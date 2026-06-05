@@ -81,10 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "專為水電師傅打造的施工紀錄 App：案件管理、施工日誌、照片自動加浮水印。" },
       { name: "author", content: "水電施工紀錄 Pro" },
       { property: "og:title", content: "水電施工紀錄 Pro" },
-      { property: "og:description", content: "工地隨拍即記，照片自動烙印案件資訊。" },
+      { property: "og:description", content: "專為水電師傅打造的施工紀錄 App：案件管理、施工日誌、照片自動加浮水印。" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "水電施工紀錄 Pro" },
+      { name: "twitter:description", content: "專為水電師傅打造的施工紀錄 App：案件管理、施工日誌、照片自動加浮水印。" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/27798dc9-9e80-4d21-8212-b205f6b95b34" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/27798dc9-9e80-4d21-8212-b205f6b95b34" },
     ],
     links: [
       {
