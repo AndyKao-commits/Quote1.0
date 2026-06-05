@@ -52,6 +52,7 @@ function ProjectDetail() {
   const photos = photoFilter === "all" ? allPhotos : allPhotos.filter((p) => p.category === photoFilter);
   const materials = listMaterials(project.id);
   const totalHours = logs.reduce((s, l) => s + (l.hours || 0), 0);
+  void totalHours;
   const materialTotal = materials.reduce((s, m) => s + m.quantity * m.unitPrice, 0);
 
   const updateStatus = (s: ProjectStatus) => saveProject({ ...project, status: s });
