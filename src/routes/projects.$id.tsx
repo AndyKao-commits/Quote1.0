@@ -120,7 +120,7 @@ function ProjectDetail() {
           <Mini label="日誌" value={logs.length} icon={<ClipboardList className="h-4 w-4" />} />
           <Mini label="照片" value={allPhotos.length} icon={<ImageIcon className="h-4 w-4" />} />
           <Mini label="材料" value={materials.length} icon={<Package className="h-4 w-4" />} />
-          <Mini label="材料金額" value={`$${materialTotal.toLocaleString()}`} icon={<Clock className="h-4 w-4" />} />
+          <Mini label="工時" value={`${totalHours}h`} icon={<Clock className="h-4 w-4" />} />
         </div>
       </header>
 
