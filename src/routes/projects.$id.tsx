@@ -116,17 +116,19 @@ function ProjectDetail() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4 text-center">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-center sm:grid-cols-4">
           <Mini label="日誌" value={logs.length} icon={<ClipboardList className="h-4 w-4" />} />
           <Mini label="照片" value={allPhotos.length} icon={<ImageIcon className="h-4 w-4" />} />
-          <Mini label="總工時" value={`${totalHours}h`} icon={<Clock className="h-4 w-4" />} />
+          <Mini label="材料" value={materials.length} icon={<Package className="h-4 w-4" />} />
+          <Mini label="材料金額" value={`$${materialTotal.toLocaleString()}`} icon={<Clock className="h-4 w-4" />} />
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="mt-5 flex gap-1 border-b border-border">
+      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-border">
         <TabBtn active={tab === "logs"} onClick={() => setTab("logs")} icon={<ClipboardList className="h-4 w-4" />}>施工日誌</TabBtn>
         <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Camera className="h-4 w-4" />}>照片</TabBtn>
+        <TabBtn active={tab === "materials"} onClick={() => setTab("materials")} icon={<Package className="h-4 w-4" />}>材料</TabBtn>
         <TabBtn active={tab === "info"} onClick={() => setTab("info")} icon={<Info className="h-4 w-4" />}>資訊</TabBtn>
       </div>
 
