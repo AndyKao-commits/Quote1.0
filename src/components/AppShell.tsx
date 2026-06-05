@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, FolderKanban, Plus, Wrench } from "lucide-react";
 import type { ReactNode } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -28,12 +29,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink to="/" label="儀表板" icon={<LayoutDashboard className="h-4 w-4" />} active={isActive("/")} />
             <NavLink to="/projects" label="案件" icon={<FolderKanban className="h-4 w-4" />} active={isActive("/projects")} />
           </nav>
-          <Link
-            to="/projects/new"
-            className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elevated)] transition hover:brightness-110"
-          >
-            <Plus className="h-4 w-4" /> 新增案件
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link
+              to="/projects/new"
+              className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elevated)] transition hover:brightness-110"
+            >
+              <Plus className="h-4 w-4" /> 新增案件
+            </Link>
+          </div>
         </div>
       </header>
 

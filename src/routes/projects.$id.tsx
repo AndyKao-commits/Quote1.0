@@ -2,14 +2,15 @@ import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-ro
 import { useState } from "react";
 import {
   ArrowLeft, Phone, MapPin, Calendar, Trash2, ClipboardList, Camera, Info,
-  Clock, User, Image as ImageIcon,
+  Clock, User, Image as ImageIcon, Package, ScanLine,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LogForm } from "@/components/LogForm";
 import { PhotoUploader, PhotoLightbox } from "@/components/PhotoUploader";
+import { QuoteScanner, ManualMaterialForm } from "@/components/QuoteScanner";
 import {
-  getProject, listLogs, listPhotos, deleteProject, deleteLog, deletePhoto,
+  getProject, listLogs, listPhotos, listMaterials, deleteProject, deleteLog, deletePhoto, deleteMaterial,
   saveProject, statusLabel, type ProjectStatus, type PhotoCategory,
 } from "@/lib/storage";
 import { useStoreVersion } from "@/hooks/use-storage";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/projects/$id")({
   ),
 });
 
-type Tab = "logs" | "photos" | "info";
+type Tab = "logs" | "photos" | "materials" | "info";
 
 function ProjectDetail() {
   useStoreVersion();
@@ -49,7 +50,9 @@ function ProjectDetail() {
   const logs = listLogs(project.id);
   const allPhotos = listPhotos(project.id);
   const photos = photoFilter === "all" ? allPhotos : allPhotos.filter((p) => p.category === photoFilter);
+  const materials = listMaterials(project.id);
   const totalHours = logs.reduce((s, l) => s + (l.hours || 0), 0);
+  const materialTotal = materials.reduce((s, m) => s + m.quantity * m.unitPrice, 0);
 
   const updateStatus = (s: ProjectStatus) => saveProject({ ...project, status: s });
 
@@ -113,17 +116,19 @@ function ProjectDetail() {
           ))}
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4 text-center">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-center sm:grid-cols-4">
           <Mini label="日誌" value={logs.length} icon={<ClipboardList className="h-4 w-4" />} />
           <Mini label="照片" value={allPhotos.length} icon={<ImageIcon className="h-4 w-4" />} />
-          <Mini label="總工時" value={`${totalHours}h`} icon={<Clock className="h-4 w-4" />} />
+          <Mini label="材料" value={materials.length} icon={<Package className="h-4 w-4" />} />
+          <Mini label="工時" value={`${totalHours}h`} icon={<Clock className="h-4 w-4" />} />
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="mt-5 flex gap-1 border-b border-border">
+      <div className="mt-5 flex gap-1 overflow-x-auto border-b border-border">
         <TabBtn active={tab === "logs"} onClick={() => setTab("logs")} icon={<ClipboardList className="h-4 w-4" />}>施工日誌</TabBtn>
         <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Camera className="h-4 w-4" />}>照片</TabBtn>
+        <TabBtn active={tab === "materials"} onClick={() => setTab("materials")} icon={<Package className="h-4 w-4" />}>材料</TabBtn>
         <TabBtn active={tab === "info"} onClick={() => setTab("info")} icon={<Info className="h-4 w-4" />}>資訊</TabBtn>
       </div>
 
@@ -214,6 +219,62 @@ function ProjectDetail() {
 
             {photoIndex !== null && (
               <PhotoLightbox photos={photos} index={photoIndex} onClose={() => setPhotoIndex(null)} onChange={setPhotoIndex} />
+            )}
+          </div>
+        )}
+
+        {tab === "materials" && (
+          <div className="space-y-4">
+            <QuoteScanner projectId={project.id} onDone={() => setTab("materials")} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ManualMaterialForm projectId={project.id} />
+              <div className="text-right text-xs text-muted-foreground">
+                共 {materials.length} 項 · 合計
+                <span className="ml-1 text-base font-bold text-foreground tabular-nums">
+                  NT$ {materialTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {materials.length === 0 ? (
+              <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
+                <ScanLine className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  還沒有材料。拍張估價單，讓 AI 自動填入吧！
+                </p>
+              </div>
+            ) : (
+              <ul className="card-surface divide-y divide-border overflow-hidden">
+                {materials.map((m) => (
+                  <li key={m.id} className="flex items-center gap-3 p-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent-foreground">
+                      <Package className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold">{m.name}</span>
+                        {m.source === "scan" && (
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">AI</span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {m.brand ? `${m.brand} · ` : ""}{m.quantity} {m.unit} × NT$ {m.unitPrice.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold tabular-nums">
+                        NT$ {(m.quantity * m.unitPrice).toLocaleString()}
+                      </div>
+                      <button
+                        onClick={() => confirm("刪除這項材料？") && deleteMaterial(m.id)}
+                        className="mt-0.5 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}
