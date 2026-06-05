@@ -223,6 +223,62 @@ function ProjectDetail() {
           </div>
         )}
 
+        {tab === "materials" && (
+          <div className="space-y-4">
+            <QuoteScanner projectId={project.id} onDone={() => setTab("materials")} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ManualMaterialForm projectId={project.id} />
+              <div className="text-right text-xs text-muted-foreground">
+                共 {materials.length} 項 · 合計
+                <span className="ml-1 text-base font-bold text-foreground tabular-nums">
+                  NT$ {materialTotal.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {materials.length === 0 ? (
+              <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
+                <ScanLine className="h-8 w-8 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  還沒有材料。拍張估價單，讓 AI 自動填入吧！
+                </p>
+              </div>
+            ) : (
+              <ul className="card-surface divide-y divide-border overflow-hidden">
+                {materials.map((m) => (
+                  <li key={m.id} className="flex items-center gap-3 p-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent-foreground">
+                      <Package className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold">{m.name}</span>
+                        {m.source === "scan" && (
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">AI</span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {m.brand ? `${m.brand} · ` : ""}{m.quantity} {m.unit} × NT$ {m.unitPrice.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold tabular-nums">
+                        NT$ {(m.quantity * m.unitPrice).toLocaleString()}
+                      </div>
+                      <button
+                        onClick={() => confirm("刪除這項材料？") && deleteMaterial(m.id)}
+                        className="mt-0.5 text-xs text-muted-foreground hover:text-destructive"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {tab === "info" && (
           <div className="card-surface space-y-4 p-5 text-sm">
             <InfoRow label="案件名稱" value={project.name} />
