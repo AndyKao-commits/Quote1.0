@@ -2,14 +2,15 @@ import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-ro
 import { useState } from "react";
 import {
   ArrowLeft, Phone, MapPin, Calendar, Trash2, ClipboardList, Camera, Info,
-  Clock, User, Image as ImageIcon,
+  Clock, User, Image as ImageIcon, Package, ScanLine,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LogForm } from "@/components/LogForm";
 import { PhotoUploader, PhotoLightbox } from "@/components/PhotoUploader";
+import { QuoteScanner, ManualMaterialForm } from "@/components/QuoteScanner";
 import {
-  getProject, listLogs, listPhotos, deleteProject, deleteLog, deletePhoto,
+  getProject, listLogs, listPhotos, listMaterials, deleteProject, deleteLog, deletePhoto, deleteMaterial,
   saveProject, statusLabel, type ProjectStatus, type PhotoCategory,
 } from "@/lib/storage";
 import { useStoreVersion } from "@/hooks/use-storage";
