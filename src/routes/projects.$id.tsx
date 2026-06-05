@@ -34,7 +34,7 @@ export const Route = createFileRoute("/projects/$id")({
   ),
 });
 
-type Tab = "logs" | "photos" | "info";
+type Tab = "logs" | "photos" | "materials" | "info";
 
 function ProjectDetail() {
   useStoreVersion();
@@ -50,7 +50,9 @@ function ProjectDetail() {
   const logs = listLogs(project.id);
   const allPhotos = listPhotos(project.id);
   const photos = photoFilter === "all" ? allPhotos : allPhotos.filter((p) => p.category === photoFilter);
+  const materials = listMaterials(project.id);
   const totalHours = logs.reduce((s, l) => s + (l.hours || 0), 0);
+  const materialTotal = materials.reduce((s, m) => s + m.quantity * m.unitPrice, 0);
 
   const updateStatus = (s: ProjectStatus) => saveProject({ ...project, status: s });
 
