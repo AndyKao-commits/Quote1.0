@@ -93,6 +93,27 @@ export const deleteProject = (id: string) => {
   write(K_PROJECTS, read<Project>(K_PROJECTS).filter((p) => p.id !== id));
   write(K_LOGS, read<WorkLog>(K_LOGS).filter((l) => l.projectId !== id));
   write(K_PHOTOS, read<Photo>(K_PHOTOS).filter((p) => p.projectId !== id));
+  write(K_MATERIALS, read<Material>(K_MATERIALS).filter((m) => m.projectId !== id));
+};
+
+// Materials
+export const listMaterials = (projectId: string) =>
+  read<Material>(K_MATERIALS)
+    .filter((m) => m.projectId === projectId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+export const saveMaterial = (m: Material) => {
+  const list = read<Material>(K_MATERIALS);
+  const idx = list.findIndex((x) => x.id === m.id);
+  if (idx >= 0) list[idx] = m;
+  else list.unshift(m);
+  write(K_MATERIALS, list);
+};
+export const saveMaterials = (items: Material[]) => {
+  const list = read<Material>(K_MATERIALS);
+  write(K_MATERIALS, [...items, ...list]);
+};
+export const deleteMaterial = (id: string) => {
+  write(K_MATERIALS, read<Material>(K_MATERIALS).filter((m) => m.id !== id));
 };
 
 // Logs
