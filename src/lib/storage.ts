@@ -40,9 +40,23 @@ export interface Photo {
   createdAt: number;
 }
 
+export interface Material {
+  id: string;
+  projectId: string;
+  name: string;
+  brand?: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  note?: string;
+  source: "manual" | "scan";
+  createdAt: number;
+}
+
 const K_PROJECTS = "swd_projects";
 const K_LOGS = "swd_logs";
 const K_PHOTOS = "swd_photos";
+const K_MATERIALS = "swd_materials";
 
 const isClient = () => typeof window !== "undefined";
 
