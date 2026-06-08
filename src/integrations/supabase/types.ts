@@ -139,6 +139,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          permission_level: number
           updated_at: string
           watermark_enabled: boolean
         }
@@ -148,6 +149,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          permission_level?: number
           updated_at?: string
           watermark_enabled?: boolean
         }
@@ -157,6 +159,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          permission_level?: number
           updated_at?: string
           watermark_enabled?: boolean
         }
