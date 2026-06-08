@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, CheckCircle2, ClipboardList, Plus, ArrowRight, CalendarCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Marquee } from "@/components/Marquee";
 import { useProjects } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,6 +36,7 @@ function Dashboard() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Dashboard</p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">今日工地總覽</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">所有案件、施工進度與現場照片，一個地方搞定。</p>
+        <Marquee />
       </section>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

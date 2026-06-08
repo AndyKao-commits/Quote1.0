@@ -24,8 +24,8 @@ interface Msg {
   replied_at: string | null;
 }
 
-const AI_NAME = "Wei Feng AI 小幫手";
-const ADMIN_NAME = "客服專員 澤澤";
+const AI_NAME = "AI小幫手";
+const ADMIN_NAME = "客服專員";
 
 function SupportPage() {
   const qc = useQueryClient();

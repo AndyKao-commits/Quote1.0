@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Plus, Wrench, User, MessageCircle, Shield } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, User, MessageCircle, Shield, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useProfile, useSupportUnreadCount } from "@/lib/db";
 import { useIsAdmin } from "@/lib/useIsAdmin";
+import { HeaderAvatarButton } from "./HeaderAvatarButton";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -18,27 +19,28 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/dashboard" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-elevated)]">
-              <Wrench className="h-5 w-5" />
-            </span>
-            <span className="leading-tight">
+          <div className="flex items-center gap-2.5">
+            <HeaderAvatarButton />
+            <Link to="/dashboard" className="leading-tight">
               <span className="block font-display text-base font-bold tracking-tight">{brand}</span>
               <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Field Log</span>
-            </span>
-          </Link>
+            </Link>
+          </div>
           <nav className="hidden items-center gap-1 md:flex">
             <NavLink to="/dashboard" label="儀表板" icon={<LayoutDashboard className="h-4 w-4" />} active={isActive("/dashboard")} />
             <NavLink to="/projects" label="案件" icon={<FolderKanban className="h-4 w-4" />} active={isActive("/projects")} />
             <NavLink to="/support" label="AI 客服" icon={<MessageCircle className="h-4 w-4" />} active={isActive("/support")} />
             {isAdmin && (
-              <NavLink
-                to="/admin"
-                label="管理員"
-                icon={<Shield className="h-4 w-4" />}
-                active={isActive("/admin")}
-                badge={unread > 0 ? unread : undefined}
-              />
+              <>
+                <NavLink to="/admin" label="管理員" icon={<Shield className="h-4 w-4" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
+                <NavLink
+                  to="/admin/inbox"
+                  label="客服收件夾"
+                  icon={<Inbox className="h-4 w-4" />}
+                  active={isActive("/admin/inbox")}
+                  badge={unread > 0 ? unread : undefined}
+                />
+              </>
             )}
             <NavLink to="/profile" label="個人" icon={<User className="h-4 w-4" />} active={isActive("/profile")} />
           </nav>
