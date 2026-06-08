@@ -178,6 +178,7 @@ export type Database = {
           scope: string | null
           start_date: string
           status: string
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -193,6 +194,7 @@ export type Database = {
           scope?: string | null
           start_date: string
           status?: string
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -208,10 +210,19 @@ export type Database = {
           scope?: string | null
           start_date?: string
           status?: string
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_messages: {
         Row: {
@@ -225,6 +236,7 @@ export type Database = {
           status: string
           summary: string | null
           tags: string[]
+          takeover_at: string | null
           updated_at: string
           user_id: string
         }
@@ -239,6 +251,7 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          takeover_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -253,8 +266,65 @@ export type Database = {
           status?: string
           summary?: string | null
           tags?: string[]
+          takeover_at?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -335,6 +405,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_team_member: {
+        Args: { _team: string; _user: string }
+        Returns: boolean
+      }
+      team_role: { Args: { _team: string; _user: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
