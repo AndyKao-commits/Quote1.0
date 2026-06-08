@@ -231,6 +231,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
     onError: (e: Error) => alert(e.message),
   });
 
+  const markReadMut = useMutation({
+    mutationFn: () => markReadFn({ data: { targetUserId: room.user_id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+      qc.invalidateQueries({ queryKey: ["support-unread-count"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
+
   useEffect(() => { taRef.current?.focus(); }, [room.user_id]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
