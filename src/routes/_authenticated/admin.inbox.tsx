@@ -319,13 +319,13 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           replyMut.mutate(t);
         }}
       >
-        {showCanned && (cannedQ.data?.length ?? 0) > 0 && (
+        {showCanned && cannedList.length > 0 && (
           <div className="absolute bottom-full left-3 right-3 mb-2 max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-[var(--shadow-elevated)]">
             <div className="border-b border-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              常用罐頭回覆
+              常用罐頭回覆（{cannedList.length}）
             </div>
             <ul className="divide-y divide-border">
-              {cannedQ.data!.map((c) => (
+              {cannedList.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"
