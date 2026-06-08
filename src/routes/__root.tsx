@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
       { title: "施工紀錄 PRO — 案件管理、施工日誌、PDF 報告" },
       { name: "description", content: OG_DESC },
       { name: "author", content: "施工紀錄 PRO" },
