@@ -385,6 +385,9 @@ function ProjectDetail() {
                   await removeLog.mutateAsync(confirmDelete.id);
                 } else if (confirmDelete.kind === "photo") {
                   await removePhoto.mutateAsync(confirmDelete.photo);
+                } else if (confirmDelete.kind === "photos") {
+                  await removePhotos.mutateAsync(confirmDelete.photos);
+                  setSelectedIds(new Set());
                 } else if (confirmDelete.kind === "material") {
                   await removeMaterial.mutateAsync(confirmDelete.id);
                 }
