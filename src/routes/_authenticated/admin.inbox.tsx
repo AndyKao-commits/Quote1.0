@@ -316,7 +316,7 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
         </button>
         <button
           type="button"
-          onClick={() => takeoverMut.mutate(room.ai_enabled)}
+          onClick={() => takeoverMut.mutate(!room.ai_enabled)}
           disabled={takeoverMut.isPending}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide shadow-md transition disabled:opacity-60 ${
             room.ai_enabled
