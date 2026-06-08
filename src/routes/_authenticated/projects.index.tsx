@@ -16,15 +16,25 @@ export const Route = createFileRoute("/_authenticated/projects/")({
 
 function ProjectsList() {
   const [q, setQ] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
   const { data: all = [], isLoading } = useProjects();
+  const teamsFn = useServerFn(listMyTeams);
+  const { data: teams = [] } = useQuery({
+    queryKey: ["my-teams"],
+    queryFn: () => teamsFn({}) as Promise<Team[]>,
+  });
+  const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
   const kw = q.trim().toLowerCase();
-  const projects = kw
+  let projects = kw
     ? all.filter((p) =>
         [p.name, p.customer_name, p.address, p.start_date, p.expected_end_date]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(kw)),
       )
     : all;
+  if (teamFilter === "personal") projects = projects.filter((p) => !p.team_id);
+  else if (teamFilter !== "all") projects = projects.filter((p) => p.team_id === teamFilter);
+
 
   return (
     <AppShell>
