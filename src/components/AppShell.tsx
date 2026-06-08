@@ -70,6 +70,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             icon={<MessageCircle className="h-5 w-5" />}
             active={isActive("/support")}
           />
+          <BottomLink
+            to="/team"
+            label="團隊"
+            icon={<Users className="h-5 w-5" />}
+            active={isActive("/team")}
+          />
           {isAdmin && (
             <BottomLink
               to="/admin/inbox"
