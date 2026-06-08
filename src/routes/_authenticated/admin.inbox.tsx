@@ -270,6 +270,16 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
         </div>
         <button
           type="button"
+          onClick={() => markReadMut.mutate()}
+          disabled={markReadMut.isPending || room.unread_count === 0}
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-bold hover:bg-secondary disabled:opacity-50"
+          title="清除此對話的未讀紅點"
+        >
+          {markReadMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          已讀
+        </button>
+        <button
+          type="button"
           onClick={() => takeoverMut.mutate(room.ai_enabled)}
           disabled={takeoverMut.isPending}
           className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition disabled:opacity-60 ${
