@@ -21,6 +21,7 @@ export interface Project {
   scope?: string | null;
   note?: string | null;
   status: ProjectStatus;
+  team_id?: string | null;
   created_at: string;
   updated_at: string;
 }
