@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, Bot, Loader2, Inbox, ArrowLeft, UserCog } from "lucide-react";
+import { Send, Bot, Loader2, Inbox, ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { askSupport, userPostImage } from "@/lib/support.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,34 +41,9 @@ const ADMIN_NAME = "客服專員";
 
 function buildBubbles(rows: Msg[]): Bubble[] {
   const out: Bubble[] = [];
-  let lastAiEnabled: boolean | null = null;
   for (const r of rows) {
-    // Skip internal transfer marker; we render system bubbles based on transitions instead.
-    if (r.admin_reply === "__TRANSFER_NOTICE__") {
-      if (lastAiEnabled !== false) {
-        out.push({
-          kind: "system",
-          id: r.id + "-transfer",
-          text: "🤖 AI小幫手已暫停，改由真人專員為您服務",
-          at: r.created_at,
-        });
-        lastAiEnabled = false;
-      }
-      continue;
-    }
-
-    // Detect AI<->human transitions implicitly from row-level ai_enabled flag.
-    if (lastAiEnabled !== null && lastAiEnabled !== r.ai_enabled) {
-      out.push({
-        kind: "system",
-        id: r.id + "-sys",
-        text: r.ai_enabled
-          ? "🤖 系統提示：專員已離線，自動切換回 AI小幫手服務"
-          : "👤 AI小幫手已暫停，改由真人專員為您服務",
-        at: r.created_at,
-      });
-    }
-    lastAiEnabled = r.ai_enabled;
+    // Skip internal transfer marker — user side does NOT show AI/admin toggle transitions.
+    if (r.admin_reply === "__TRANSFER_NOTICE__") continue;
 
     // User question text (skip system placeholders like "[圖片]" since the image bubble already renders)
     if (r.question && r.question !== "[圖片]") {
@@ -134,7 +109,6 @@ function SupportPage() {
   });
 
   const bubbles = useMemo(() => buildBubbles(rows), [rows]);
-  const aiOn = rows.length === 0 ? true : rows[rows.length - 1].ai_enabled !== false;
 
   const mut = useMutation({
     mutationFn: (question: string) => askFn({ data: { question } }),
@@ -159,19 +133,6 @@ function SupportPage() {
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [bubbles.length, mut.isPending]);
 
-  const StatusBadge = (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-        aiOn
-          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-          : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
-      }`}
-    >
-      {aiOn ? <Bot className="h-3 w-3" /> : <UserCog className="h-3 w-3" />}
-      {aiOn ? "AI小幫手在線中" : "專員真人接手中"}
-    </span>
-  );
-
   return (
     <AppShell>
       {/* Mobile fullscreen overlay */}
@@ -182,11 +143,11 @@ function SupportPage() {
           </Link>
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary">
-              {aiOn ? <Bot className="h-4 w-4" /> : <UserCog className="h-4 w-4" />}
+              <Bot className="h-4 w-4" />
             </span>
             <div className="leading-tight">
-              <div className="text-sm font-bold">{aiOn ? AI_NAME : ADMIN_NAME}</div>
-              <div className="mt-0.5">{StatusBadge}</div>
+              <div className="text-sm font-bold">{AI_NAME}</div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground">線上客服</div>
             </div>
           </div>
         </div>
@@ -215,7 +176,6 @@ function SupportPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Bot className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">AI 客服</h1>
-          {StatusBadge}
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           詢問 App 使用問題，AI 立即回覆。AI 無法回答的問題會自動轉交管理員。
