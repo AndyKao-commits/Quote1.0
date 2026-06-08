@@ -8,7 +8,7 @@ import { useIsAdmin } from "@/lib/useIsAdmin";
 import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/_authenticated/admin")({
+export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "管理員面板 — 現場紀錄" }] }),
   component: AdminPage,
 });
