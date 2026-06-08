@@ -1,5 +1,5 @@
-import type { ProjectStatus } from "@/lib/storage";
-import { statusLabel } from "@/lib/storage";
+import type { ProjectStatus } from "@/lib/db";
+import { statusLabel } from "@/lib/db";
 
 const styles: Record<ProjectStatus, string> = {
   pending: "bg-muted text-muted-foreground border-border",
