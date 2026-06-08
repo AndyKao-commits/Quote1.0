@@ -277,8 +277,20 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           <div className="truncate text-sm font-bold">
             {room.display_name || room.email || room.user_id.slice(0, 8)}
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {room.email || room.user_id.slice(0, 12)}
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span
+              className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                room.ai_enabled
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              {room.ai_enabled ? <Bot className="h-2.5 w-2.5" /> : <UserCog className="h-2.5 w-2.5" />}
+              {room.ai_enabled ? "AI小幫手在線中" : "專員真人接手中"}
+            </span>
+            <span className="truncate text-[10px] text-muted-foreground">
+              {room.email || room.user_id.slice(0, 12)}
+            </span>
           </div>
         </div>
         <button
