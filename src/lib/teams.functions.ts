@@ -297,3 +297,156 @@ export const changeMemberLevel = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============ Invitation links ============
+export interface TeamInvitation {
+  id: string;
+  team_id: string;
+  token: string;
+  role: "editor" | "viewer";
+  level: number;
+  expires_at: string | null;
+  created_at: string;
+  used_at: string | null;
+}
+
+function genToken() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID().replace(/-/g, "") + Math.random().toString(36).slice(2, 8);
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export const createInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        teamId: z.string().uuid(),
+        role: z.enum(["editor", "viewer"]).default("viewer"),
+        level: z.number().int().min(1).max(4).default(1),
+        ttlHours: z.number().int().min(0).max(24 * 365).default(24),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!(await isTeamOwner(supabase, data.teamId, userId))) {
+      throw new Error("只有團隊主持人可以建立邀請連結");
+    }
+    const token = genToken();
+    const expires_at =
+      data.ttlHours > 0
+        ? new Date(Date.now() + data.ttlHours * 3600 * 1000).toISOString()
+        : null;
+    const { data: row, error } = await supabase
+      .from("team_invitations")
+      .insert({
+        team_id: data.teamId,
+        token,
+        role: data.role,
+        level: data.level,
+        expires_at,
+        created_by: userId,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return row as TeamInvitation;
+  });
+
+export const listInvites = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ teamId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!(await isTeamOwner(supabase, data.teamId, userId))) {
+      throw new Error("只有團隊主持人可以查看邀請");
+    }
+    const { data: rows, error } = await supabase
+      .from("team_invitations")
+      .select("*")
+      .eq("team_id", data.teamId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as TeamInvitation[];
+  });
+
+export const revokeInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ inviteId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context as any;
+    const { error } = await supabase.from("team_invitations").delete().eq("id", data.inviteId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const previewInvite = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(8).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: inv } = await (supabaseAdmin as any)
+      .from("team_invitations")
+      .select("id, team_id, role, level, expires_at, used_at, teams!inner(name)")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (!inv) throw new Error("邀請連結無效");
+    if (inv.used_at) throw new Error("此邀請連結已被使用");
+    if (inv.expires_at && new Date(inv.expires_at).getTime() < Date.now())
+      throw new Error("此邀請連結已過期");
+    return {
+      team_id: inv.team_id,
+      team_name: inv.teams?.name as string,
+      role: inv.role as "editor" | "viewer",
+      level: inv.level as number,
+    };
+  });
+
+export const acceptInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ token: z.string().min(8).max(200) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId } = context as any;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: inv, error } = await (supabaseAdmin as any)
+      .from("team_invitations")
+      .select("*, teams!inner(owner_id, name)")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!inv) throw new Error("邀請連結無效");
+    if (inv.used_at) throw new Error("此邀請連結已被使用");
+    if (inv.expires_at && new Date(inv.expires_at).getTime() < Date.now())
+      throw new Error("此邀請連結已過期");
+    if (inv.teams.owner_id === userId) {
+      // mark used so it doesn't linger; owner doesn't need to join
+      await (supabaseAdmin as any)
+        .from("team_invitations")
+        .update({ used_at: new Date().toISOString(), used_by: userId })
+        .eq("id", inv.id);
+      return { ok: true, team_id: inv.team_id, team_name: inv.teams.name };
+    }
+
+    // upsert membership
+    const { error: memErr } = await (supabaseAdmin as any)
+      .from("team_members")
+      .upsert(
+        {
+          team_id: inv.team_id,
+          user_id: userId,
+          role: inv.role,
+          level: inv.level,
+        },
+        { onConflict: "team_id,user_id" },
+      );
+    if (memErr) throw new Error(memErr.message);
+
+    await (supabaseAdmin as any)
+      .from("team_invitations")
+      .update({ used_at: new Date().toISOString(), used_by: userId })
+      .eq("id", inv.id);
+
+    return { ok: true, team_id: inv.team_id, team_name: inv.teams.name };
+  });
