@@ -9,7 +9,7 @@ import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
-  head: () => ({ meta: [{ title: "管理員面板 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "管理員面板 — 施工紀錄 PRO" }] }),
   component: AdminPage,
 });
 

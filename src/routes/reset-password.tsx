@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({ meta: [{ title: "重設密碼 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "重設密碼 — 施工紀錄 PRO" }] }),
   component: ResetPasswordPage,
 });
 
@@ -54,7 +54,7 @@ function ResetPasswordPage() {
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-elevated)]">
             <Wrench className="h-5 w-5" />
           </span>
-          <span className="font-display text-xl font-bold">現場紀錄</span>
+          <span className="font-display text-xl font-bold">施工紀錄 PRO</span>
         </Link>
 
         <div className="card-surface p-6">

@@ -10,7 +10,7 @@ import { listMyTeams, type Team } from "@/lib/teams.functions";
 
 
 export const Route = createFileRoute("/_authenticated/projects/")({
-  head: () => ({ meta: [{ title: "案件管理 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "案件管理 — 施工紀錄 PRO" }] }),
   component: ProjectsList,
 });
 

@@ -10,11 +10,14 @@ import {
   adminListInboxRooms,
   adminGetRoomMessages,
   adminPostReply,
+  adminPostImage,
   adminTakeoverRoom,
   adminMarkRoomRead,
   type InboxRoom,
 } from "@/lib/inbox.functions";
 import { useCannedResponses } from "@/lib/canned";
+import { SupportImage } from "@/components/SupportImage";
+import { SupportPhotoButton } from "@/components/SupportPhotoButton";
 
 const DEFAULT_CANNED = [
   { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
@@ -29,7 +32,7 @@ const DEFAULT_CANNED = [
 
 
 export const Route = createFileRoute("/_authenticated/admin/inbox")({
-  head: () => ({ meta: [{ title: "客服收件夾 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "客服收件夾 — 施工紀錄 PRO" }] }),
   component: InboxPage,
 });
 
@@ -190,6 +193,7 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const qc = useQueryClient();
   const getFn = useServerFn(adminGetRoomMessages);
   const replyFn = useServerFn(adminPostReply);
+  const imgFn = useServerFn(adminPostImage);
   const takeoverFn = useServerFn(adminTakeoverRoom);
   const markReadFn = useServerFn(adminMarkRoomRead);
   const cannedQ = useCannedResponses(true);
@@ -197,6 +201,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const [showCanned, setShowCanned] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const imgMut = useMutation({
+    mutationFn: (path: string) => imgFn({ data: { targetUserId: room.user_id, path } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
 
   const cannedList = useMemo(() => {
     const dbItems = (cannedQ.data ?? []).map((c) => ({ id: c.id, title: c.title, content: c.content }));
@@ -264,8 +277,20 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           <div className="truncate text-sm font-bold">
             {room.display_name || room.email || room.user_id.slice(0, 8)}
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {room.email || room.user_id.slice(0, 12)}
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <span
+              className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                room.ai_enabled
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              {room.ai_enabled ? <Bot className="h-2.5 w-2.5" /> : <UserCog className="h-2.5 w-2.5" />}
+              {room.ai_enabled ? "AI小幫手在線中" : "專員真人接手中"}
+            </span>
+            <span className="truncate text-[10px] text-muted-foreground">
+              {room.email || room.user_id.slice(0, 12)}
+            </span>
           </div>
         </div>
         <button
@@ -353,6 +378,10 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           >
             罐頭 <ChevronDown className="h-3 w-3" />
           </button>
+          <SupportPhotoButton
+            customerUserId={room.user_id}
+            onUploaded={(path) => imgMut.mutateAsync(path)}
+          />
           <textarea
             ref={taRef}
             value={reply}
@@ -383,9 +412,9 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
 }
 
 type Bubble =
-  | { kind: "user"; text: string; at: string }
+  | { kind: "user"; text: string; at: string; image?: string | null }
   | { kind: "ai"; text: string; at: string; tags: string[] }
-  | { kind: "admin"; text: string; at: string }
+  | { kind: "admin"; text: string; at: string; image?: string | null }
   | { kind: "system"; text: string; at: string };
 
 function buildBubbles(rows: any[]): Bubble[] {
@@ -393,20 +422,36 @@ function buildBubbles(rows: any[]): Bubble[] {
   let lastAi: boolean | null = null;
   for (const r of rows) {
     if (r.admin_reply === "__TRANSFER_NOTICE__") {
-      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
-      lastAi = false;
+      if (lastAi !== false) {
+        out.push({ kind: "system", text: "👤 AI小幫手已暫停，改由真人專員為您服務", at: r.created_at });
+        lastAi = false;
+      }
       continue;
     }
-    // detect AI→human transition implicitly if no notice row exists
     const aiNow = r.ai_enabled !== false;
-    if (lastAi === true && !aiNow) {
-      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
+    if (lastAi !== null && lastAi !== aiNow) {
+      out.push({
+        kind: "system",
+        text: aiNow
+          ? "🤖 系統提示：專員已離線，自動切換回 AI小幫手服務"
+          : "👤 AI小幫手已暫停，改由真人專員為您服務",
+        at: r.created_at,
+      });
     }
     lastAi = aiNow;
 
-    if (r.question) out.push({ kind: "user", text: r.question, at: r.created_at });
+    // user-side: text question (skip placeholder) or image
+    if (r.question && r.question !== "[圖片]") {
+      out.push({ kind: "user", text: r.question, at: r.created_at, image: !r.admin_reply ? r.image_url : null });
+    } else if (r.image_url && !r.admin_reply) {
+      out.push({ kind: "user", text: "", at: r.created_at, image: r.image_url });
+    }
     if (r.ai_answer) out.push({ kind: "ai", text: r.ai_answer, at: r.created_at, tags: r.tags ?? [] });
-    if (r.admin_reply) out.push({ kind: "admin", text: r.admin_reply, at: r.replied_at ?? r.created_at });
+    if (r.admin_reply && r.admin_reply !== "[圖片]") {
+      out.push({ kind: "admin", text: r.admin_reply, at: r.replied_at ?? r.created_at, image: r.image_url });
+    } else if (r.image_url && r.admin_reply === "[圖片]") {
+      out.push({ kind: "admin", text: "", at: r.replied_at ?? r.created_at, image: r.image_url });
+    }
   }
   return out;
 }
@@ -414,9 +459,9 @@ function buildBubbles(rows: any[]): Bubble[] {
 function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: string | null; userAvatar?: string | null }) {
   if (bubble.kind === "system") {
     return (
-      <div className="flex justify-center">
+      <div className="flex justify-center py-1">
         <span className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
-          ⚡ {bubble.text}
+          — {bubble.text} —
         </span>
       </div>
     );
@@ -427,9 +472,10 @@ function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: s
         <Avatar name={userName ?? "U"} path={userAvatar} size={28} />
         <div className="max-w-[80%]">
           <div className="mb-0.5 text-[10px] font-semibold text-muted-foreground">{userName ?? "使用者"}</div>
-          <div className="rounded-2xl rounded-tl-sm bg-card px-3.5 py-2 text-sm shadow-sm">
-            <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
-            <div className="mt-1 text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+          <div className="space-y-1.5 rounded-2xl rounded-tl-sm bg-card px-3.5 py-2 text-sm shadow-sm">
+            {bubble.text && <div className="whitespace-pre-wrap break-words">{bubble.text}</div>}
+            {bubble.image && <SupportImage path={bubble.image} />}
+            <div className="text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
           </div>
         </div>
       </div>
@@ -467,9 +513,10 @@ function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: s
         <div className="mb-0.5 text-right text-[10px] font-semibold text-primary">
           <CircleUserRound className="mr-0.5 inline h-3 w-3" /> 管理員
         </div>
-        <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
-          <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
-          <div className="mt-1 text-[10px] opacity-80">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+        <div className="space-y-1.5 rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
+          {bubble.text && <div className="whitespace-pre-wrap break-words">{bubble.text}</div>}
+          {bubble.image && <SupportImage path={bubble.image} />}
+          <div className="text-[10px] opacity-80">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
         </div>
       </div>
     </div>

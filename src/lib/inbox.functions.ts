@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function assertAdmin(supabase: any, userId: string) {
@@ -34,7 +35,7 @@ export const adminListInboxRooms = createServerFn({ method: "GET" })
 
     const { data: rows, error } = await (supabaseAdmin as any)
       .from("support_messages")
-      .select("user_id, question, ai_answer, admin_reply, status, tags, created_at, ai_enabled")
+      .select("user_id, question, ai_answer, admin_reply, image_url, status, tags, created_at, ai_enabled")
       .order("created_at", { ascending: false })
       .limit(2000);
     if (error) throw new Error(error.message);
@@ -55,7 +56,6 @@ export const adminListInboxRooms = createServerFn({ method: "GET" })
     const profMap = new Map<string, any>();
     (profiles ?? []).forEach((p: any) => profMap.set(p.id, p));
 
-    // emails via auth admin
     const emailMap = new Map<string, string>();
     try {
       const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
@@ -69,6 +69,7 @@ export const adminListInboxRooms = createServerFn({ method: "GET" })
       msgs.slice(0, 5).forEach((m) => (m.tags ?? []).forEach((t: string) => tagSet.add(t)));
       const unread = msgs.filter((m) => m.status === "escalated" && !m.admin_reply).length;
       const lastText =
+        latest.image_url ? "[圖片]" :
         latest.admin_reply || latest.ai_answer || latest.question || "(系統訊息)";
       const prof = profMap.get(uid);
       return {
@@ -118,7 +119,6 @@ export const adminPostReply = createServerFn({ method: "POST" })
     if (!reply) throw new Error("回覆內容不可為空");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Always insert a new row as latest, and refresh takeover timer.
     const now = new Date().toISOString();
     const { error: insErr } = await (supabaseAdmin as any).from("support_messages").insert({
       user_id: data.targetUserId,
@@ -133,13 +133,42 @@ export const adminPostReply = createServerFn({ method: "POST" })
     });
     if (insErr) throw new Error(insErr.message);
 
-    // Mark any earlier escalations as answered so the unread badge clears.
     await (supabaseAdmin as any)
       .from("support_messages")
       .update({ status: "answered" })
       .eq("user_id", data.targetUserId)
       .eq("status", "escalated");
 
+    return { ok: true };
+  });
+
+export const adminPostImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({ targetUserId: z.string().uuid(), path: z.string().min(1).max(500) })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    await assertAdmin(supabase, userId);
+    const expectedPrefix = `support/${data.targetUserId}/`;
+    if (!data.path.startsWith(expectedPrefix)) throw new Error("路徑不合法");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    const { error } = await (supabaseAdmin as any).from("support_messages").insert({
+      user_id: data.targetUserId,
+      question: null,
+      ai_answer: null,
+      admin_reply: "[圖片]",
+      image_url: data.path,
+      status: "answered",
+      replied_at: now,
+      ai_enabled: false,
+      takeover_at: now,
+      tags: [],
+    });
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -153,7 +182,6 @@ export const adminTakeoverRoom = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
 
     if (!data.enable) {
-      // Human takeover: disable AI for this user and stamp takeover_at
       await (supabaseAdmin as any)
         .from("support_messages")
         .update({ ai_enabled: false, takeover_at: now })
@@ -171,7 +199,6 @@ export const adminTakeoverRoom = createServerFn({ method: "POST" })
         tags: ["#系統"],
       });
     } else {
-      // Hand back to AI: clear takeover stamp and re-enable
       await (supabaseAdmin as any)
         .from("support_messages")
         .update({ ai_enabled: true, takeover_at: null })
@@ -195,5 +222,3 @@ export const adminMarkRoomRead = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-
