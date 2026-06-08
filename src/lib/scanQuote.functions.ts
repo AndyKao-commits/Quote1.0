@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { generateText, Output } from "ai";
 import { z } from "zod";
-
-// 估價單/報價單照片 -> 結構化材料清單
-// 使用 Lovable AI Gateway（Gemini 視覺模型）
+import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const InputSchema = z.object({
   imageDataUrl: z
@@ -22,6 +21,10 @@ const ItemSchema = z.object({
 });
 
 export type ScannedItem = z.infer<typeof ItemSchema>;
+
+const OutputSchema = z.object({
+  items: z.array(ItemSchema),
+});
 
 const SYSTEM_PROMPT = `你是專業的水電工程估價單辨識助理。
 使用者會給你一張估價單、報價單、出貨單或材料明細的照片。
@@ -47,61 +50,40 @@ export const scanQuote = createServerFn({ method: "POST" })
       throw new Error("AI 服務未設定（缺少 LOVABLE_API_KEY）");
     }
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+    const gateway = createLovableAiGatewayProvider(apiKey);
+    const model = gateway("google/gemini-2.5-flash");
+
+    try {
+      const { output } = await generateText({
+        model,
+        output: Output.object({ schema: OutputSchema }),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
             content: [
               { type: "text", text: "請辨識這張估價單上的材料，回傳 JSON。" },
-              { type: "image_url", image_url: { url: data.imageDataUrl } },
+              { type: "image", image: data.imageDataUrl },
             ],
           },
         ],
-        response_format: { type: "json_object" },
-      }),
-    });
+      });
 
-    if (res.status === 429) {
-      throw new Error("AI 服務忙碌中，請稍後再試（已達速率上限）");
+      const items = output.items.filter((it) => it.name?.trim());
+      return { items };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message.includes("429")) {
+          throw new Error("AI 服務忙碌中，請稍後再試（已達速率上限）");
+        }
+        if (error.message.includes("402")) {
+          throw new Error("AI 服務額度已用盡，請至工作區設定加值");
+        }
+        if (error.message.includes("json")) {
+          throw new Error("AI 回傳格式錯誤，請改用更清楚的照片再試一次");
+        }
+      }
+      console.error("AI gateway error", error);
+      throw new Error("AI 服務錯誤，請稍後再試");
     }
-    if (res.status === 402) {
-      throw new Error("AI 服務額度已用盡，請至工作區設定加值");
-    }
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("AI gateway error", res.status, body);
-      throw new Error(`AI 服務錯誤（${res.status}）`);
-    }
-
-    const json = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const content = json.choices?.[0]?.message?.content ?? "";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      console.error("AI return not JSON", content.slice(0, 500));
-      throw new Error("AI 回傳格式錯誤，請改用更清楚的照片再試一次");
-    }
-
-    const itemsRaw =
-      (parsed as { items?: unknown[] }).items ??
-      (Array.isArray(parsed) ? (parsed as unknown[]) : []);
-
-    const items: ScannedItem[] = [];
-    for (const it of itemsRaw) {
-      const r = ItemSchema.safeParse(it);
-      if (r.success && r.data.name?.trim()) items.push(r.data);
-    }
-
-    return { items };
   });
