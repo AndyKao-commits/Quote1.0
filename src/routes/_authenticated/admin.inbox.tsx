@@ -191,11 +191,17 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const getFn = useServerFn(adminGetRoomMessages);
   const replyFn = useServerFn(adminPostReply);
   const takeoverFn = useServerFn(adminTakeoverRoom);
+  const markReadFn = useServerFn(adminMarkRoomRead);
   const cannedQ = useCannedResponses(true);
   const [reply, setReply] = useState("");
   const [showCanned, setShowCanned] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const cannedList = useMemo(() => {
+    const dbItems = (cannedQ.data ?? []).map((c) => ({ id: c.id, title: c.title, content: c.content }));
+    return [...dbItems, ...DEFAULT_CANNED];
+  }, [cannedQ.data]);
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["inbox-room", room.user_id],
