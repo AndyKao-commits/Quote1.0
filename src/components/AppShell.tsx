@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Plus, User, MessageCircle, Shield, Inbox, Users } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, User, MessageCircle, Shield, Inbox, Users, ShoppingBag } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useProfile, useSupportUnreadCount } from "@/lib/db";
@@ -33,6 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink to="/support" label="AI 客服" icon={<MessageCircle className="h-4 w-4" />} active={isActive("/support")} />
             {isAdmin && (
               <>
+                <NavLink to="/shop" label="商店" icon={<ShoppingBag className="h-4 w-4" />} active={isActive("/shop")} />
                 <NavLink to="/admin" label="管理員" icon={<Shield className="h-4 w-4" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
                 <NavLink
                   to="/admin/inbox"
@@ -68,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <BottomLink to="/team" label="團隊" icon={<Users className="h-5 w-5" />} active={isActive("/team")} />
           {isAdmin && (
             <>
+              <BottomLink to="/shop" label="商店" icon={<ShoppingBag className="h-5 w-5" />} active={isActive("/shop")} />
               <BottomLink to="/admin" label="管理員" icon={<Shield className="h-5 w-5" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
               <BottomLink
                 to="/admin/inbox"
