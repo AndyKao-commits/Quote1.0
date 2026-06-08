@@ -54,15 +54,18 @@ function ProjectDetail() {
   const removeProject = useDeleteProject();
   const removeLog = useDeleteLog(id);
   const removePhoto = useDeletePhoto(id);
+  const removePhotos = useDeletePhotos(id);
   const updatePhotoNote = useUpdatePhotoNote(id);
   const removeMaterial = useDeleteMaterial(id);
 
   const [tab, setTab] = useState<Tab>("logs");
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
   const [photoFilter, setPhotoFilter] = useState<PhotoCategory | "all">("all");
-  const [confirmDelete, setConfirmDelete] = useState<null | { kind: "project" } | { kind: "log"; id: string } | { kind: "photo"; photo: Photo } | { kind: "material"; id: string }>(null);
+  const [confirmDelete, setConfirmDelete] = useState<null | { kind: "project" } | { kind: "log"; id: string } | { kind: "photo"; photo: Photo } | { kind: "photos"; photos: Photo[] } | { kind: "material"; id: string }>(null);
   const [editNote, setEditNote] = useState<{ id: string; note: string } | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   if (isLoading) return <AppShell><div className="p-10 text-center text-sm text-muted-foreground">載入中…</div></AppShell>;
   if (!project) throw notFound();
