@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Plus, Wrench, User } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, Wrench, User, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useProfile } from "@/lib/db";
@@ -27,6 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="hidden items-center gap-1 md:flex">
             <NavLink to="/dashboard" label="儀表板" icon={<LayoutDashboard className="h-4 w-4" />} active={isActive("/dashboard")} />
             <NavLink to="/projects" label="案件" icon={<FolderKanban className="h-4 w-4" />} active={isActive("/projects")} />
+            <NavLink to="/support" label="AI 客服" icon={<MessageCircle className="h-4 w-4" />} active={isActive("/support")} />
             <NavLink to="/profile" label="個人" icon={<User className="h-4 w-4" />} active={isActive("/profile")} />
           </nav>
           <div className="flex items-center gap-2">
@@ -48,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <BottomLink to="/dashboard" label="儀表板" icon={<LayoutDashboard className="h-5 w-5" />} active={pathname === "/dashboard"} />
           <BottomLink to="/projects" label="案件" icon={<FolderKanban className="h-5 w-5" />} active={isActive("/projects") && !pathname.startsWith("/projects/new")} />
           <BottomLink to="/projects/new" label="新增" icon={<Plus className="h-5 w-5" />} active={pathname === "/projects/new"} primary />
+          <BottomLink to="/support" label="客服" icon={<MessageCircle className="h-5 w-5" />} active={isActive("/support")} />
           <BottomLink to="/profile" label="個人" icon={<User className="h-5 w-5" />} active={isActive("/profile")} />
         </div>
       </nav>
