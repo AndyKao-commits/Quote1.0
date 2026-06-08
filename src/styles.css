@@ -137,7 +137,26 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    max-width: 100vw;
   }
+  img, video, canvas, svg {
+    max-width: 100%;
+    height: auto;
+  }
+  /* Mobile: prevent any element from forcing horizontal scroll */
+  @media (max-width: 767px) {
+    main, section, article, header, footer, div {
+      max-width: 100%;
+    }
+    pre, code {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  }
+  /* Hide scrollbar utility for horizontal scroll containers */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.01em;

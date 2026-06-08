@@ -72,26 +72,26 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const OG_IMAGE = "https://dowaterlightout.lovable.app/__l5e/assets-v1/a9041427-f29f-4059-9f5a-287f8afef350/og-cover.jpg";
+const OG_IMAGE = "https://dowaterlightout.lovable.app/__l5e/assets-v1/c62d5eac-df5a-4cbb-833a-1d40eefaeb0e/og-tech.jpg";
+const OG_DESC = "現場施工紀錄、案件管理、施工日誌、照片浮水印與 PDF 報告，一站搞定。";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "水電施工紀錄 PRO — 工程案件、施工日誌、照片浮水印、PDF 報告" },
-      { name: "description", content: "專為水電師傅打造的施工紀錄 App。案件管理、施工日誌、照片自動加浮水印，一個地方搞定。" },
-      { name: "author", content: "水電施工紀錄 PRO" },
-      { property: "og:title", content: "水電施工紀錄 PRO" },
-      { property: "og:description", content: "專為水電師傅打造的施工紀錄 App。案件管理、施工日誌、照片自動加浮水印，一個地方搞定。" },
+      { title: "施工紀錄 PRO — 案件管理、施工日誌、PDF 報告" },
+      { name: "description", content: OG_DESC },
+      { name: "author", content: "施工紀錄 PRO" },
+      { property: "og:title", content: "施工紀錄 PRO" },
+      { property: "og:description", content: OG_DESC },
       { property: "og:type", content: "website" },
       { property: "og:image", content: OG_IMAGE },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "水電施工紀錄 PRO" },
-      { name: "twitter:description", content: "專為水電師傅打造的施工紀錄 App。案件管理、施工日誌、照片自動加浮水印，一個地方搞定。" },
+      { name: "twitter:title", content: "施工紀錄 PRO" },
+      { name: "twitter:description", content: OG_DESC },
       { name: "twitter:image", content: OG_IMAGE },
     ],
     links: [
