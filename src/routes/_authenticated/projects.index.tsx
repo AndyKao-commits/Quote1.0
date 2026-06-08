@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Search, Plus, ClipboardList } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Plus, ClipboardList, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useProjects } from "@/lib/db";
+import { listMyTeams, type Team } from "@/lib/teams.functions";
+
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   head: () => ({ meta: [{ title: "案件管理 — 現場紀錄" }] }),
