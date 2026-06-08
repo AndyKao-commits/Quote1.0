@@ -19,6 +19,7 @@ import { useCannedResponses } from "@/lib/canned";
 import { SupportImage } from "@/components/SupportImage";
 import { SupportPhotoButton } from "@/components/SupportPhotoButton";
 import { toast } from "sonner";
+import { IdleAutoRevertBanner } from "@/components/IdleAutoRevertBanner";
 
 const DEFAULT_CANNED = [
   { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
@@ -235,21 +236,23 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
     onError: (e: Error) => alert(e.message),
   });
 
+  // `enable` here is the DESIRED new ai_enabled state we want to set.
+  // - currently AI on  → click "接手對話" → want AI off → mutate(false)
+  // - currently AI off → click "交還 AI"  → want AI on  → mutate(true)
   const takeoverMut = useMutation({
-    mutationFn: (enable: boolean) =>
-      takeoverFn({ data: { targetUserId: room.user_id, enable } }),
-    onSuccess: (_d, enable) => {
+    mutationFn: (newAiEnabled: boolean) =>
+      takeoverFn({ data: { targetUserId: room.user_id, enable: newAiEnabled } }),
+    onSuccess: (_d, newAiEnabled) => {
       qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
       qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
-      // `enable` is the PREVIOUS ai_enabled state we sent in; toggling means new state is !enable
-      if (enable) {
-        toast.success("已接手對話", { description: "AI 自動回覆已暫停，由您接手回覆" });
+      if (newAiEnabled) {
+        toast.success("已交還 AI 小幫手", { description: "AI 已重新啟用，將自動回覆使用者" });
       } else {
-        toast.success("已交還 AI", { description: "AI 小幫手已重新啟用，將自動回覆使用者" });
+        toast.success("已接手對話", { description: "AI 自動回覆已暫停，由您接手回覆（5 分鐘閒置會自動切回 AI）" });
       }
     },
     onError: (e: Error) => {
-      toast.error("切換失敗", { description: e.message });
+      toast.error("切換失敗", { description: e.message || "請稍後再試" });
     },
   });
 
@@ -314,7 +317,7 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
         </button>
         <button
           type="button"
-          onClick={() => takeoverMut.mutate(room.ai_enabled)}
+          onClick={() => takeoverMut.mutate(!room.ai_enabled)}
           disabled={takeoverMut.isPending}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide shadow-md transition disabled:opacity-60 ${
             room.ai_enabled
@@ -330,6 +333,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
 
       {/* Body */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4">
+        {!room.ai_enabled && (
+          <IdleAutoRevertBanner
+            aiEnabled={room.ai_enabled}
+            takeoverAt={
+              (messages as any[]).slice().reverse().find((m) => m.takeover_at)?.takeover_at ?? null
+            }
+            lastActivityAt={(messages as any[])[(messages as any[]).length - 1]?.created_at ?? null}
+          />
+        )}
         {isLoading ? (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />

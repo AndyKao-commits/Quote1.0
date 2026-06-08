@@ -10,6 +10,7 @@ import { useProfile } from "@/lib/db";
 import { Avatar } from "@/components/Avatar";
 import { SupportImage } from "@/components/SupportImage";
 import { SupportPhotoButton } from "@/components/SupportPhotoButton";
+import { IdleAutoRevertBanner } from "@/components/IdleAutoRevertBanner";
 
 export const Route = createFileRoute("/_authenticated/support")({
   head: () => ({ meta: [{ title: "AI 客服 — 施工紀錄 PRO" }] }),
@@ -26,6 +27,7 @@ interface Msg {
   created_at: string;
   replied_at: string | null;
   ai_enabled: boolean;
+  takeover_at: string | null;
 }
 
 type Bubble =
@@ -109,6 +111,11 @@ function SupportPage() {
   });
 
   const bubbles = useMemo(() => buildBubbles(rows), [rows]);
+  const latest = rows[rows.length - 1];
+  const aiEnabled = latest ? latest.ai_enabled !== false : true;
+  const takeoverAt =
+    [...rows].reverse().find((r) => r.takeover_at)?.takeover_at ?? null;
+  const lastActivityAt = latest?.created_at ?? null;
 
   const mut = useMutation({
     mutationFn: (question: string) => askFn({ data: { question } }),
@@ -151,6 +158,15 @@ function SupportPage() {
             </div>
           </div>
         </div>
+        {!aiEnabled && (
+          <div className="px-3 pt-2">
+            <IdleAutoRevertBanner
+              aiEnabled={aiEnabled}
+              takeoverAt={takeoverAt}
+              lastActivityAt={lastActivityAt}
+            />
+          </div>
+        )}
         <ChatBody
           scrollRef={scrollRef}
           isLoading={isLoading}
@@ -182,6 +198,15 @@ function SupportPage() {
         </p>
 
         <div className="card-surface mt-6 flex h-[65vh] min-h-[480px] flex-col overflow-hidden">
+          {!aiEnabled && (
+            <div className="px-4 pt-3">
+              <IdleAutoRevertBanner
+                aiEnabled={aiEnabled}
+                takeoverAt={takeoverAt}
+                lastActivityAt={lastActivityAt}
+              />
+            </div>
+          )}
           <ChatBody
             scrollRef={scrollRef}
             isLoading={isLoading}

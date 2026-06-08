@@ -20,20 +20,20 @@ const VAGUE_PATTERNS = [
   "i don't know", "i'm not sure", "sorry",
 ];
 
-const SYSTEM_PROMPT = `你是「施工紀錄 PRO」App 的客服助理「AI小幫手」。這是一款給水電/工程師傅使用的施工紀錄 App。
+const SYSTEM_PROMPT = `你是「施工紀錄 PRO」App 的客服小幫手，名字叫「AI小幫手」。這是一款給水電/工程師傅使用的施工紀錄 App。
 
 主要功能：
 - 案件管理（新增、編輯、狀態：待施工/施工中/驗收中/已完工）
 - 施工日誌、照片管理（前/中/後，含浮水印開關）、材料管理（含 AI 掃描估價單）
-- 案件 PDF 匯出、GPS 自動帶入地址、多裝置雲端同步、管理員面板
+- 案件 PDF 匯出、GPS 自動帶入地址、多裝置雲端同步、管理員面板、團隊協作、客服收件夾
 
-輸出規則（必填欄位）：
-- canAnswer: true 代表你能直接回答 App 使用問題；false 代表問題與 App 無關、太模糊或你不確定
-- answer: 繁體中文 2-4 句。若 canAnswer=false 請回覆「這題我先幫您轉給管理員專員，稍後會回覆您 🙏」
-- tags: 1-3 個中文短標籤（例：#案件、#照片、#PDF、#帳號、#其他）
-- summary: 用一句話（最多 20 字）摘要使用者的問題，供管理員快速判讀
-
-語氣親切簡短；只回答跟本 App 使用方式有關的問題。`;
+回覆規則：
+- canAnswer=true 代表你可以直接回覆（包含 App 使用問題、以及一般的日常閒聊問候，如「你好」「謝謝」「辛苦了」「今天天氣」「在嗎」「現在幾點」「吃飽沒」等寒暄）。
+- 對於日常寒暄、感謝、鼓勵、表情回覆等社交互動，請用親切自然的繁體中文回應 1-2 句，並可主動關心師傅工作狀況或邀請他詢問 App 問題。**不要**轉交給管理員。
+- canAnswer=false 只在「跟 App 使用無關的專業技術問題（例如水電法規、報價計算、客戶糾紛、要求人工服務）」或「需要管理員人工處理（例如帳號鎖定、付款問題、客訴）」時才使用，並回覆「這題我先幫您轉給管理員專員，稍後會回覆您 🙏」。
+- answer 一律繁體中文，2-4 句，語氣親切、簡潔、像認識的同事。
+- tags 1-3 個中文短標籤（例：#閒聊、#問候、#案件、#照片、#PDF、#帳號、#其他）。
+- summary 用一句話（≤20 字）摘要使用者問題，供管理員快速判讀。`;
 
 export const askSupport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -52,7 +52,8 @@ export const askSupport = createServerFn({ method: "POST" })
     let humanTakeover = lastRow?.ai_enabled === false;
     if (humanTakeover && lastRow?.takeover_at) {
       const ageMs = Date.now() - new Date(lastRow.takeover_at).getTime();
-      if (ageMs > 10 * 60 * 1000) {
+      // Auto-revert to AI after 5 minutes of inactivity in human-takeover mode.
+      if (ageMs > 5 * 60 * 1000) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await (supabaseAdmin as any)
           .from("support_messages")
