@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Wrench, Camera, ClipboardList, FileDown, ArrowRight, Cloud } from "lucide-react";
+import { Marquee } from "@/components/Marquee";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,6 +49,7 @@ function Landing() {
               進入系統 <ArrowRight className="h-5 w-5" />
             </Link>
           </div>
+          <Marquee />
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
