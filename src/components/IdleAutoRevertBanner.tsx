@@ -25,10 +25,12 @@ export function IdleAutoRevertBanner({
     return () => clearInterval(t);
   }, []);
 
+  // Only show when admin has explicitly taken over (takeoverAt is set).
   if (aiEnabled) return null;
-  const anchorIso = lastActivityAt ?? takeoverAt;
-  if (!anchorIso) return null;
-  const anchor = new Date(anchorIso).getTime();
+  if (!takeoverAt) return null;
+  const takeover = new Date(takeoverAt).getTime();
+  const lastAct = lastActivityAt ? new Date(lastActivityAt).getTime() : takeover;
+  const anchor = Math.max(takeover, lastAct);
   const limitMs = 5 * 60 * 1000;
   const remainMs = Math.max(0, anchor + limitMs - now);
   const sec = Math.ceil(remainMs / 1000);
