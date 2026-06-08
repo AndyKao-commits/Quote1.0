@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ArrowLeft, Phone, MapPin, Calendar, Trash2, ClipboardList, Camera, Info,
-  Clock, User, Image as ImageIcon, Package, ScanLine, FileDown, Loader2, Pencil, Users, Check, X,
+  Clock, User, Image as ImageIcon, Package, ScanLine, FileDown, Loader2, Pencil, Users, Check, X, Square, CheckSquare,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -14,7 +14,7 @@ import { PhotoImage } from "@/components/PhotoImage";
 import { QuoteScanner, ManualMaterialForm } from "@/components/QuoteScanner";
 import {
   useProject, useLogs, usePhotos, useMaterials,
-  useSaveProject, useDeleteProject, useDeleteLog, useDeletePhoto, useDeleteMaterial,
+  useSaveProject, useDeleteProject, useDeleteLog, useDeletePhoto, useDeletePhotos, useDeleteMaterial,
   useUpdatePhotoNote, getPhotoUrl,
   statusLabel, type ProjectStatus, type PhotoCategory, type Photo, type Project,
 } from "@/lib/db";
