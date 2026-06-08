@@ -1,0 +1,1 @@
+ALTER TABLE public.support_messages ALTER COLUMN question DROP NOT NULL;

@@ -217,7 +217,7 @@ export type Database = {
           ai_enabled: boolean
           created_at: string
           id: string
-          question: string
+          question: string | null
           replied_at: string | null
           status: string
           summary: string | null
@@ -231,7 +231,7 @@ export type Database = {
           ai_enabled?: boolean
           created_at?: string
           id?: string
-          question: string
+          question?: string | null
           replied_at?: string | null
           status?: string
           summary?: string | null
@@ -245,7 +245,7 @@ export type Database = {
           ai_enabled?: boolean
           created_at?: string
           id?: string
-          question?: string
+          question?: string | null
           replied_at?: string | null
           status?: string
           summary?: string | null
