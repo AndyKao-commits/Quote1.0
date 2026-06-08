@@ -8,9 +8,9 @@ import { Marquee } from "@/components/Marquee";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "水電施工紀錄 PRO — 工程案件、施工日誌、照片浮水印、PDF 報告" },
-      { name: "description", content: "專為水電師傅打造的施工紀錄 App。案件管理、施工日誌、照片自動加浮水印，一個地方搞定。" },
-      { property: "og:title", content: "水電施工紀錄 PRO" },
+      { title: "施工紀錄 PRO — 案件管理、施工日誌、PDF 報告" },
+      { name: "description", content: "現場施工紀錄、案件管理、施工日誌、照片浮水印與 PDF 報告，一站搞定。" },
+      { property: "og:title", content: "施工紀錄 PRO" },
       { property: "og:description", content: "案件管理、施工日誌、照片浮水印、PDF 報告，雲端同步不遺失。" },
     ],
   }),
