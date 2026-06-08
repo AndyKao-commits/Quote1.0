@@ -198,6 +198,15 @@ function SupportPage() {
         </p>
 
         <div className="card-surface mt-6 flex h-[65vh] min-h-[480px] flex-col overflow-hidden">
+          {!aiEnabled && (
+            <div className="px-4 pt-3">
+              <IdleAutoRevertBanner
+                aiEnabled={aiEnabled}
+                takeoverAt={takeoverAt}
+                lastActivityAt={lastActivityAt}
+              />
+            </div>
+          )}
           <ChatBody
             scrollRef={scrollRef}
             isLoading={isLoading}
