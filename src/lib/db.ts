@@ -257,6 +257,25 @@ export function useSavePhoto() {
   });
 }
 
+export function useDeletePhotos(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (photos: Photo[]) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("未登入");
+      const paths = photos.map((p) => p.storage_path);
+      const ids = photos.map((p) => p.id);
+      if (paths.length) {
+        const { error: storageErr } = await supabase.storage.from("photos").remove(paths);
+        if (storageErr) throw storageErr;
+      }
+      const { error } = await supabase.from("photos").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["photos", projectId] }),
+  });
+}
+
 export function useDeletePhoto(projectId: string) {
   const qc = useQueryClient();
   return useMutation({

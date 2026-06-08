@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ArrowLeft, Phone, MapPin, Calendar, Trash2, ClipboardList, Camera, Info,
-  Clock, User, Image as ImageIcon, Package, ScanLine, FileDown, Loader2, Pencil, Users, Check, X,
+  Clock, User, Image as ImageIcon, Package, ScanLine, FileDown, Loader2, Pencil, Users, Check, X, Square, CheckSquare,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -14,7 +14,7 @@ import { PhotoImage } from "@/components/PhotoImage";
 import { QuoteScanner, ManualMaterialForm } from "@/components/QuoteScanner";
 import {
   useProject, useLogs, usePhotos, useMaterials,
-  useSaveProject, useDeleteProject, useDeleteLog, useDeletePhoto, useDeleteMaterial,
+  useSaveProject, useDeleteProject, useDeleteLog, useDeletePhoto, useDeletePhotos, useDeleteMaterial,
   useUpdatePhotoNote, getPhotoUrl,
   statusLabel, type ProjectStatus, type PhotoCategory, type Photo, type Project,
 } from "@/lib/db";
@@ -54,15 +54,18 @@ function ProjectDetail() {
   const removeProject = useDeleteProject();
   const removeLog = useDeleteLog(id);
   const removePhoto = useDeletePhoto(id);
+  const removePhotos = useDeletePhotos(id);
   const updatePhotoNote = useUpdatePhotoNote(id);
   const removeMaterial = useDeleteMaterial(id);
 
   const [tab, setTab] = useState<Tab>("logs");
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
   const [photoFilter, setPhotoFilter] = useState<PhotoCategory | "all">("all");
-  const [confirmDelete, setConfirmDelete] = useState<null | { kind: "project" } | { kind: "log"; id: string } | { kind: "photo"; photo: Photo } | { kind: "material"; id: string }>(null);
+  const [confirmDelete, setConfirmDelete] = useState<null | { kind: "project" } | { kind: "log"; id: string } | { kind: "photo"; photo: Photo } | { kind: "photos"; photos: Photo[] } | { kind: "material"; id: string }>(null);
   const [editNote, setEditNote] = useState<{ id: string; note: string } | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   if (isLoading) return <AppShell><div className="p-10 text-center text-sm text-muted-foreground">載入中…</div></AppShell>;
   if (!project) throw notFound();
@@ -183,22 +186,57 @@ function ProjectDetail() {
           <div className="space-y-4">
             <PhotoUploader project={project} />
 
-            <div className="flex flex-wrap items-center gap-1.5">
-              {([
-                { v: "all", label: `全部 ${allPhotos.length}` },
-                { v: "before", label: "施工前" },
-                { v: "during", label: "施工中" },
-                { v: "after", label: "完工後" },
-              ] as const).map((f) => (
-                <button
-                  key={f.v}
-                  onClick={() => setPhotoFilter(f.v as PhotoCategory | "all")}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    photoFilter === f.v ? "bg-foreground text-background" : "border border-border bg-card text-muted-foreground hover:bg-secondary"
-                  }`}
-                >{f.label}</button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {([
+                  { v: "all", label: `全部 ${allPhotos.length}` },
+                  { v: "before", label: "施工前" },
+                  { v: "during", label: "施工中" },
+                  { v: "after", label: "完工後" },
+                ] as const).map((f) => (
+                  <button
+                    key={f.v}
+                    onClick={() => setPhotoFilter(f.v as PhotoCategory | "all")}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      photoFilter === f.v ? "bg-foreground text-background" : "border border-border bg-card text-muted-foreground hover:bg-secondary"
+                    }`}
+                  >{f.label}</button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setBatchMode((v) => !v); setSelectedIds(new Set()); }}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  batchMode ? "bg-destructive/10 text-destructive border border-destructive/30" : "border border-border bg-card text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                {batchMode ? "取消" : "批量選擇"}
+              </button>
             </div>
+
+            {batchMode && selectedIds.size > 0 && (
+              <div className="sticky top-0 z-30 flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-sm">
+                <span className="text-sm font-semibold">已選 {selectedIds.size} 張</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedIds(new Set(photos.map((p) => p.id)))}
+                    className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-secondary"
+                  >全選</button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-secondary"
+                  >清除</button>
+                  <button
+                    onClick={() => {
+                      const selectedPhotos = photos.filter((p) => selectedIds.has(p.id));
+                      if (selectedPhotos.length) setConfirmDelete({ kind: "photos", photos: selectedPhotos });
+                    }}
+                    className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    <Trash2 className="mr-1 inline h-3 w-3" />刪除
+                  </button>
+                </div>
+              </div>
+            )}
 
             {photos.length === 0 ? (
               <div className="card-surface p-8 text-center text-sm text-muted-foreground">
@@ -206,28 +244,56 @@ function ProjectDetail() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {photos.map((p, i) => (
-                  <div key={p.id} className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted">
-                    <button onClick={() => openLightbox(i)} className="block h-full w-full">
-                      <PhotoImage path={p.storage_path} alt={p.note ?? ""} className="h-full w-full object-cover transition group-hover:scale-105" />
-                    </button>
-                    <span className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      {p.category === "before" ? "前" : p.category === "during" ? "中" : "後"}
-                    </span>
-                    <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-                      <button onClick={() => setEditNote({ id: p.id, note: p.note ?? "" })} className="rounded-md bg-black/55 p-1 text-white">
-                        <Pencil className="h-3.5 w-3.5" />
+                {photos.map((p, i) => {
+                  const isSelected = selectedIds.has(p.id);
+                  return (
+                    <div key={p.id} className={`group relative aspect-square overflow-hidden rounded-xl border bg-muted ${batchMode && isSelected ? "border-primary ring-2 ring-primary" : "border-border"}`}>
+                      <button
+                        onClick={() => {
+                          if (batchMode) {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                              return next;
+                            });
+                          } else {
+                            openLightbox(i);
+                          }
+                        }}
+                        className="block h-full w-full"
+                      >
+                        <PhotoImage path={p.storage_path} alt={p.note ?? ""} className={`h-full w-full object-cover transition ${batchMode ? "" : "group-hover:scale-105"}`} />
                       </button>
-                      <button onClick={() => setConfirmDelete({ kind: "photo", photo: p })} className="rounded-md bg-black/55 p-1 text-white">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {batchMode ? (
+                        <div className="absolute left-1.5 top-1.5">
+                          {isSelected ? (
+                            <CheckSquare className="h-5 w-5 text-primary drop-shadow-sm" />
+                          ) : (
+                            <Square className="h-5 w-5 text-white/80 drop-shadow-sm" />
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            {p.category === "before" ? "前" : p.category === "during" ? "中" : "後"}
+                          </span>
+                          <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
+                            <button onClick={() => setEditNote({ id: p.id, note: p.note ?? "" })} className="rounded-md bg-black/55 p-1 text-white">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => setConfirmDelete({ kind: "photo", photo: p })} className="rounded-md bg-black/55 p-1 text-white">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
-            {photoIndex !== null && (
+            {photoIndex !== null && !batchMode && (
               <LightboxLoader photos={photos} index={photoIndex} setIndex={setPhotoIndex} />
             )}
           </div>
@@ -298,11 +364,13 @@ function ProjectDetail() {
               {confirmDelete?.kind === "project" && "確定刪除此案件？"}
               {confirmDelete?.kind === "log" && "確定刪除這筆日誌？"}
               {confirmDelete?.kind === "photo" && "確定刪除此照片？"}
+              {confirmDelete?.kind === "photos" && `確定刪除 ${confirmDelete.photos.length} 張照片？`}
               {confirmDelete?.kind === "material" && "確定刪除這項材料？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete?.kind === "project" && `「${project.name}」的所有日誌、照片、材料都會被一併刪除，且無法復原。`}
-              {confirmDelete?.kind !== "project" && "此操作無法復原。"}
+              {confirmDelete?.kind === "photos" && "這些照片將從雲端永久移除，無法復原。"}
+              {confirmDelete?.kind !== "project" && confirmDelete?.kind !== "photos" && "此操作無法復原。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -317,6 +385,9 @@ function ProjectDetail() {
                   await removeLog.mutateAsync(confirmDelete.id);
                 } else if (confirmDelete.kind === "photo") {
                   await removePhoto.mutateAsync(confirmDelete.photo);
+                } else if (confirmDelete.kind === "photos") {
+                  await removePhotos.mutateAsync(confirmDelete.photos);
+                  setSelectedIds(new Set());
                 } else if (confirmDelete.kind === "material") {
                   await removeMaterial.mutateAsync(confirmDelete.id);
                 }
