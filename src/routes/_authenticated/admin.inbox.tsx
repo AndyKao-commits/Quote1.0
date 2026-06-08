@@ -193,6 +193,7 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const qc = useQueryClient();
   const getFn = useServerFn(adminGetRoomMessages);
   const replyFn = useServerFn(adminPostReply);
+  const imgFn = useServerFn(adminPostImage);
   const takeoverFn = useServerFn(adminTakeoverRoom);
   const markReadFn = useServerFn(adminMarkRoomRead);
   const cannedQ = useCannedResponses(true);
@@ -200,6 +201,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const [showCanned, setShowCanned] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const imgMut = useMutation({
+    mutationFn: (path: string) => imgFn({ data: { targetUserId: room.user_id, path } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
 
   const cannedList = useMemo(() => {
     const dbItems = (cannedQ.data ?? []).map((c) => ({ id: c.id, title: c.title, content: c.content }));
