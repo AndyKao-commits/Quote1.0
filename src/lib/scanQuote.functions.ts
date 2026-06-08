@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const InputSchema = z.object({
@@ -43,6 +44,7 @@ const SYSTEM_PROMPT = `你是專業的水電工程估價單辨識助理。
 { "items": [ { "name": "...", "brand": "...", "unit": "...", "quantity": 0, "unitPrice": 0, "note": "" } ] }`;
 
 export const scanQuote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
