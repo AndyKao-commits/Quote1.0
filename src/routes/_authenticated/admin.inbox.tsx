@@ -378,6 +378,10 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           >
             罐頭 <ChevronDown className="h-3 w-3" />
           </button>
+          <SupportPhotoButton
+            customerUserId={room.user_id}
+            onUploaded={(path) => imgMut.mutateAsync(path)}
+          />
           <textarea
             ref={taRef}
             value={reply}
