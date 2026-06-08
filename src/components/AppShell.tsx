@@ -69,12 +69,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             icon={<MessageCircle className="h-5 w-5" />}
             active={isActive("/support")}
           />
+          {isAdmin && (
+            <BottomLink
+              to="/admin/inbox"
+              label="收件夾"
+              icon={<Inbox className="h-5 w-5" />}
+              active={isActive("/admin/inbox")}
+              badge={unread > 0 ? unread : undefined}
+            />
+          )}
           <BottomLink
             to="/profile"
             label="個人"
             icon={<User className="h-5 w-5" />}
-            active={isActive("/profile")}
-            badge={isAdmin && unread > 0 ? unread : undefined}
+            active={isActive("/profile") || (!isAdmin && isActive("/admin"))}
           />
         </div>
       </nav>
