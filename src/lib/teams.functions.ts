@@ -14,11 +14,20 @@ export interface Team {
 export interface TeamMember {
   user_id: string;
   role: "owner" | "editor" | "viewer";
+  level: number; // 1-4 permission tier (1=瀏覽業主, 2=工人, 3=工地主任, 4=副管理員)
   display_name: string | null;
   email: string;
   avatar_url: string | null;
   created_at: string;
 }
+
+export const LEVEL_META: Record<number, { label: string; desc: string }> = {
+  1: { label: "L1 業主／瀏覽", desc: "唯讀，可瀏覽團隊案件" },
+  2: { label: "L2 工人", desc: "瀏覽 + 新增施工日誌" },
+  3: { label: "L3 工地主任", desc: "可新增與編輯團隊案件" },
+  4: { label: "L4 副管理員", desc: "近主持人權限" },
+};
+
 
 async function isTeamOwner(supabase: any, teamId: string, userId: string) {
   const { data } = await supabase.from("teams").select("owner_id").eq("id", teamId).maybeSingle();
