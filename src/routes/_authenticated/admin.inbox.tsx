@@ -1,10 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Loader2, Shield, ArrowLeft, Send, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  Inbox, Loader2, Shield, ArrowLeft, Send, CheckCircle2, AlertTriangle, Tag, Plus, Trash2,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
+import { useCannedResponses, useSaveCanned, useDeleteCanned } from "@/lib/canned";
 
 export const Route = createFileRoute("/_authenticated/admin/inbox")({
   head: () => ({ meta: [{ title: "客服收件夾 — 現場紀錄" }] }),
@@ -18,6 +21,8 @@ interface Row {
   ai_answer: string | null;
   admin_reply: string | null;
   status: string;
+  tags: string[] | null;
+  summary: string | null;
   created_at: string;
   replied_at: string | null;
 }
@@ -56,10 +61,17 @@ function InboxPage() {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["support-inbox"] });
+      qc.invalidateQueries({ queryKey: ["support-unread-count"] });
       setReplyDraft((p) => ({ ...p, [vars.id]: "" }));
     },
     onError: (e: Error) => alert(e.message),
   });
+
+  const cannedQ = useCannedResponses(isAdmin === true);
+  const saveCanned = useSaveCanned();
+  const delCanned = useDeleteCanned();
+  const [cTitle, setCTitle] = useState("");
+  const [cContent, setCContent] = useState("");
 
   if (checking) {
     return (
@@ -88,7 +100,55 @@ function InboxPage() {
           </span>
         )}
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">使用者透過 AI 客服送出的問題，AI 無法回答時會自動轉到這裡。</p>
+
+      <section className="card-surface mt-4 p-4">
+        <h2 className="text-sm font-bold">罐頭回覆模板</h2>
+        <p className="mt-1 text-xs text-muted-foreground">常用回覆，點擊即可代入下方對話的回覆框。</p>
+        <form
+          className="mt-3 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const t = cTitle.trim(); const c = cContent.trim();
+            if (!t || !c) return;
+            saveCanned.mutate({ title: t, content: c }, {
+              onSuccess: () => { setCTitle(""); setCContent(""); },
+              onError: (err: Error) => alert(err.message),
+            });
+          }}
+        >
+          <input className={inp} placeholder="標題（如：感謝來信）" value={cTitle} onChange={(e) => setCTitle(e.target.value)} />
+          <input className={inp} placeholder="內容…" value={cContent} onChange={(e) => setCContent(e.target.value)} />
+          <button
+            type="submit"
+            disabled={saveCanned.isPending}
+            className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:brightness-110 disabled:opacity-60"
+          >
+            <Plus className="h-3.5 w-3.5" /> 新增
+          </button>
+        </form>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(cannedQ.data ?? []).length === 0 && (
+            <span className="text-xs text-muted-foreground">尚無罐頭回覆</span>
+          )}
+          {(cannedQ.data ?? []).map((c) => (
+            <div key={c.id} className="group inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 py-1 pl-3 pr-1 text-xs">
+              <span className="font-semibold">{c.title}</span>
+              <button
+                type="button"
+                title="刪除"
+                onClick={() => {
+                  if (confirm(`刪除模板「${c.title}」？`)) {
+                    delCanned.mutate(c.id);
+                  }
+                }}
+                className="grid h-5 w-5 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="mt-4 flex gap-2">
         <button
@@ -136,6 +196,21 @@ function InboxPage() {
                 )}
               </div>
 
+              {(r.tags?.length || r.summary) && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                  {r.summary && (
+                    <span className="rounded-md bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+                      📝 {r.summary}
+                    </span>
+                  )}
+                  {r.tags?.map((t) => (
+                    <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 font-semibold text-muted-foreground">
+                      <Tag className="h-3 w-3" /> {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div className="mt-2 rounded-lg bg-secondary p-3 text-sm">
                 <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">使用者問題</div>
                 <div className="whitespace-pre-wrap">{r.question}</div>
@@ -154,22 +229,38 @@ function InboxPage() {
                   <div className="whitespace-pre-wrap">{r.admin_reply}</div>
                 </div>
               ) : (
-                <div className="mt-3 flex items-end gap-2">
-                  <textarea
-                    value={replyDraft[r.id] ?? ""}
-                    onChange={(e) => setReplyDraft((p) => ({ ...p, [r.id]: e.target.value }))}
-                    placeholder="輸入回覆內容…"
-                    rows={2}
-                    className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                  <button
-                    disabled={replyMut.isPending || !replyDraft[r.id]?.trim()}
-                    onClick={() => replyMut.mutate({ id: r.id, reply: replyDraft[r.id].trim() })}
-                    className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
-                  >
-                    {replyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    回覆
-                  </button>
+                <div className="mt-3 space-y-2">
+                  {(cannedQ.data ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(cannedQ.data ?? []).map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setReplyDraft((p) => ({ ...p, [r.id]: c.content }))}
+                          className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold hover:bg-secondary"
+                        >
+                          {c.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={replyDraft[r.id] ?? ""}
+                      onChange={(e) => setReplyDraft((p) => ({ ...p, [r.id]: e.target.value }))}
+                      placeholder="輸入回覆內容…"
+                      rows={2}
+                      className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      disabled={replyMut.isPending || !replyDraft[r.id]?.trim()}
+                      onClick={() => replyMut.mutate({ id: r.id, reply: replyDraft[r.id].trim() })}
+                      className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
+                    >
+                      {replyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      回覆
+                    </button>
+                  </div>
                 </div>
               )}
             </li>
@@ -179,3 +270,5 @@ function InboxPage() {
     </AppShell>
   );
 }
+
+const inp = "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
