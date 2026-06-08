@@ -10,11 +10,14 @@ import {
   adminListInboxRooms,
   adminGetRoomMessages,
   adminPostReply,
+  adminPostImage,
   adminTakeoverRoom,
   adminMarkRoomRead,
   type InboxRoom,
 } from "@/lib/inbox.functions";
 import { useCannedResponses } from "@/lib/canned";
+import { SupportImage } from "@/components/SupportImage";
+import { SupportPhotoButton } from "@/components/SupportPhotoButton";
 
 const DEFAULT_CANNED = [
   { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
