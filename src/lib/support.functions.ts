@@ -39,6 +39,37 @@ export const askSupport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+
+    // Check if user is currently in "human takeover" mode (latest row has ai_enabled=false)
+    const { data: lastRow } = await (supabase as any)
+      .from("support_messages")
+      .select("ai_enabled")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const humanTakeover = lastRow?.ai_enabled === false;
+
+    if (humanTakeover) {
+      // Skip AI — queue directly to admin
+      const { data: row, error } = await (supabase as any)
+        .from("support_messages")
+        .insert({
+          user_id: userId,
+          question: data.question,
+          ai_answer: null,
+          status: "escalated",
+          ai_enabled: false,
+          tags: ["#真人接手"],
+          summary: data.question.slice(0, 20),
+        })
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return { id: row.id, status: "escalated", answer: "" };
+    }
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI 服務未設定");
 
@@ -69,7 +100,6 @@ export const askSupport = createServerFn({ method: "POST" })
       };
     }
 
-    // Keyword fallback: even if AI says canAnswer=true, downgrade if answer contains vague terms
     const ans = (result.answer || "").toLowerCase();
     const vague = VAGUE_PATTERNS.some((k) => ans.includes(k));
     const canAnswer = result.canAnswer && !vague;
@@ -78,7 +108,6 @@ export const askSupport = createServerFn({ method: "POST" })
     }
 
     const status = canAnswer ? "answered" : "escalated";
-    const { supabase, userId } = context;
     const { data: row, error } = await (supabase as any)
       .from("support_messages")
       .insert({

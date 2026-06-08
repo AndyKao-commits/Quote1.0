@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Plus, User, MessageCircle, Shield, Inbox } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Plus, User, MessageCircle, Shield, Inbox, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useProfile, useSupportUnreadCount } from "@/lib/db";
@@ -29,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="hidden items-center gap-1 md:flex">
             <NavLink to="/dashboard" label="儀表板" icon={<LayoutDashboard className="h-4 w-4" />} active={isActive("/dashboard")} />
             <NavLink to="/projects" label="案件" icon={<FolderKanban className="h-4 w-4" />} active={isActive("/projects")} />
+            <NavLink to="/team" label="團隊管理" icon={<Users className="h-4 w-4" />} active={isActive("/team")} />
             <NavLink to="/support" label="AI 客服" icon={<MessageCircle className="h-4 w-4" />} active={isActive("/support")} />
             {isAdmin && (
               <>

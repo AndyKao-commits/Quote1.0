@@ -1,274 +1,441 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Inbox, Loader2, Shield, ArrowLeft, Send, CheckCircle2, AlertTriangle, Tag, Plus, Trash2,
+  Inbox, Loader2, Send, ArrowLeft, Tag, Bot, UserCog, ChevronDown, MessageSquare, CircleUserRound,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Avatar } from "@/components/Avatar";
 import { useIsAdmin } from "@/lib/useIsAdmin";
-import { supabase } from "@/integrations/supabase/client";
-import { useCannedResponses, useSaveCanned, useDeleteCanned } from "@/lib/canned";
+import {
+  adminListInboxRooms,
+  adminGetRoomMessages,
+  adminPostReply,
+  adminTakeoverRoom,
+  type InboxRoom,
+} from "@/lib/inbox.functions";
+import { useCannedResponses } from "@/lib/canned";
 
 export const Route = createFileRoute("/_authenticated/admin/inbox")({
   head: () => ({ meta: [{ title: "客服收件夾 — 現場紀錄" }] }),
   component: InboxPage,
 });
 
-interface Row {
-  id: string;
-  user_id: string;
-  question: string;
-  ai_answer: string | null;
-  admin_reply: string | null;
-  status: string;
-  tags: string[] | null;
-  summary: string | null;
-  created_at: string;
-  replied_at: string | null;
+const TAG_COLORS = [
+  "bg-rose-500/15 text-rose-700 dark:text-rose-300",
+  "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+  "bg-pink-500/15 text-pink-700 dark:text-pink-300",
+];
+function tagColor(t: string) {
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
+  return TAG_COLORS[h % TAG_COLORS.length];
 }
 
 function InboxPage() {
   const nav = useNavigate();
-  const qc = useQueryClient();
   const { data: isAdmin, isLoading: checking } = useIsAdmin();
-  const [filter, setFilter] = useState<"escalated" | "all">("escalated");
-  const [replyDraft, setReplyDraft] = useState<Record<string, string>>({});
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!checking && isAdmin === false) nav({ to: "/profile" });
   }, [checking, isAdmin, nav]);
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["support-inbox", filter],
+  const listFn = useServerFn(adminListInboxRooms);
+  const { data: rooms = [], isLoading } = useQuery({
+    queryKey: ["inbox-rooms"],
     enabled: isAdmin === true,
     refetchInterval: 15000,
-    queryFn: async () => {
-      let q = supabase.from("support_messages").select("*").order("created_at", { ascending: false });
-      if (filter === "escalated") q = q.eq("status", "escalated");
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as Row[];
-    },
+    queryFn: () => listFn({}),
   });
 
-  const replyMut = useMutation({
-    mutationFn: async (args: { id: string; reply: string }) => {
-      const { error } = await supabase
-        .from("support_messages")
-        .update({ admin_reply: args.reply, status: "answered", replied_at: new Date().toISOString() })
-        .eq("id", args.id);
-      if (error) throw error;
-    },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["support-inbox"] });
-      qc.invalidateQueries({ queryKey: ["support-unread-count"] });
-      setReplyDraft((p) => ({ ...p, [vars.id]: "" }));
-    },
-    onError: (e: Error) => alert(e.message),
-  });
-
-  const cannedQ = useCannedResponses(isAdmin === true);
-  const saveCanned = useSaveCanned();
-  const delCanned = useDeleteCanned();
-  const [cTitle, setCTitle] = useState("");
-  const [cContent, setCContent] = useState("");
+  // auto-select first room on desktop
+  useEffect(() => {
+    if (!activeUserId && rooms.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
+      setActiveUserId(rooms[0].user_id);
+    }
+  }, [rooms, activeUserId]);
 
   if (checking) {
     return (
       <AppShell>
-        <div className="grid place-items-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <div className="grid place-items-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       </AppShell>
     );
   }
   if (!isAdmin) return null;
 
-  const pendingCount = rows.filter((r) => r.status === "escalated").length;
+  const activeRoom = rooms.find((r) => r.user_id === activeUserId) ?? null;
 
   return (
     <AppShell>
-      <div className="flex items-center gap-2">
-        <Link to="/admin" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <Shield className="h-6 w-6 text-primary" />
+      <div className="mb-3 flex items-center gap-2">
+        <Inbox className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">客服收件夾</h1>
-        {pendingCount > 0 && (
-          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="h-3 w-3" /> 待處理 {pendingCount}
-          </span>
-        )}
       </div>
 
-      <section className="card-surface mt-4 p-4">
-        <h2 className="text-sm font-bold">罐頭回覆模板</h2>
-        <p className="mt-1 text-xs text-muted-foreground">常用回覆，點擊即可代入下方對話的回覆框。</p>
-        <form
-          className="mt-3 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const t = cTitle.trim(); const c = cContent.trim();
-            if (!t || !c) return;
-            saveCanned.mutate({ title: t, content: c }, {
-              onSuccess: () => { setCTitle(""); setCContent(""); },
-              onError: (err: Error) => alert(err.message),
-            });
-          }}
+      <div className="card-surface flex h-[calc(100dvh-200px)] min-h-[480px] overflow-hidden md:h-[calc(100dvh-180px)]">
+        {/* Room list (35% desktop / full mobile when no room selected) */}
+        <aside
+          className={`${activeUserId ? "hidden md:flex" : "flex"} w-full flex-col border-r border-border md:w-[35%]`}
         >
-          <input className={inp} placeholder="標題（如：感謝來信）" value={cTitle} onChange={(e) => setCTitle(e.target.value)} />
-          <input className={inp} placeholder="內容…" value={cContent} onChange={(e) => setCContent(e.target.value)} />
-          <button
-            type="submit"
-            disabled={saveCanned.isPending}
-            className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:brightness-110 disabled:opacity-60"
-          >
-            <Plus className="h-3.5 w-3.5" /> 新增
-          </button>
-        </form>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(cannedQ.data ?? []).length === 0 && (
-            <span className="text-xs text-muted-foreground">尚無罐頭回覆</span>
-          )}
-          {(cannedQ.data ?? []).map((c) => (
-            <div key={c.id} className="group inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 py-1 pl-3 pr-1 text-xs">
-              <span className="font-semibold">{c.title}</span>
-              <button
-                type="button"
-                title="刪除"
-                onClick={() => {
-                  if (confirm(`刪除模板「${c.title}」？`)) {
-                    delCanned.mutate(c.id);
-                  }
-                }}
-                className="grid h-5 w-5 place-items-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="mt-4 flex gap-2">
-        <button
-          onClick={() => setFilter("escalated")}
-          className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-            filter === "escalated" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-          }`}
-        >
-          待處理
-        </button>
-        <button
-          onClick={() => setFilter("all")}
-          className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-            filter === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
-          }`}
-        >
-          全部
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">載入中…</div>
-      ) : rows.length === 0 ? (
-        <div className="card-surface mt-4 grid place-items-center p-10 text-center text-sm text-muted-foreground">
-          <div>
-            <Inbox className="mx-auto mb-2 h-8 w-8 opacity-60" />
-            {filter === "escalated" ? "沒有待處理的問題 🎉" : "尚無訊息"}
+          <div className="border-b border-border bg-muted/30 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            對話列表（{rooms.length}）
           </div>
-        </div>
-      ) : (
-        <ul className="mt-4 space-y-3">
-          {rows.map((r) => (
-            <li key={r.id} className="card-surface p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>使用者：{r.user_id.slice(0, 8)}…</span>
-                <span>{new Date(r.created_at).toLocaleString("zh-TW")}</span>
-                {r.status === "answered" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                    <CheckCircle2 className="h-3 w-3" /> 已回覆
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                    <AlertTriangle className="h-3 w-3" /> 待處理
-                  </span>
-                )}
+          {isLoading ? (
+            <div className="grid flex-1 place-items-center text-sm text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="grid flex-1 place-items-center px-6 text-center text-sm text-muted-foreground">
+              <div>
+                <Inbox className="mx-auto mb-2 h-8 w-8 opacity-60" />
+                還沒有任何對話
               </div>
-
-              {(r.tags?.length || r.summary) && (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                  {r.summary && (
-                    <span className="rounded-md bg-primary/10 px-2 py-0.5 font-semibold text-primary">
-                      📝 {r.summary}
-                    </span>
-                  )}
-                  {r.tags?.map((t) => (
-                    <span key={t} className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 font-semibold text-muted-foreground">
-                      <Tag className="h-3 w-3" /> {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="mt-2 rounded-lg bg-secondary p-3 text-sm">
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">使用者問題</div>
-                <div className="whitespace-pre-wrap">{r.question}</div>
-              </div>
-
-              {r.ai_answer && (
-                <div className="mt-2 rounded-lg border border-dashed border-border p-3 text-sm">
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI 自動回覆</div>
-                  <div className="whitespace-pre-wrap text-muted-foreground">{r.ai_answer}</div>
-                </div>
-              )}
-
-              {r.admin_reply ? (
-                <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">管理員回覆</div>
-                  <div className="whitespace-pre-wrap">{r.admin_reply}</div>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  {(cannedQ.data ?? []).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {(cannedQ.data ?? []).map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setReplyDraft((p) => ({ ...p, [r.id]: c.content }))}
-                          className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold hover:bg-secondary"
-                        >
-                          {c.title}
-                        </button>
-                      ))}
+            </div>
+          ) : (
+            <ul className="flex-1 divide-y divide-border overflow-y-auto">
+              {rooms.map((r) => (
+                <li key={r.user_id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveUserId(r.user_id)}
+                    className={`flex w-full items-start gap-3 px-3 py-3 text-left transition hover:bg-secondary/60 ${
+                      activeUserId === r.user_id ? "bg-secondary" : ""
+                    }`}
+                  >
+                    <Avatar name={r.display_name ?? r.email ?? "?"} path={r.avatar_url} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-bold">
+                          {r.display_name || r.email || r.user_id.slice(0, 8)}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatTime(r.last_message_at)}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <p className="flex-1 truncate text-xs text-muted-foreground">
+                          {r.last_message === "__TRANSFER_NOTICE__" ? "（系統提示）" : r.last_message}
+                        </p>
+                        {r.unread_count > 0 && (
+                          <span className="grid min-w-[18px] place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                            {r.unread_count > 99 ? "99+" : r.unread_count}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        {!r.ai_enabled && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                            <UserCog className="h-2.5 w-2.5" /> 真人接手
+                          </span>
+                        )}
+                        {r.tags.slice(0, 3).map((t) => (
+                          <span key={t} className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${tagColor(t)}`}>
+                            <Tag className="h-2.5 w-2.5" /> {t}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  )}
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      value={replyDraft[r.id] ?? ""}
-                      onChange={(e) => setReplyDraft((p) => ({ ...p, [r.id]: e.target.value }))}
-                      placeholder="輸入回覆內容…"
-                      rows={2}
-                      className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    />
-                    <button
-                      disabled={replyMut.isPending || !replyDraft[r.id]?.trim()}
-                      onClick={() => replyMut.mutate({ id: r.id, reply: replyDraft[r.id].trim() })}
-                      className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
-                    >
-                      {replyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      回覆
-                    </button>
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+
+        {/* Chat window */}
+        <section className={`${activeUserId ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col`}>
+          {activeRoom ? (
+            <ChatWindow room={activeRoom} onBack={() => setActiveUserId(null)} />
+          ) : (
+            <div className="grid flex-1 place-items-center text-sm text-muted-foreground">
+              <div className="text-center">
+                <MessageSquare className="mx-auto mb-2 h-8 w-8 opacity-60" />
+                請從左側選擇一個對話
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </AppShell>
   );
 }
 
-const inp = "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) {
+    return d.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" });
+}
+
+function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
+  const qc = useQueryClient();
+  const getFn = useServerFn(adminGetRoomMessages);
+  const replyFn = useServerFn(adminPostReply);
+  const takeoverFn = useServerFn(adminTakeoverRoom);
+  const cannedQ = useCannedResponses(true);
+  const [reply, setReply] = useState("");
+  const [showCanned, setShowCanned] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const { data: messages = [], isLoading } = useQuery({
+    queryKey: ["inbox-room", room.user_id],
+    refetchInterval: 10000,
+    queryFn: () => getFn({ data: { targetUserId: room.user_id } }),
+  });
+
+  const replyMut = useMutation({
+    mutationFn: (text: string) => replyFn({ data: { targetUserId: room.user_id, reply: text } }),
+    onSuccess: () => {
+      setReply("");
+      qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+      qc.invalidateQueries({ queryKey: ["support-unread-count"] });
+      setTimeout(() => taRef.current?.focus(), 0);
+    },
+    onError: (e: Error) => alert(e.message),
+  });
+
+  const takeoverMut = useMutation({
+    mutationFn: (enable: boolean) =>
+      takeoverFn({ data: { targetUserId: room.user_id, enable } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
+
+  useEffect(() => { taRef.current?.focus(); }, [room.user_id]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  // Build flat list of bubbles
+  const bubbles = useMemo(() => buildBubbles(messages), [messages]);
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onBack}
+          className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary md:hidden"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <Avatar name={room.display_name ?? room.email ?? "?"} path={room.avatar_url} size={36} />
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="truncate text-sm font-bold">
+            {room.display_name || room.email || room.user_id.slice(0, 8)}
+          </div>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {room.email || room.user_id.slice(0, 12)}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => takeoverMut.mutate(room.ai_enabled)}
+          disabled={takeoverMut.isPending}
+          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition disabled:opacity-60 ${
+            room.ai_enabled
+              ? "bg-primary text-primary-foreground hover:brightness-110"
+              : "border border-border bg-card hover:bg-secondary"
+          }`}
+          title={room.ai_enabled ? "接手後 AI 將不再自動回覆此使用者" : "交還 AI 自動回覆"}
+        >
+          {takeoverMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCog className="h-3 w-3" />}
+          {room.ai_enabled ? "接手對話" : "交還 AI"}
+        </button>
+      </div>
+
+      {/* Body */}
+      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4">
+        {isLoading ? (
+          <div className="grid h-full place-items-center text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : bubbles.length === 0 ? (
+          <div className="grid h-full place-items-center text-center text-sm text-muted-foreground">
+            <div>還沒有訊息</div>
+          </div>
+        ) : (
+          bubbles.map((b, i) => <Bubble key={i} bubble={b} userName={room.display_name ?? room.email} userAvatar={room.avatar_url} />)
+        )}
+      </div>
+
+      {/* Composer */}
+      <form
+        className="relative border-t border-border bg-card p-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const t = reply.trim();
+          if (!t || replyMut.isPending) return;
+          replyMut.mutate(t);
+        }}
+      >
+        {showCanned && (cannedQ.data?.length ?? 0) > 0 && (
+          <div className="absolute bottom-full left-3 right-3 mb-2 max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-[var(--shadow-elevated)]">
+            <div className="border-b border-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              常用罐頭回覆
+            </div>
+            <ul className="divide-y divide-border">
+              {cannedQ.data!.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReply((p) => (p ? p + "\n" + c.content : c.content));
+                      setShowCanned(false);
+                      setTimeout(() => taRef.current?.focus(), 0);
+                    }}
+                    className="block w-full px-3 py-2 text-left text-xs hover:bg-secondary"
+                  >
+                    <div className="font-bold">{c.title}</div>
+                    <div className="mt-0.5 line-clamp-2 text-muted-foreground">{c.content}</div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCanned((v) => !v)}
+            className="btn-touch inline-flex items-center gap-1 rounded-lg border border-border bg-secondary px-2.5 text-xs font-semibold hover:bg-secondary/80"
+            title="常用罐頭回覆"
+          >
+            罐頭 <ChevronDown className="h-3 w-3" />
+          </button>
+          <textarea
+            ref={taRef}
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                const t = reply.trim();
+                if (t && !replyMut.isPending) replyMut.mutate(t);
+              }
+            }}
+            placeholder="輸入回覆…（Enter 送出 / Shift+Enter 換行）"
+            rows={2}
+            className="flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+          <button
+            type="submit"
+            disabled={replyMut.isPending || !reply.trim()}
+            className="btn-touch inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
+          >
+            {replyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            送出
+          </button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+type Bubble =
+  | { kind: "user"; text: string; at: string }
+  | { kind: "ai"; text: string; at: string; tags: string[] }
+  | { kind: "admin"; text: string; at: string }
+  | { kind: "system"; text: string; at: string };
+
+function buildBubbles(rows: any[]): Bubble[] {
+  const out: Bubble[] = [];
+  let lastAi: boolean | null = null;
+  for (const r of rows) {
+    if (r.admin_reply === "__TRANSFER_NOTICE__") {
+      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
+      lastAi = false;
+      continue;
+    }
+    // detect AI→human transition implicitly if no notice row exists
+    const aiNow = r.ai_enabled !== false;
+    if (lastAi === true && !aiNow) {
+      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
+    }
+    lastAi = aiNow;
+
+    if (r.question) out.push({ kind: "user", text: r.question, at: r.created_at });
+    if (r.ai_answer) out.push({ kind: "ai", text: r.ai_answer, at: r.created_at, tags: r.tags ?? [] });
+    if (r.admin_reply) out.push({ kind: "admin", text: r.admin_reply, at: r.replied_at ?? r.created_at });
+  }
+  return out;
+}
+
+function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: string | null; userAvatar?: string | null }) {
+  if (bubble.kind === "system") {
+    return (
+      <div className="flex justify-center">
+        <span className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
+          ⚡ {bubble.text}
+        </span>
+      </div>
+    );
+  }
+  if (bubble.kind === "user") {
+    return (
+      <div className="flex items-start gap-2">
+        <Avatar name={userName ?? "U"} path={userAvatar} size={28} />
+        <div className="max-w-[80%]">
+          <div className="mb-0.5 text-[10px] font-semibold text-muted-foreground">{userName ?? "使用者"}</div>
+          <div className="rounded-2xl rounded-tl-sm bg-card px-3.5 py-2 text-sm shadow-sm">
+            <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
+            <div className="mt-1 text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (bubble.kind === "ai") {
+    return (
+      <div className="flex items-start gap-2">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground">
+          <Bot className="h-3.5 w-3.5" />
+        </span>
+        <div className="max-w-[80%]">
+          <div className="mb-0.5 text-[10px] font-semibold text-muted-foreground">AI小幫手</div>
+          <div className="rounded-2xl rounded-tl-sm bg-secondary px-3.5 py-2 text-sm shadow-sm">
+            <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
+            {bubble.tags?.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {bubble.tags.map((t) => (
+                  <span key={t} className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${tagColor(t)}`}>
+                    <Tag className="h-2.5 w-2.5" /> {t}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-1 text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // admin
+  return (
+    <div className="flex items-start justify-end gap-2">
+      <div className="max-w-[80%]">
+        <div className="mb-0.5 text-right text-[10px] font-semibold text-primary">
+          <CircleUserRound className="mr-0.5 inline h-3 w-3" /> 管理員
+        </div>
+        <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
+          <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
+          <div className="mt-1 text-[10px] opacity-80">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+        </div>
+      </div>
+    </div>
+  );
+}

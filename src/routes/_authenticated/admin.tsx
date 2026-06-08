@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle, Users, Lock } from "lucide-react";
+import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "@/lib/admin.functions";
@@ -74,31 +74,6 @@ function AdminPage() {
       </div>
       <p className="mt-1 text-sm text-muted-foreground">控管會員帳號、權限與資料存取。客服收件夾已移至頂部導覽列。</p>
 
-      <section className="card-surface mt-6 p-5 opacity-70">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-muted text-muted-foreground">
-              <Users className="h-4 w-4" />
-            </span>
-            <div>
-              <h2 className="flex items-center gap-2 text-sm font-bold">
-                團隊管理
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                  <Lock className="h-3 w-3" /> Coming Soon
-                </span>
-              </h2>
-              <p className="text-xs text-muted-foreground">建立團隊、分派成員、共享案件權限（即將啟動）。</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            disabled
-            className="cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground"
-          >
-            即將啟動
-          </button>
-        </div>
-      </section>
 
       <section className="card-surface mt-6 p-5">
         <h2 className="flex items-center gap-2 text-sm font-bold"><UserPlus className="h-4 w-4" /> 新增會員</h2>
