@@ -19,6 +19,7 @@ import { useCannedResponses } from "@/lib/canned";
 import { SupportImage } from "@/components/SupportImage";
 import { SupportPhotoButton } from "@/components/SupportPhotoButton";
 import { toast } from "sonner";
+import { IdleAutoRevertBanner } from "@/components/IdleAutoRevertBanner";
 
 const DEFAULT_CANNED = [
   { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
@@ -332,6 +333,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
 
       {/* Body */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/20 p-4">
+        {!room.ai_enabled && (
+          <IdleAutoRevertBanner
+            aiEnabled={room.ai_enabled}
+            takeoverAt={
+              (messages as any[]).slice().reverse().find((m) => m.takeover_at)?.takeover_at ?? null
+            }
+            lastActivityAt={(messages as any[])[(messages as any[]).length - 1]?.created_at ?? null}
+          />
+        )}
         {isLoading ? (
           <div className="grid h-full place-items-center text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
