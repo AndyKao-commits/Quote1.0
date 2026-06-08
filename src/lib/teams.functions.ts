@@ -139,7 +139,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
 
     const { data: rows } = await supabase
       .from("team_members")
-      .select("user_id, role, created_at")
+      .select("user_id, role, level, created_at")
       .eq("team_id", data.teamId);
 
     const ids = new Set<string>([team.owner_id, ...(rows ?? []).map((r: any) => r.user_id)]);
@@ -163,6 +163,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
       {
         user_id: team.owner_id,
         role: "owner",
+        level: 4,
         display_name: ownerProfile?.display_name ?? null,
         avatar_url: ownerProfile?.avatar_url ?? null,
         email: emailMap.get(team.owner_id) ?? "",
@@ -175,6 +176,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
           return {
             user_id: r.user_id,
             role: r.role,
+            level: typeof r.level === "number" ? r.level : 2,
             display_name: p?.display_name ?? null,
             avatar_url: p?.avatar_url ?? null,
             email: emailMap.get(r.user_id) ?? "",
@@ -184,6 +186,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
     ];
     return out;
   });
+
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
