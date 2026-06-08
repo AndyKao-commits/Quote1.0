@@ -68,6 +68,7 @@ export interface Profile {
   id: string;
   display_name: string | null;
   brand_name: string | null;
+  avatar_url: string | null;
   watermark_enabled: boolean;
   updated_at: string;
 }
@@ -309,13 +310,30 @@ export function useDeleteMaterial(projectId: string) {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: Partial<Pick<Profile, "display_name" | "brand_name" | "watermark_enabled">>) => {
+    mutationFn: async (p: Partial<Pick<Profile, "display_name" | "brand_name" | "watermark_enabled" | "avatar_url">>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("未登入");
       const { error } = await (supabase as any).from("profiles").update(p).eq("id", user.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+// Admin: count of escalated (unanswered) support messages — for navbar red dot
+export function useSupportUnreadCount(enabled: boolean) {
+  return useQuery({
+    queryKey: ["support-unread-count"],
+    enabled,
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("support_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "escalated");
+      if (error) throw error;
+      return count ?? 0;
+    },
   });
 }
 
