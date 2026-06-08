@@ -2,15 +2,18 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Wrench, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "登入 — 現場紀錄" }] }),
   component: AuthPage,
 });
 
+type Mode = "signin" | "signup" | "forgot";
+
 function AuthPage() {
   const nav = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [name, setName] = useState("");
@@ -40,10 +43,16 @@ function AuthPage() {
         const { data: s } = await supabase.auth.getSession();
         if (s.session) nav({ to: "/dashboard" });
         else setMsg("註冊成功，請查收 Email 確認信完成驗證。");
-      } else {
+      } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
         nav({ to: "/dashboard" });
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setMsg("已寄出重設密碼信，請查收 Email（含垃圾信件夾）。");
       }
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "操作失敗");
@@ -63,18 +72,23 @@ function AuthPage() {
         </Link>
 
         <div className="card-surface p-6">
-          <div className="mb-5 flex gap-1 rounded-lg border border-border p-1">
-            <button
-              type="button"
-              onClick={() => setMode("signin")}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signin" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-            >登入</button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-            >註冊</button>
-          </div>
+          {mode !== "forgot" && (
+            <div className="mb-5 flex gap-1 rounded-lg border border-border p-1">
+              <button
+                type="button"
+                onClick={() => { setMode("signin"); setErr(null); setMsg(null); }}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signin" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              >登入</button>
+              <button
+                type="button"
+                onClick={() => { setMode("signup"); setErr(null); setMsg(null); }}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              >註冊</button>
+            </div>
+          )}
+          {mode === "forgot" && (
+            <h2 className="mb-4 text-base font-bold">忘記密碼</h2>
+          )}
 
           <form onSubmit={submit} className="space-y-3">
             {mode === "signup" && (
@@ -87,10 +101,12 @@ function AuthPage() {
               <span className="mb-1 block text-xs font-semibold text-muted-foreground">Email</span>
               <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inp} />
             </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">密碼</span>
-              <input required type="password" minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} className={inp} />
-            </label>
+            {mode !== "forgot" && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-muted-foreground">密碼</span>
+                <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} />
+              </label>
+            )}
 
             {err && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
             {msg && <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary">{msg}</p>}
@@ -101,14 +117,31 @@ function AuthPage() {
               className="btn-touch inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === "signin" ? "登入" : "建立帳號"}
+              {mode === "signin" ? "登入" : mode === "signup" ? "建立帳號" : "寄送重設信"}
             </button>
           </form>
-        </div>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          <Link to="/" className="hover:underline">← 回首頁</Link>
-        </p>
+          <div className="mt-4 flex items-center justify-between text-xs">
+            {mode !== "forgot" ? (
+              <button
+                type="button"
+                onClick={() => { setMode("forgot"); setErr(null); setMsg(null); }}
+                className="text-muted-foreground hover:text-foreground hover:underline"
+              >
+                忘記密碼？
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setMode("signin"); setErr(null); setMsg(null); }}
+                className="text-muted-foreground hover:text-foreground hover:underline"
+              >
+                ← 回登入
+              </button>
+            )}
+            <Link to="/" className="text-muted-foreground hover:underline">回首頁</Link>
+          </div>
+        </div>
       </div>
     </div>
   );

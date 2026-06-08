@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      canned_responses: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           brand: string | null
@@ -107,6 +134,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           brand_name: string | null
           created_at: string
           display_name: string | null
@@ -115,6 +143,7 @@ export type Database = {
           watermark_enabled: boolean
         }
         Insert: {
+          avatar_url?: string | null
           brand_name?: string | null
           created_at?: string
           display_name?: string | null
@@ -123,6 +152,7 @@ export type Database = {
           watermark_enabled?: boolean
         }
         Update: {
+          avatar_url?: string | null
           brand_name?: string | null
           created_at?: string
           display_name?: string | null
@@ -184,33 +214,42 @@ export type Database = {
         Row: {
           admin_reply: string | null
           ai_answer: string | null
+          ai_enabled: boolean
           created_at: string
           id: string
           question: string
           replied_at: string | null
           status: string
+          summary: string | null
+          tags: string[]
           updated_at: string
           user_id: string
         }
         Insert: {
           admin_reply?: string | null
           ai_answer?: string | null
+          ai_enabled?: boolean
           created_at?: string
           id?: string
           question: string
           replied_at?: string | null
           status?: string
+          summary?: string | null
+          tags?: string[]
           updated_at?: string
           user_id: string
         }
         Update: {
           admin_reply?: string | null
           ai_answer?: string | null
+          ai_enabled?: boolean
           created_at?: string
           id?: string
           question?: string
           replied_at?: string | null
           status?: string
+          summary?: string | null
+          tags?: string[]
           updated_at?: string
           user_id?: string
         }
