@@ -364,11 +364,13 @@ function ProjectDetail() {
               {confirmDelete?.kind === "project" && "確定刪除此案件？"}
               {confirmDelete?.kind === "log" && "確定刪除這筆日誌？"}
               {confirmDelete?.kind === "photo" && "確定刪除此照片？"}
+              {confirmDelete?.kind === "photos" && `確定刪除 ${confirmDelete.photos.length} 張照片？`}
               {confirmDelete?.kind === "material" && "確定刪除這項材料？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete?.kind === "project" && `「${project.name}」的所有日誌、照片、材料都會被一併刪除，且無法復原。`}
-              {confirmDelete?.kind !== "project" && "此操作無法復原。"}
+              {confirmDelete?.kind === "photos" && "這些照片將從雲端永久移除，無法復原。"}
+              {confirmDelete?.kind !== "project" && confirmDelete?.kind !== "photos" && "此操作無法復原。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
