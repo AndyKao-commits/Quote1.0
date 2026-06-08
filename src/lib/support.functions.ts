@@ -20,7 +20,7 @@ const VAGUE_PATTERNS = [
   "i don't know", "i'm not sure", "sorry",
 ];
 
-const SYSTEM_PROMPT = `你是「現場紀錄」App 的客服助理「Wei Feng AI 小幫手」。這是一款給水電/工程師傅使用的施工紀錄 App。
+const SYSTEM_PROMPT = `你是「現場紀錄」App 的客服助理「AI小幫手」。這是一款給水電/工程師傅使用的施工紀錄 App。
 
 主要功能：
 - 案件管理（新增、編輯、狀態：待施工/施工中/驗收中/已完工）
