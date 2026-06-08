@@ -118,40 +118,28 @@ export const adminPostReply = createServerFn({ method: "POST" })
     if (!reply) throw new Error("回覆內容不可為空");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Attach to latest unanswered escalated row if any, else insert standalone row
-    const { data: pending } = await (supabaseAdmin as any)
-      .from("support_messages")
-      .select("id")
-      .eq("user_id", data.targetUserId)
-      .eq("status", "escalated")
-      .is("admin_reply", null)
-      .order("created_at", { ascending: true })
-      .limit(1);
+    // Always insert a new row as latest, and refresh takeover timer.
+    const now = new Date().toISOString();
+    const { error: insErr } = await (supabaseAdmin as any).from("support_messages").insert({
+      user_id: data.targetUserId,
+      question: null,
+      ai_answer: null,
+      admin_reply: reply,
+      status: "answered",
+      replied_at: now,
+      ai_enabled: false,
+      takeover_at: now,
+      tags: [],
+    });
+    if (insErr) throw new Error(insErr.message);
 
-    if (pending && pending[0]) {
-      const { error } = await (supabaseAdmin as any)
-        .from("support_messages")
-        .update({
-          admin_reply: reply,
-          status: "answered",
-          replied_at: new Date().toISOString(),
-          ai_enabled: false,
-        })
-        .eq("id", pending[0].id);
-      if (error) throw new Error(error.message);
-    } else {
-      const { error } = await (supabaseAdmin as any).from("support_messages").insert({
-        user_id: data.targetUserId,
-        question: null,
-        ai_answer: null,
-        admin_reply: reply,
-        status: "answered",
-        replied_at: new Date().toISOString(),
-        ai_enabled: false,
-        tags: [],
-      });
-      if (error) throw new Error(error.message);
-    }
+    // Mark any earlier escalations as answered so the unread badge clears.
+    await (supabaseAdmin as any)
+      .from("support_messages")
+      .update({ status: "answered" })
+      .eq("user_id", data.targetUserId)
+      .eq("status", "escalated");
+
     return { ok: true };
   });
 
@@ -162,23 +150,33 @@ export const adminTakeoverRoom = createServerFn({ method: "POST" })
     const { supabase, userId } = context as any;
     await assertAdmin(supabase, userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await (supabaseAdmin as any)
-      .from("support_messages")
-      .update({ ai_enabled: data.enable })
-      .eq("user_id", data.targetUserId);
-    if (error) throw new Error(error.message);
+    const now = new Date().toISOString();
+
     if (!data.enable) {
-      // Insert a transfer-notice row so the user sees the system line
+      // Human takeover: disable AI for this user and stamp takeover_at
+      await (supabaseAdmin as any)
+        .from("support_messages")
+        .update({ ai_enabled: false, takeover_at: now })
+        .eq("user_id", data.targetUserId);
+
       await (supabaseAdmin as any).from("support_messages").insert({
         user_id: data.targetUserId,
         question: null,
         ai_answer: null,
         admin_reply: "__TRANSFER_NOTICE__",
         status: "answered",
-        replied_at: new Date().toISOString(),
+        replied_at: now,
         ai_enabled: false,
+        takeover_at: now,
         tags: ["#系統"],
       });
+    } else {
+      // Hand back to AI: clear takeover stamp and re-enable
+      await (supabaseAdmin as any)
+        .from("support_messages")
+        .update({ ai_enabled: true, takeover_at: null })
+        .eq("user_id", data.targetUserId);
     }
     return { ok: true };
   });
+
