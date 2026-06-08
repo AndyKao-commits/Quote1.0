@@ -29,7 +29,7 @@ const DEFAULT_CANNED = [
 
 
 export const Route = createFileRoute("/_authenticated/admin/inbox")({
-  head: () => ({ meta: [{ title: "客服收件夾 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "客服收件夾 — 施工紀錄 PRO" }] }),
   component: InboxPage,
 });
 

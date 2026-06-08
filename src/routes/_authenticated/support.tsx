@@ -10,7 +10,7 @@ import { useProfile } from "@/lib/db";
 import { Avatar } from "@/components/Avatar";
 
 export const Route = createFileRoute("/_authenticated/support")({
-  head: () => ({ meta: [{ title: "AI 客服 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "AI 客服 — 施工紀錄 PRO" }] }),
   component: SupportPage,
 });
 

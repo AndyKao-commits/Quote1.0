@@ -25,7 +25,7 @@ function Landing() {
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-elevated)]">
             <Wrench className="h-5 w-5" />
           </span>
-          <span className="font-display text-lg font-bold tracking-tight">水電施工紀錄 PRO</span>
+          <span className="font-display text-lg font-bold tracking-tight">施工紀錄 PRO PRO</span>
         </Link>
         <Link to="/auth" className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold hover:bg-secondary">
           登入 / 註冊

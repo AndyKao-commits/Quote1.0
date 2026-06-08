@@ -8,7 +8,7 @@ import { useProjects } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "儀表板 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "儀表板 — 施工紀錄 PRO" }] }),
   component: Dashboard,
 });
 

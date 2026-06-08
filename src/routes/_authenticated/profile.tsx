@@ -9,7 +9,7 @@ import { AvatarUploader } from "@/components/AvatarUploader";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  head: () => ({ meta: [{ title: "個人資料 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "個人資料 — 施工紀錄 PRO" }] }),
   component: ProfilePage,
 });
 
@@ -103,7 +103,7 @@ function ProfilePage() {
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-muted-foreground">系統名稱（左上角顯示）</span>
-              <input value={brand} onChange={(e) => setBrand(e.target.value)} className={inp} placeholder="現場紀錄" />
+              <input value={brand} onChange={(e) => setBrand(e.target.value)} className={inp} placeholder="施工紀錄 PRO" />
             </label>
             <button
               onClick={() => update.mutate({ display_name: display.trim() || null, brand_name: brand.trim() || null })}

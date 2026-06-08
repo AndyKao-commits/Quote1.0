@@ -128,7 +128,7 @@ export async function exportProjectPdf({ project, logs, photos, materials }: Exp
     <h2 class="pdf-h2">客戶簽名</h2>
     <div class="sign-box">客戶簽名：________________________________________<br><br>日期：________________</div>
 
-    <p class="muted" style="margin-top:30px;text-align:center;">— 由「現場紀錄」生成．${new Date().toLocaleString("zh-TW")} —</p>
+    <p class="muted" style="margin-top:30px;text-align:center;">— 由「施工紀錄 PRO」生成．${new Date().toLocaleString("zh-TW")} —</p>
   `;
   document.body.appendChild(container);
 

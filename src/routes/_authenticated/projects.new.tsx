@@ -8,7 +8,7 @@ import { useSaveProject, type ProjectStatus } from "@/lib/db";
 import { listMyTeams, type Team } from "@/lib/teams.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/new")({
-  head: () => ({ meta: [{ title: "新增案件 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "新增案件 — 施工紀錄 PRO" }] }),
   component: NewProject,
 });
 

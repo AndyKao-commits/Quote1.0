@@ -26,7 +26,7 @@ import {
 import { exportProjectPdf } from "@/lib/pdfExport";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
-  head: () => ({ meta: [{ title: `案件詳情 — 現場紀錄` }] }),
+  head: () => ({ meta: [{ title: `案件詳情 — 施工紀錄 PRO` }] }),
   component: ProjectDetail,
   notFoundComponent: () => (
     <AppShell>

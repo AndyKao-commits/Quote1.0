@@ -16,7 +16,7 @@ import {
 } from "@/lib/teams.functions";
 
 export const Route = createFileRoute("/_authenticated/team")({
-  head: () => ({ meta: [{ title: "團隊管理 — 現場紀錄" }] }),
+  head: () => ({ meta: [{ title: "團隊管理 — 施工紀錄 PRO" }] }),
   component: TeamPage,
 });
 

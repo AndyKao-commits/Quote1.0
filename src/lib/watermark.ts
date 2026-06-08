@@ -60,7 +60,7 @@ export async function addWatermark(
   }
   ctx.shadowBlur = 0;
 
-  const tag = "現場紀錄";
+  const tag = "施工紀錄 PRO";
   ctx.font = `700 ${Math.round(fontBase * 0.78)}px "Noto Sans TC", system-ui, sans-serif`;
   const tagW = ctx.measureText(tag).width + pad * 1.4;
   const tagH = fontBase * 1.6;

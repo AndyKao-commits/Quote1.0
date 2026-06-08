@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: profile } = useProfile();
   const { data: isAdmin } = useIsAdmin();
   const { data: unread = 0 } = useSupportUnreadCount(isAdmin === true);
-  const brand = profile?.brand_name?.trim() || "現場紀錄";
+  const brand = profile?.brand_name?.trim() || "施工紀錄 PRO";
   const isActive = (p: string) =>
     p === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(p);
 
