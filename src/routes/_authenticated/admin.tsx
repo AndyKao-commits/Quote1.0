@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle, Users, Lock } from "lucide-react";
+import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "@/lib/admin.functions";
