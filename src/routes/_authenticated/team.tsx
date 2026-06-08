@@ -11,9 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   listMyTeams, createTeam, renameTeam, deleteTeam,
   listTeamMembers, inviteMember, removeMember, changeMemberRole, changeMemberLevel,
+  createInvite, listInvites, revokeInvite,
   LEVEL_META,
-  type Team, type TeamMember,
+  type Team, type TeamMember, type TeamInvitation,
 } from "@/lib/teams.functions";
+import { Link2, Copy, Trash } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({ meta: [{ title: "團隊管理 — 施工紀錄 PRO" }] }),
