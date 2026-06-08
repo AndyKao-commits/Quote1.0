@@ -18,6 +18,7 @@ import {
 import { useCannedResponses } from "@/lib/canned";
 import { SupportImage } from "@/components/SupportImage";
 import { SupportPhotoButton } from "@/components/SupportPhotoButton";
+import { toast } from "sonner";
 
 const DEFAULT_CANNED = [
   { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
@@ -237,11 +238,19 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const takeoverMut = useMutation({
     mutationFn: (enable: boolean) =>
       takeoverFn({ data: { targetUserId: room.user_id, enable } }),
-    onSuccess: () => {
+    onSuccess: (_d, enable) => {
       qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
       qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+      // `enable` is the PREVIOUS ai_enabled state we sent in; toggling means new state is !enable
+      if (enable) {
+        toast.success("已接手對話", { description: "AI 自動回覆已暫停，由您接手回覆" });
+      } else {
+        toast.success("已交還 AI", { description: "AI 小幫手已重新啟用，將自動回覆使用者" });
+      }
     },
-    onError: (e: Error) => alert(e.message),
+    onError: (e: Error) => {
+      toast.error("切換失敗", { description: e.message });
+    },
   });
 
   const markReadMut = useMutation({
@@ -307,14 +316,14 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           type="button"
           onClick={() => takeoverMut.mutate(room.ai_enabled)}
           disabled={takeoverMut.isPending}
-          className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition disabled:opacity-60 ${
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide shadow-md transition disabled:opacity-60 ${
             room.ai_enabled
-              ? "bg-primary text-primary-foreground hover:brightness-110"
-              : "border border-border bg-card hover:bg-secondary"
+              ? "bg-gradient-to-r from-rose-500 to-orange-500 text-white ring-2 ring-rose-300/60 hover:brightness-110 dark:ring-rose-400/40"
+              : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white ring-2 ring-emerald-300/60 hover:brightness-110 dark:ring-emerald-400/40"
           }`}
           title={room.ai_enabled ? "接手後 AI 將不再自動回覆此使用者" : "交還 AI 自動回覆"}
         >
-          {takeoverMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCog className="h-3 w-3" />}
+          {takeoverMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCog className="h-3.5 w-3.5" />}
           {room.ai_enabled ? "接手對話" : "交還 AI"}
         </button>
       </div>
