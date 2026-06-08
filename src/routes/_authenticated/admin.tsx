@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle } from "lucide-react";
+import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle, Inbox } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "@/lib/admin.functions";
@@ -68,9 +68,17 @@ function AdminPage() {
 
   return (
     <AppShell>
-      <div className="flex items-center gap-2">
-        <Shield className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">管理員面板</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Shield className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">管理員面板</h1>
+        </div>
+        <Link
+          to="/admin/inbox"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 text-sm font-semibold hover:bg-secondary/80"
+        >
+          <Inbox className="h-4 w-4" /> 客服收件夾
+        </Link>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">控管會員帳號、權限與資料存取。</p>
 
