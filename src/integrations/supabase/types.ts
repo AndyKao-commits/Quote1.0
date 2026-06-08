@@ -180,6 +180,42 @@ export type Database = {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          admin_reply: string | null
+          ai_answer: string | null
+          created_at: string
+          id: string
+          question: string
+          replied_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          ai_answer?: string | null
+          created_at?: string
+          id?: string
+          question: string
+          replied_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          ai_answer?: string | null
+          created_at?: string
+          id?: string
+          question?: string
+          replied_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
