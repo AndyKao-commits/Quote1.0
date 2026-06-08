@@ -272,3 +272,28 @@ export const changeMemberRole = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const changeMemberLevel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        teamId: z.string().uuid(),
+        userId: z.string().uuid(),
+        level: z.number().int().min(1).max(4),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!(await isTeamOwner(supabase, data.teamId, userId))) {
+      throw new Error("只有團隊主持人可以變更權限等級");
+    }
+    const { error } = await supabase
+      .from("team_members")
+      .update({ level: data.level })
+      .eq("team_id", data.teamId)
+      .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
