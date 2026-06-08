@@ -137,8 +137,14 @@ function SupportPage() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [bubbles.length, mut.isPending]);
+    const scrollToBottom = () => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    // Initial + content-change scroll
+    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    // Re-scroll when images / dynamic content resize the body
+    const ro = new ResizeObserver(scrollToBottom);
+    Array.from(el.children).forEach((c) => ro.observe(c as Element));
+    return () => ro.disconnect();
+  }, [bubbles, mut.isPending]);
 
   return (
     <AppShell>
