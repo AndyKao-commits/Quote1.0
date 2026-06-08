@@ -60,30 +60,23 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:pb-10">{children}</main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-6xl">
+        <div className="no-scrollbar mx-auto flex max-w-full overflow-x-auto" style={{ scrollSnapType: "x proximity" }}>
           <BottomLink to="/dashboard" label="儀表板" icon={<LayoutDashboard className="h-5 w-5" />} active={pathname === "/dashboard"} />
           <BottomLink to="/projects" label="案件" icon={<FolderKanban className="h-5 w-5" />} active={isActive("/projects") && !pathname.startsWith("/projects/new")} />
           <BottomLink to="/projects/new" label="新增" icon={<Plus className="h-5 w-5" />} active={pathname === "/projects/new"} primary />
-          <BottomLink
-            to="/support"
-            label="客服"
-            icon={<MessageCircle className="h-5 w-5" />}
-            active={isActive("/support")}
-          />
-          <BottomLink
-            to="/team"
-            label="團隊"
-            icon={<Users className="h-5 w-5" />}
-            active={isActive("/team")}
-          />
+          <BottomLink to="/support" label="客服" icon={<MessageCircle className="h-5 w-5" />} active={isActive("/support")} />
+          <BottomLink to="/team" label="團隊" icon={<Users className="h-5 w-5" />} active={isActive("/team")} />
           {isAdmin && (
-            <BottomLink
-              to="/admin/inbox"
-              label="收件夾"
-              icon={<Inbox className="h-5 w-5" />}
-              active={isActive("/admin/inbox")}
-              badge={unread > 0 ? unread : undefined}
-            />
+            <>
+              <BottomLink to="/admin" label="管理員" icon={<Shield className="h-5 w-5" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
+              <BottomLink
+                to="/admin/inbox"
+                label="收件夾"
+                icon={<Inbox className="h-5 w-5" />}
+                active={isActive("/admin/inbox")}
+                badge={unread > 0 ? unread : undefined}
+              />
+            </>
           )}
           <BottomLink
             to="/profile"
@@ -119,7 +112,8 @@ function BottomLink({ to, label, icon, active, primary, badge }: { to: string; l
   return (
     <Link
       to={to}
-      className={`relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition ${
+      style={{ scrollSnapAlign: "start" }}
+      className={`relative flex min-w-[68px] shrink-0 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition ${
         primary ? "text-primary" : active ? "text-primary" : "text-muted-foreground"
       }`}
     >
