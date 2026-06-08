@@ -68,6 +68,7 @@ export interface Profile {
   id: string;
   display_name: string | null;
   brand_name: string | null;
+  watermark_enabled: boolean;
   updated_at: string;
 }
 
@@ -308,10 +309,10 @@ export function useDeleteMaterial(projectId: string) {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: Partial<Pick<Profile, "display_name" | "brand_name">>) => {
+    mutationFn: async (p: Partial<Pick<Profile, "display_name" | "brand_name" | "watermark_enabled">>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("未登入");
-      const { error } = await supabase.from("profiles").update(p).eq("id", user.id);
+      const { error } = await (supabase as any).from("profiles").update(p).eq("id", user.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),

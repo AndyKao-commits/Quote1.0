@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { LogOut, Cloud, Check, Loader2, User as UserIcon } from "lucide-react";
+import { LogOut, Cloud, Check, Loader2, User as UserIcon, Stamp, Shield } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useProfile, useUpdateProfile, useProjects } from "@/lib/db";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -14,6 +15,7 @@ function ProfilePage() {
   const nav = useNavigate();
   const { data: profile } = useProfile();
   const { data: projects = [] } = useProjects();
+  const { data: isAdmin } = useIsAdmin();
   const update = useUpdateProfile();
   const [email, setEmail] = useState<string>("");
   const [display, setDisplay] = useState("");
@@ -95,14 +97,56 @@ function ProfilePage() {
           </p>
         </section>
 
+        <section className="card-surface p-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-full bg-accent/20 text-accent-foreground">
+              <Stamp className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="font-bold">照片浮水印</div>
+              <div className="text-xs text-muted-foreground">自動印上案件、時間、地址、人員</div>
+            </div>
+          </div>
+          <label className="mt-5 flex cursor-pointer items-center justify-between rounded-lg border border-border bg-secondary/40 px-4 py-3">
+            <div>
+              <div className="text-sm font-semibold">{profile?.watermark_enabled !== false ? "啟用中" : "已關閉"}</div>
+              <div className="text-xs text-muted-foreground">關閉後上傳的照片不會加浮水印</div>
+            </div>
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={profile?.watermark_enabled !== false}
+              onChange={(e) => update.mutate({ watermark_enabled: e.target.checked })}
+            />
+            <span
+              aria-hidden
+              className={`relative inline-block h-7 w-12 rounded-full transition ${profile?.watermark_enabled !== false ? "bg-primary" : "bg-muted"}`}
+            >
+              <span
+                className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${profile?.watermark_enabled !== false ? "left-5" : "left-0.5"}`}
+              />
+            </span>
+          </label>
+        </section>
+
         <section className="card-surface p-5 md:col-span-2">
           <h2 className="text-sm font-bold">帳號</h2>
-          <button
-            onClick={logout}
-            className="btn-touch mt-3 inline-flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-card px-4 text-sm font-semibold text-destructive hover:bg-destructive/10"
-          >
-            <LogOut className="h-4 w-4" /> 登出
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110"
+              >
+                <Shield className="h-4 w-4" /> 管理員面板
+              </Link>
+            )}
+            <button
+              onClick={logout}
+              className="btn-touch inline-flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-card px-4 text-sm font-semibold text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-4 w-4" /> 登出
+            </button>
+          </div>
         </section>
       </div>
     </AppShell>

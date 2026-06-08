@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Camera, Upload, Loader2, X } from "lucide-react";
 import { addWatermarkBlob, nowStamp } from "@/lib/watermark";
-import { useSavePhoto, type PhotoCategory, type Project } from "@/lib/db";
+import { useSavePhoto, useProfile, type PhotoCategory, type Project } from "@/lib/db";
 
 export function PhotoUploader({ project }: { project: Project }) {
   const [category, setCategory] = useState<PhotoCategory>("during");
@@ -12,6 +12,8 @@ export function PhotoUploader({ project }: { project: Project }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const savePhoto = useSavePhoto();
+  const { data: profile } = useProfile();
+  const watermarkOn = profile?.watermark_enabled !== false;
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -22,12 +24,14 @@ export function PhotoUploader({ project }: { project: Project }) {
       for (let i = 0; i < arr.length; i++) {
         const file = arr[i];
         const takenAt = nowStamp();
-        const blob = await addWatermarkBlob(file, {
-          projectName: project.name,
-          address: project.address,
-          worker,
-          takenAt,
-        });
+        const blob = watermarkOn
+          ? await addWatermarkBlob(file, {
+              projectName: project.name,
+              address: project.address,
+              worker,
+              takenAt,
+            })
+          : file;
         await savePhoto.mutateAsync({
           project_id: project.id,
           category,
@@ -58,7 +62,7 @@ export function PhotoUploader({ project }: { project: Project }) {
     <div className="card-surface p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-bold">上傳工地照片</h3>
-        <span className="text-[11px] font-medium text-accent-foreground">✦ 自動加浮水印．雲端儲存</span>
+        <span className={`text-[11px] font-medium ${watermarkOn ? "text-accent-foreground" : "text-muted-foreground"}`}>{watermarkOn ? "✦ 自動加浮水印．雲端儲存" : "○ 浮水印已關閉．雲端儲存"}</span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
