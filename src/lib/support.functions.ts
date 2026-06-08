@@ -41,8 +41,6 @@ export const askSupport = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
 
-    // Check if user is currently in "human takeover" mode (latest row has ai_enabled=false)
-    // Auto-revert to AI mode if takeover_at is older than 10 minutes (idle timeout).
     const { data: lastRow } = await (supabase as any)
       .from("support_messages")
       .select("ai_enabled, takeover_at")
@@ -55,7 +53,6 @@ export const askSupport = createServerFn({ method: "POST" })
     if (humanTakeover && lastRow?.takeover_at) {
       const ageMs = Date.now() - new Date(lastRow.takeover_at).getTime();
       if (ageMs > 10 * 60 * 1000) {
-        // Idle > 10 min: hand back to AI
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await (supabaseAdmin as any)
           .from("support_messages")
@@ -66,7 +63,6 @@ export const askSupport = createServerFn({ method: "POST" })
     }
 
     if (humanTakeover) {
-      // Skip AI — queue directly to admin
       const { data: row, error } = await (supabase as any)
         .from("support_messages")
         .insert({
@@ -137,4 +133,36 @@ export const askSupport = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     return { id: row.id, status, answer: result.answer };
+  });
+
+// User uploads an image into the support thread. Path must be under support/{userId}/.
+export const userPostImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ path: z.string().min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    const expectedPrefix = `support/${userId}/`;
+    if (!data.path.startsWith(expectedPrefix)) throw new Error("路徑不合法");
+
+    const { data: lastRow } = await (supabase as any)
+      .from("support_messages")
+      .select("ai_enabled")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const humanTakeover = lastRow?.ai_enabled === false;
+
+    const { error } = await (supabase as any).from("support_messages").insert({
+      user_id: userId,
+      question: "[圖片]",
+      image_url: data.path,
+      status: humanTakeover ? "escalated" : "answered",
+      ai_enabled: !humanTakeover,
+      tags: humanTakeover ? ["#真人接手"] : ["#圖片"],
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
