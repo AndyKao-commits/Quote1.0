@@ -14,11 +14,20 @@ export interface Team {
 export interface TeamMember {
   user_id: string;
   role: "owner" | "editor" | "viewer";
+  level: number; // 1-4 permission tier (1=瀏覽業主, 2=工人, 3=工地主任, 4=副管理員)
   display_name: string | null;
   email: string;
   avatar_url: string | null;
   created_at: string;
 }
+
+export const LEVEL_META: Record<number, { label: string; desc: string }> = {
+  1: { label: "L1 業主／瀏覽", desc: "唯讀，可瀏覽團隊案件" },
+  2: { label: "L2 工人", desc: "瀏覽 + 新增施工日誌" },
+  3: { label: "L3 工地主任", desc: "可新增與編輯團隊案件" },
+  4: { label: "L4 副管理員", desc: "近主持人權限" },
+};
+
 
 async function isTeamOwner(supabase: any, teamId: string, userId: string) {
   const { data } = await supabase.from("teams").select("owner_id").eq("id", teamId).maybeSingle();
@@ -130,7 +139,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
 
     const { data: rows } = await supabase
       .from("team_members")
-      .select("user_id, role, created_at")
+      .select("user_id, role, level, created_at")
       .eq("team_id", data.teamId);
 
     const ids = new Set<string>([team.owner_id, ...(rows ?? []).map((r: any) => r.user_id)]);
@@ -154,6 +163,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
       {
         user_id: team.owner_id,
         role: "owner",
+        level: 4,
         display_name: ownerProfile?.display_name ?? null,
         avatar_url: ownerProfile?.avatar_url ?? null,
         email: emailMap.get(team.owner_id) ?? "",
@@ -166,6 +176,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
           return {
             user_id: r.user_id,
             role: r.role,
+            level: typeof r.level === "number" ? r.level : 2,
             display_name: p?.display_name ?? null,
             avatar_url: p?.avatar_url ?? null,
             email: emailMap.get(r.user_id) ?? "",
@@ -175,6 +186,7 @@ export const listTeamMembers = createServerFn({ method: "GET" })
     ];
     return out;
   });
+
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -255,6 +267,31 @@ export const changeMemberRole = createServerFn({ method: "POST" })
     const { error } = await supabase
       .from("team_members")
       .update({ role: data.role })
+      .eq("team_id", data.teamId)
+      .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const changeMemberLevel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        teamId: z.string().uuid(),
+        userId: z.string().uuid(),
+        level: z.number().int().min(1).max(4),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    if (!(await isTeamOwner(supabase, data.teamId, userId))) {
+      throw new Error("只有團隊主持人可以變更權限等級");
+    }
+    const { error } = await supabase
+      .from("team_members")
+      .update({ level: data.level })
       .eq("team_id", data.teamId)
       .eq("user_id", data.userId);
     if (error) throw new Error(error.message);

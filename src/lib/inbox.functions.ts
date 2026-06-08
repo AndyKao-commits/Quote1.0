@@ -180,3 +180,20 @@ export const adminTakeoverRoom = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminMarkRoomRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { targetUserId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    await assertAdmin(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("support_messages")
+      .update({ status: "answered" })
+      .eq("user_id", data.targetUserId)
+      .eq("status", "escalated");
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+

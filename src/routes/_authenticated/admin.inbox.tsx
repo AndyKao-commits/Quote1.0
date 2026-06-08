@@ -2,9 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Inbox, Loader2, Send, ArrowLeft, Tag, Bot, UserCog, ChevronDown, MessageSquare, CircleUserRound,
-} from "lucide-react";
+import { Inbox, Loader2, Send, ArrowLeft, Tag, Bot, UserCog, ChevronDown, MessageSquare, CircleUserRound, Check } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { useIsAdmin } from "@/lib/useIsAdmin";
@@ -13,9 +11,22 @@ import {
   adminGetRoomMessages,
   adminPostReply,
   adminTakeoverRoom,
+  adminMarkRoomRead,
   type InboxRoom,
 } from "@/lib/inbox.functions";
 import { useCannedResponses } from "@/lib/canned";
+
+const DEFAULT_CANNED = [
+  { id: "_d1", title: "您好，這邊是客服", content: "您好，我是客服專員，已收到您的訊息，將盡快為您處理。" },
+  { id: "_d2", title: "確認問題細節", content: "為了協助您處理，可否再提供問題發生的時間、地點與相關照片？" },
+  { id: "_d3", title: "派工確認", content: "已為您安排師傅前往，預計到場時間會再 LINE 通知您，請保持手機暢通。" },
+  { id: "_d4", title: "施工進度更新", content: "目前施工進度約 60%，預計 ___ 完工，照片我會稍後上傳到案件中。" },
+  { id: "_d5", title: "報價說明", content: "本案件含工資、材料合計約 NT$ ___，明細已附在案件材料清單中。" },
+  { id: "_d6", title: "完工驗收", content: "本案件已完工，麻煩您協助驗收並回覆是否一切正常，感謝！" },
+  { id: "_d7", title: "感謝詢問", content: "感謝您的詢問，若還有任何問題隨時與我們聯繫。" },
+  { id: "_d8", title: "稍後回覆", content: "目前在現場處理中，稍後會盡快回覆您，感謝耐心等候。" },
+];
+
 
 export const Route = createFileRoute("/_authenticated/admin/inbox")({
   head: () => ({ meta: [{ title: "客服收件夾 — 現場紀錄" }] }),
@@ -180,11 +191,17 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
   const getFn = useServerFn(adminGetRoomMessages);
   const replyFn = useServerFn(adminPostReply);
   const takeoverFn = useServerFn(adminTakeoverRoom);
+  const markReadFn = useServerFn(adminMarkRoomRead);
   const cannedQ = useCannedResponses(true);
   const [reply, setReply] = useState("");
   const [showCanned, setShowCanned] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const cannedList = useMemo(() => {
+    const dbItems = (cannedQ.data ?? []).map((c) => ({ id: c.id, title: c.title, content: c.content }));
+    return [...dbItems, ...DEFAULT_CANNED];
+  }, [cannedQ.data]);
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["inbox-room", room.user_id],
@@ -210,6 +227,15 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
       qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+    },
+    onError: (e: Error) => alert(e.message),
+  });
+
+  const markReadMut = useMutation({
+    mutationFn: () => markReadFn({ data: { targetUserId: room.user_id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
+      qc.invalidateQueries({ queryKey: ["support-unread-count"] });
     },
     onError: (e: Error) => alert(e.message),
   });
@@ -242,6 +268,16 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
             {room.email || room.user_id.slice(0, 12)}
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => markReadMut.mutate()}
+          disabled={markReadMut.isPending || room.unread_count === 0}
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11px] font-bold hover:bg-secondary disabled:opacity-50"
+          title="清除此對話的未讀紅點"
+        >
+          {markReadMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          已讀
+        </button>
         <button
           type="button"
           onClick={() => takeoverMut.mutate(room.ai_enabled)}
@@ -283,13 +319,13 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
           replyMut.mutate(t);
         }}
       >
-        {showCanned && (cannedQ.data?.length ?? 0) > 0 && (
+        {showCanned && cannedList.length > 0 && (
           <div className="absolute bottom-full left-3 right-3 mb-2 max-h-60 overflow-y-auto rounded-lg border border-border bg-card shadow-[var(--shadow-elevated)]">
             <div className="border-b border-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              常用罐頭回覆
+              常用罐頭回覆（{cannedList.length}）
             </div>
             <ul className="divide-y divide-border">
-              {cannedQ.data!.map((c) => (
+              {cannedList.map((c) => (
                 <li key={c.id}>
                   <button
                     type="button"

@@ -10,7 +10,8 @@ import { Avatar } from "@/components/Avatar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listMyTeams, createTeam, renameTeam, deleteTeam,
-  listTeamMembers, inviteMember, removeMember, changeMemberRole,
+  listTeamMembers, inviteMember, removeMember, changeMemberRole, changeMemberLevel,
+  LEVEL_META,
   type Team, type TeamMember,
 } from "@/lib/teams.functions";
 
@@ -198,6 +199,13 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: invKey }),
     onError: (e: Error) => alert(e.message),
   });
+  const levelFn = useServerFn(changeMemberLevel);
+  const levelMut = useMutation({
+    mutationFn: (p: { uid: string; level: number }) =>
+      levelFn({ data: { teamId: team.id, userId: p.uid, level: p.level } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: invKey }),
+    onError: (e: Error) => alert(e.message),
+  });
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("editor");
@@ -337,33 +345,52 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
                 <div className="truncate text-[11px] text-muted-foreground">{m.email || "—"}</div>
               </div>
               {isOwner && m.role !== "owner" ? (
-                <div className="flex items-center gap-1">
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={m.role}
+                      onChange={(e) => roleMut.mutate({ uid: m.user_id, role: e.target.value as any })}
+                      disabled={roleMut.isPending}
+                      className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
+                      title="角色（影響案件權限）"
+                    >
+                      <option value="editor">編輯者</option>
+                      <option value="viewer">瀏覽者</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
+                          removeMut.mutate(m.user_id);
+                        }
+                      }}
+                      className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                      title="移除"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <select
-                    value={m.role}
-                    onChange={(e) => roleMut.mutate({ uid: m.user_id, role: e.target.value as any })}
-                    disabled={roleMut.isPending}
-                    className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
+                    value={m.level}
+                    onChange={(e) => levelMut.mutate({ uid: m.user_id, level: Number(e.target.value) })}
+                    disabled={levelMut.isPending}
+                    className="rounded-lg border border-input bg-background px-2 py-0.5 text-[11px] font-semibold outline-none"
+                    title="權限等級"
                   >
-                    <option value="editor">編輯者</option>
-                    <option value="viewer">瀏覽者</option>
+                    {[1, 2, 3, 4].map((lv) => (
+                      <option key={lv} value={lv}>{LEVEL_META[lv].label}</option>
+                    ))}
                   </select>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
-                        removeMut.mutate(m.user_id);
-                      }
-                    }}
-                    className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-                    title="移除"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
                 </div>
               ) : (
-                <span className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold ${ROLE_META[m.role].cls}`}>
-                  {ROLE_META[m.role].icon} {ROLE_META[m.role].label}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[10px] font-bold ${ROLE_META[m.role].cls}`}>
+                    {ROLE_META[m.role].icon} {ROLE_META[m.role].label}
+                  </span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    {LEVEL_META[m.level]?.label ?? `L${m.level}`}
+                  </span>
+                </div>
               )}
             </li>
           ))}
@@ -371,7 +398,14 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
       )}
 
       <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-[11px] text-muted-foreground">
-        <strong>權限說明：</strong>主持人可邀請/管理成員與案件；編輯者可瀏覽與建立團隊案件；瀏覽者僅能瀏覽團隊案件。
+        <strong>權限等級說明：</strong>
+        <ul className="mt-1 grid gap-0.5 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((lv) => (
+            <li key={lv}>
+              <span className="font-bold text-foreground">{LEVEL_META[lv].label}</span>：{LEVEL_META[lv].desc}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );

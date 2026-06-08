@@ -46,7 +46,10 @@ function SupportPage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Msg[];
+      // Hide internal system rows from end-user view
+      return ((data ?? []) as Msg[]).filter(
+        (m) => m.admin_reply !== "__TRANSFER_NOTICE__",
+      );
     },
     refetchInterval: 15000,
   });
