@@ -412,9 +412,9 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
 }
 
 type Bubble =
-  | { kind: "user"; text: string; at: string }
+  | { kind: "user"; text: string; at: string; image?: string | null }
   | { kind: "ai"; text: string; at: string; tags: string[] }
-  | { kind: "admin"; text: string; at: string }
+  | { kind: "admin"; text: string; at: string; image?: string | null }
   | { kind: "system"; text: string; at: string };
 
 function buildBubbles(rows: any[]): Bubble[] {
@@ -422,20 +422,36 @@ function buildBubbles(rows: any[]): Bubble[] {
   let lastAi: boolean | null = null;
   for (const r of rows) {
     if (r.admin_reply === "__TRANSFER_NOTICE__") {
-      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
-      lastAi = false;
+      if (lastAi !== false) {
+        out.push({ kind: "system", text: "👤 AI小幫手已暫停，改由真人專員為您服務", at: r.created_at });
+        lastAi = false;
+      }
       continue;
     }
-    // detect AI→human transition implicitly if no notice row exists
     const aiNow = r.ai_enabled !== false;
-    if (lastAi === true && !aiNow) {
-      out.push({ kind: "system", text: "AI小幫手已將此對話轉交給真人客服", at: r.created_at });
+    if (lastAi !== null && lastAi !== aiNow) {
+      out.push({
+        kind: "system",
+        text: aiNow
+          ? "🤖 系統提示：專員已離線，自動切換回 AI小幫手服務"
+          : "👤 AI小幫手已暫停，改由真人專員為您服務",
+        at: r.created_at,
+      });
     }
     lastAi = aiNow;
 
-    if (r.question) out.push({ kind: "user", text: r.question, at: r.created_at });
+    // user-side: text question (skip placeholder) or image
+    if (r.question && r.question !== "[圖片]") {
+      out.push({ kind: "user", text: r.question, at: r.created_at, image: !r.admin_reply ? r.image_url : null });
+    } else if (r.image_url && !r.admin_reply) {
+      out.push({ kind: "user", text: "", at: r.created_at, image: r.image_url });
+    }
     if (r.ai_answer) out.push({ kind: "ai", text: r.ai_answer, at: r.created_at, tags: r.tags ?? [] });
-    if (r.admin_reply) out.push({ kind: "admin", text: r.admin_reply, at: r.replied_at ?? r.created_at });
+    if (r.admin_reply && r.admin_reply !== "[圖片]") {
+      out.push({ kind: "admin", text: r.admin_reply, at: r.replied_at ?? r.created_at, image: r.image_url });
+    } else if (r.image_url && r.admin_reply === "[圖片]") {
+      out.push({ kind: "admin", text: "", at: r.replied_at ?? r.created_at, image: r.image_url });
+    }
   }
   return out;
 }
@@ -443,9 +459,9 @@ function buildBubbles(rows: any[]): Bubble[] {
 function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: string | null; userAvatar?: string | null }) {
   if (bubble.kind === "system") {
     return (
-      <div className="flex justify-center">
+      <div className="flex justify-center py-1">
         <span className="rounded-full bg-muted px-3 py-1 text-[11px] text-muted-foreground">
-          ⚡ {bubble.text}
+          — {bubble.text} —
         </span>
       </div>
     );
@@ -456,9 +472,10 @@ function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: s
         <Avatar name={userName ?? "U"} path={userAvatar} size={28} />
         <div className="max-w-[80%]">
           <div className="mb-0.5 text-[10px] font-semibold text-muted-foreground">{userName ?? "使用者"}</div>
-          <div className="rounded-2xl rounded-tl-sm bg-card px-3.5 py-2 text-sm shadow-sm">
-            <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
-            <div className="mt-1 text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+          <div className="space-y-1.5 rounded-2xl rounded-tl-sm bg-card px-3.5 py-2 text-sm shadow-sm">
+            {bubble.text && <div className="whitespace-pre-wrap break-words">{bubble.text}</div>}
+            {bubble.image && <SupportImage path={bubble.image} />}
+            <div className="text-[10px] text-muted-foreground">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
           </div>
         </div>
       </div>
@@ -496,9 +513,10 @@ function Bubble({ bubble, userName, userAvatar }: { bubble: Bubble; userName?: s
         <div className="mb-0.5 text-right text-[10px] font-semibold text-primary">
           <CircleUserRound className="mr-0.5 inline h-3 w-3" /> 管理員
         </div>
-        <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
-          <div className="whitespace-pre-wrap break-words">{bubble.text}</div>
-          <div className="mt-1 text-[10px] opacity-80">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
+        <div className="space-y-1.5 rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground shadow-sm">
+          {bubble.text && <div className="whitespace-pre-wrap break-words">{bubble.text}</div>}
+          {bubble.image && <SupportImage path={bubble.image} />}
+          <div className="text-[10px] opacity-80">{new Date(bubble.at).toLocaleString("zh-TW")}</div>
         </div>
       </div>
     </div>
