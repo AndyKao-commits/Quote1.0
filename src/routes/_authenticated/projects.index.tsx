@@ -3,27 +3,20 @@ import { useState } from "react";
 import { Search, Plus, ClipboardList } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
-import { listProjects } from "@/lib/storage";
-import { useStoreVersion } from "@/hooks/use-storage";
+import { useProjects } from "@/lib/db";
 
-export const Route = createFileRoute("/projects/")({
-  head: () => ({
-    meta: [
-      { title: "案件管理 — 水電施工紀錄 Pro" },
-      { name: "description", content: "搜尋客戶、案件、地址、日期。" },
-    ],
-  }),
+export const Route = createFileRoute("/_authenticated/projects/")({
+  head: () => ({ meta: [{ title: "案件管理 — 現場紀錄" }] }),
   component: ProjectsList,
 });
 
 function ProjectsList() {
-  useStoreVersion();
   const [q, setQ] = useState("");
-  const all = listProjects();
+  const { data: all = [], isLoading } = useProjects();
   const kw = q.trim().toLowerCase();
   const projects = kw
     ? all.filter((p) =>
-        [p.name, p.customerName, p.address, p.startDate, p.expectedEndDate]
+        [p.name, p.customer_name, p.address, p.start_date, p.expected_end_date]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(kw)),
       )
@@ -54,14 +47,14 @@ function ProjectsList() {
         />
       </div>
 
-      {projects.length === 0 ? (
+      {isLoading ? (
+        <div className="card-surface p-10 text-center text-sm text-muted-foreground">載入中…</div>
+      ) : projects.length === 0 ? (
         <div className="card-surface flex flex-col items-center gap-3 px-6 py-16 text-center">
           <div className="grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
             <ClipboardList className="h-6 w-6" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {kw ? "沒有符合的案件" : "還沒有案件，點上方按鈕建立"}
-          </p>
+          <p className="text-sm text-muted-foreground">{kw ? "沒有符合的案件" : "還沒有案件，點上方按鈕建立"}</p>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -74,15 +67,13 @@ function ProjectsList() {
             >
               <div className="flex items-center justify-between gap-2">
                 <StatusBadge status={p.status} />
-                <span className="text-xs text-muted-foreground">{p.startDate}</span>
+                <span className="text-xs text-muted-foreground">{p.start_date}</span>
               </div>
               <h3 className="mt-3 truncate text-base font-semibold">{p.name}</h3>
-              <p className="mt-1 truncate text-sm text-muted-foreground">{p.customerName}</p>
+              <p className="mt-1 truncate text-sm text-muted-foreground">{p.customer_name}</p>
               <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.address}</p>
-              {p.expectedEndDate && (
-                <p className="mt-2 text-[11px] font-medium text-muted-foreground">
-                  預計完工：{p.expectedEndDate}
-                </p>
+              {p.expected_end_date && (
+                <p className="mt-2 text-[11px] font-medium text-muted-foreground">預計完工：{p.expected_end_date}</p>
               )}
             </Link>
           ))}

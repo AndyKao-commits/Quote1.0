@@ -1,21 +1,28 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { saveLog, uid } from "@/lib/storage";
+import { useSaveLog } from "@/lib/db";
 
-export function LogForm({ projectId, onSaved }: { projectId: string; onSaved?: () => void }) {
+export function LogForm({ projectId }: { projectId: string }) {
   const today = new Date().toISOString().slice(0, 10);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ date: today, content: "", hours: 8, workers: "", note: "" });
+  const save = useSaveLog();
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.content.trim()) return;
-    saveLog({ id: uid(), projectId, createdAt: Date.now(), ...form, hours: Number(form.hours) || 0 });
+    await save.mutateAsync({
+      project_id: projectId,
+      date: form.date,
+      content: form.content,
+      hours: Number(form.hours) || 0,
+      workers: form.workers || undefined,
+      note: form.note || undefined,
+    });
     setForm({ date: today, content: "", hours: 8, workers: "", note: "" });
     setOpen(false);
-    onSaved?.();
   };
 
   if (!open) {
@@ -54,7 +61,9 @@ export function LogForm({ projectId, onSaved }: { projectId: string; onSaved?: (
       </label>
       <div className="flex justify-end gap-2 md:col-span-2">
         <button type="button" onClick={() => setOpen(false)} className="btn-touch rounded-lg border border-border bg-card px-4 text-sm font-semibold hover:bg-secondary">取消</button>
-        <button type="submit" className="btn-touch rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110">儲存日誌</button>
+        <button type="submit" disabled={save.isPending} className="btn-touch rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60">
+          {save.isPending ? "儲存中…" : "儲存日誌"}
+        </button>
       </div>
     </form>
   );

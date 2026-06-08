@@ -1,12 +1,19 @@
-// 將圖片載入到 canvas，壓縮並烙印浮水印
 export interface WatermarkInfo {
   projectName: string;
   address?: string;
   worker?: string;
-  takenAt: string; // "YYYY-MM-DD HH:mm"
+  takenAt: string;
 }
 
 const MAX_DIM = 1600;
+
+export async function addWatermarkBlob(
+  file: File,
+  info: WatermarkInfo,
+): Promise<Blob> {
+  const dataUrl = await addWatermark(file, info);
+  return await (await fetch(dataUrl)).blob();
+}
 
 export async function addWatermark(
   file: File,
@@ -24,7 +31,6 @@ export async function addWatermark(
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0, width, height);
 
-  // 底部半透明黑色條
   const pad = Math.max(16, Math.round(width * 0.018));
   const fontBase = Math.max(18, Math.round(width * 0.028));
   const lineGap = Math.round(fontBase * 1.35);
@@ -42,7 +48,6 @@ export async function addWatermark(
   ctx.fillStyle = grad;
   ctx.fillRect(0, height - blockH * 1.4, width, blockH * 1.4);
 
-  // 文字
   ctx.fillStyle = "#ffffff";
   ctx.font = `600 ${fontBase}px "Noto Sans TC", system-ui, sans-serif`;
   ctx.textBaseline = "top";
@@ -55,8 +60,7 @@ export async function addWatermark(
   }
   ctx.shadowBlur = 0;
 
-  // 右上角品牌標
-  const tag = "水電施工紀錄 Pro";
+  const tag = "現場紀錄";
   ctx.font = `700 ${Math.round(fontBase * 0.78)}px "Noto Sans TC", system-ui, sans-serif`;
   const tagW = ctx.measureText(tag).width + pad * 1.4;
   const tagH = fontBase * 1.6;
@@ -66,33 +70,20 @@ export async function addWatermark(
   ctx.fillStyle = "#fff";
   ctx.fillText(tag, width - tagW - pad + pad * 0.7, pad + tagH * 0.28);
 
-  return canvas.toDataURL("image/jpeg", 0.82);
+  return canvas.toDataURL("image/jpeg", 0.85);
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = (e) => {
-      URL.revokeObjectURL(url);
-      reject(e);
-    };
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
     img.src = url;
   });
 }
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
