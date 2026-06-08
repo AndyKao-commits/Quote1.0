@@ -1,0 +1,1 @@
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS level smallint NOT NULL DEFAULT 2 CHECK (level BETWEEN 1 AND 4);
