@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, MapPin, Loader2, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useSaveProject, type ProjectStatus } from "@/lib/db";
+import { listMyTeams, type Team } from "@/lib/teams.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/new")({
   head: () => ({ meta: [{ title: "新增案件 — 現場紀錄" }] }),
@@ -14,12 +17,22 @@ function NewProject() {
   const save = useSaveProject();
   const today = new Date().toISOString().slice(0, 10);
   const [locating, setLocating] = useState(false);
+  const [useTeam, setUseTeam] = useState(false);
+  const [teamId, setTeamId] = useState<string>("");
   const [form, setForm] = useState({
     name: "", customer_name: "", customer_phone: "", address: "",
     start_date: today, expected_end_date: "", scope: "", note: "",
     status: "pending" as ProjectStatus,
   });
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  const teamsFn = useServerFn(listMyTeams);
+  const { data: teams = [] } = useQuery({
+    queryKey: ["my-teams"],
+    queryFn: () => teamsFn({}) as Promise<Team[]>,
+  });
+  // only teams where I can add cases (owner/editor)
+  const writableTeams = teams.filter((t) => t.my_role !== "viewer");
 
   async function locate() {
     if (!navigator.geolocation) { alert("此裝置不支援定位"); return; }
@@ -46,12 +59,14 @@ function NewProject() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.customer_name.trim() || !form.address.trim()) return;
-    const payload = {
+    if (useTeam && !teamId) { alert("請選擇團隊"); return; }
+    const payload: any = {
       ...form,
       expected_end_date: form.expected_end_date || null,
       customer_phone: form.customer_phone || null,
       scope: form.scope || null,
       note: form.note || null,
+      team_id: useTeam ? teamId : null,
     };
     const p = await save.mutateAsync(payload);
     navigate({ to: "/projects/$id", params: { id: p.id } });
@@ -103,6 +118,44 @@ function NewProject() {
             <option value="done">已完工</option>
           </select>
         </Field>
+
+        {/* Team selection */}
+        <div className="md:col-span-2 rounded-xl border border-dashed border-border bg-secondary/30 p-4">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={useTeam}
+              onChange={(e) => setUseTeam(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <Users className="h-4 w-4 text-primary" />
+            指派給團隊（讓團隊成員共同管理此案件）
+          </label>
+          {useTeam && (
+            <div className="mt-3">
+              {writableTeams.length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  您還沒有可建立案件的團隊。請先到「團隊管理」建立或請主持人邀請您。
+                </div>
+              ) : (
+                <select
+                  value={teamId}
+                  onChange={(e) => setTeamId(e.target.value)}
+                  className={inputCls}
+                  required={useTeam}
+                >
+                  <option value="">— 選擇團隊 —</option>
+                  {writableTeams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}（{t.my_role === "owner" ? "主持人" : "編輯者"}）
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+
         <Field label="工程內容" className="md:col-span-2">
           <textarea rows={3} value={form.scope} onChange={(e) => set("scope", e.target.value)} className={inputCls} placeholder="客廳新增四組插座、更換配電箱、安裝軌道燈..." />
         </Field>

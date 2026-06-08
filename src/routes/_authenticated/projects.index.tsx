@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Search, Plus, ClipboardList } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Plus, ClipboardList, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useProjects } from "@/lib/db";
+import { listMyTeams, type Team } from "@/lib/teams.functions";
+
 
 export const Route = createFileRoute("/_authenticated/projects/")({
   head: () => ({ meta: [{ title: "案件管理 — 現場紀錄" }] }),
@@ -12,15 +16,25 @@ export const Route = createFileRoute("/_authenticated/projects/")({
 
 function ProjectsList() {
   const [q, setQ] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
   const { data: all = [], isLoading } = useProjects();
+  const teamsFn = useServerFn(listMyTeams);
+  const { data: teams = [] } = useQuery({
+    queryKey: ["my-teams"],
+    queryFn: () => teamsFn({}) as Promise<Team[]>,
+  });
+  const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
   const kw = q.trim().toLowerCase();
-  const projects = kw
+  let projects = kw
     ? all.filter((p) =>
         [p.name, p.customer_name, p.address, p.start_date, p.expected_end_date]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(kw)),
       )
     : all;
+  if (teamFilter === "personal") projects = projects.filter((p) => !p.team_id);
+  else if (teamFilter !== "all") projects = projects.filter((p) => p.team_id === teamFilter);
+
 
   return (
     <AppShell>
@@ -47,6 +61,25 @@ function ProjectsList() {
         />
       </div>
 
+      {teams.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {[{ id: "all", name: "全部" }, { id: "personal", name: "個人案件" }, ...teams].map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTeamFilter(t.id)}
+              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold transition ${
+                teamFilter === t.id
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:bg-secondary"
+              }`}
+            >
+              {t.id !== "all" && t.id !== "personal" && <Users className="h-3 w-3" />}
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="card-surface p-10 text-center text-sm text-muted-foreground">載入中…</div>
       ) : projects.length === 0 ? (
@@ -72,9 +105,16 @@ function ProjectsList() {
               <h3 className="mt-3 truncate text-base font-semibold">{p.name}</h3>
               <p className="mt-1 truncate text-sm text-muted-foreground">{p.customer_name}</p>
               <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{p.address}</p>
-              {p.expected_end_date && (
-                <p className="mt-2 text-[11px] font-medium text-muted-foreground">預計完工：{p.expected_end_date}</p>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {p.team_id && teamMap.has(p.team_id) && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                    <Users className="h-2.5 w-2.5" /> {teamMap.get(p.team_id)}
+                  </span>
+                )}
+                {p.expected_end_date && (
+                  <span className="text-[11px] font-medium text-muted-foreground">預計完工：{p.expected_end_date}</span>
+                )}
+              </div>
             </Link>
           ))}
         </div>
@@ -82,3 +122,4 @@ function ProjectsList() {
     </AppShell>
   );
 }
+

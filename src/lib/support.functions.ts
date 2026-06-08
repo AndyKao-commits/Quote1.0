@@ -42,14 +42,28 @@ export const askSupport = createServerFn({ method: "POST" })
     const { supabase, userId } = context as any;
 
     // Check if user is currently in "human takeover" mode (latest row has ai_enabled=false)
+    // Auto-revert to AI mode if takeover_at is older than 10 minutes (idle timeout).
     const { data: lastRow } = await (supabase as any)
       .from("support_messages")
-      .select("ai_enabled")
+      .select("ai_enabled, takeover_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const humanTakeover = lastRow?.ai_enabled === false;
+
+    let humanTakeover = lastRow?.ai_enabled === false;
+    if (humanTakeover && lastRow?.takeover_at) {
+      const ageMs = Date.now() - new Date(lastRow.takeover_at).getTime();
+      if (ageMs > 10 * 60 * 1000) {
+        // Idle > 10 min: hand back to AI
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await (supabaseAdmin as any)
+          .from("support_messages")
+          .update({ ai_enabled: true, takeover_at: null })
+          .eq("user_id", userId);
+        humanTakeover = false;
+      }
+    }
 
     if (humanTakeover) {
       // Skip AI — queue directly to admin
