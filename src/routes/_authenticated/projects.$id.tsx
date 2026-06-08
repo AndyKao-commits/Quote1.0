@@ -391,3 +391,82 @@ function InfoRow({ label, value, multiline }: { label: string; value: string; mu
     </div>
   );
 }
+
+function TeamAssignRow({ project }: { project: Project }) {
+  const teamsFn = useServerFn(listMyTeams);
+  const saveProject = useSaveProject();
+  const { data: teams = [] } = useQuery({
+    queryKey: ["my-teams"],
+    queryFn: () => teamsFn({}) as Promise<Team[]>,
+  });
+  const writable = teams.filter((t) => t.my_role !== "viewer");
+  const currentTeam = teams.find((t) => t.id === project.team_id) ?? null;
+  const [editing, setEditing] = useState(false);
+  const [selected, setSelected] = useState<string>(project.team_id ?? "");
+
+  async function save() {
+    await saveProject.mutateAsync({
+      id: project.id,
+      name: project.name,
+      customer_name: project.customer_name,
+      address: project.address,
+      start_date: project.start_date,
+      team_id: selected || null,
+    });
+    setEditing(false);
+  }
+
+  return (
+    <div className="grid gap-1 border-b border-border pb-3 last:border-0 last:pb-0 sm:grid-cols-[120px_1fr] sm:gap-3">
+      <div className="text-xs font-semibold text-muted-foreground">所屬團隊</div>
+      <div className="flex flex-wrap items-center gap-2">
+        {editing ? (
+          <>
+            <select
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+              className="rounded-lg border border-input bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+            >
+              <option value="">— 個人案件（不指派團隊）—</option>
+              {writable.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}（{t.my_role === "owner" ? "主持人" : "編輯者"}）</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saveProject.isPending}
+              className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground hover:brightness-110 disabled:opacity-60"
+            >
+              {saveProject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditing(false); setSelected(project.team_id ?? ""); }}
+              className="grid h-8 w-8 place-items-center rounded-lg border border-border hover:bg-secondary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <>
+            {currentTeam ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                <Users className="h-3 w-3" /> {currentTeam.name}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">個人案件（未指派團隊）</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-semibold hover:bg-secondary"
+            >
+              <Pencil className="h-3 w-3" /> 編輯
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
