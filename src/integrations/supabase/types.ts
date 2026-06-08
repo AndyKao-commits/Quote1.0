@@ -231,6 +231,7 @@ export type Database = {
           ai_enabled: boolean
           created_at: string
           id: string
+          image_url: string | null
           question: string | null
           replied_at: string | null
           status: string
@@ -246,6 +247,7 @@ export type Database = {
           ai_enabled?: boolean
           created_at?: string
           id?: string
+          image_url?: string | null
           question?: string | null
           replied_at?: string | null
           status?: string
@@ -261,6 +263,7 @@ export type Database = {
           ai_enabled?: boolean
           created_at?: string
           id?: string
+          image_url?: string | null
           question?: string | null
           replied_at?: string | null
           status?: string
@@ -271,6 +274,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      team_invitations: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          level: number
+          role: string
+          team_id: string
+          token: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          level?: number
+          role?: string
+          team_id: string
+          token: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          level?: number
+          role?: string
+          team_id?: string
+          token?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_members: {
         Row: {
