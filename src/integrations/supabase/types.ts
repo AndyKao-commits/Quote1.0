@@ -14,7 +14,213 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      materials: {
+        Row: {
+          brand: string | null
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          project_id: string
+          quantity: number
+          source: string
+          unit: string
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          project_id: string
+          quantity?: number
+          source?: string
+          unit?: string
+          unit_price?: number
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          project_id?: string
+          quantity?: number
+          source?: string
+          unit?: string
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          note: string | null
+          project_id: string
+          storage_path: string
+          taken_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          project_id: string
+          storage_path: string
+          taken_at: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          project_id?: string
+          storage_path?: string
+          taken_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          address: string
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          expected_end_date: string | null
+          id: string
+          name: string
+          note: string | null
+          scope: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          customer_name: string
+          customer_phone?: string | null
+          expected_end_date?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          scope?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string | null
+          expected_end_date?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          scope?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      work_logs: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          hours: number
+          id: string
+          note: string | null
+          project_id: string
+          user_id: string
+          workers: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          date: string
+          hours?: number
+          id?: string
+          note?: string | null
+          project_id: string
+          user_id: string
+          workers?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          hours?: number
+          id?: string
+          note?: string | null
+          project_id?: string
+          user_id?: string
+          workers?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
