@@ -10,7 +10,7 @@ export function SupportPhotoButton({
   onUploaded,
 }: {
   customerUserId: string;
-  onUploaded: (path: string) => Promise<void> | void;
+  onUploaded: (path: string) => Promise<unknown> | unknown;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
