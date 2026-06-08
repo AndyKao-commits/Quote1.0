@@ -235,21 +235,23 @@ function ChatWindow({ room, onBack }: { room: InboxRoom; onBack: () => void }) {
     onError: (e: Error) => alert(e.message),
   });
 
+  // `enable` here is the DESIRED new ai_enabled state we want to set.
+  // - currently AI on  → click "接手對話" → want AI off → mutate(false)
+  // - currently AI off → click "交還 AI"  → want AI on  → mutate(true)
   const takeoverMut = useMutation({
-    mutationFn: (enable: boolean) =>
-      takeoverFn({ data: { targetUserId: room.user_id, enable } }),
-    onSuccess: (_d, enable) => {
+    mutationFn: (newAiEnabled: boolean) =>
+      takeoverFn({ data: { targetUserId: room.user_id, enable: newAiEnabled } }),
+    onSuccess: (_d, newAiEnabled) => {
       qc.invalidateQueries({ queryKey: ["inbox-room", room.user_id] });
       qc.invalidateQueries({ queryKey: ["inbox-rooms"] });
-      // `enable` is the PREVIOUS ai_enabled state we sent in; toggling means new state is !enable
-      if (enable) {
-        toast.success("已接手對話", { description: "AI 自動回覆已暫停，由您接手回覆" });
+      if (newAiEnabled) {
+        toast.success("已交還 AI 小幫手", { description: "AI 已重新啟用，將自動回覆使用者" });
       } else {
-        toast.success("已交還 AI", { description: "AI 小幫手已重新啟用，將自動回覆使用者" });
+        toast.success("已接手對話", { description: "AI 自動回覆已暫停，由您接手回覆（5 分鐘閒置會自動切回 AI）" });
       }
     },
     onError: (e: Error) => {
-      toast.error("切換失敗", { description: e.message });
+      toast.error("切換失敗", { description: e.message || "請稍後再試" });
     },
   });
 
