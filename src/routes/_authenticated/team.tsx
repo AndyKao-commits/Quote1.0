@@ -327,6 +327,11 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
         </form>
       )}
 
+      {/* Invite links */}
+      {isOwner && <InviteLinksPanel teamId={team.id} />}
+
+
+
       {/* Members */}
       {isLoading ? (
         <div className="grid place-items-center py-8">
