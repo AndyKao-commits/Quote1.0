@@ -12,8 +12,10 @@
     "format": "prettier --write .",
     "verify:env": "node scripts/verify-env.mjs",
     "check:supabase": "node scripts/check-supabase.mjs",
+    "setup:storage": "node scripts/setup-storage.mjs",
     "setup:vercel-env": "powershell -ExecutionPolicy Bypass -File scripts/sync-vercel-env.ps1",
-    "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1"
+    "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1",
+    "build:bootstrap-sql": "node scripts/build-bootstrap-sql.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",

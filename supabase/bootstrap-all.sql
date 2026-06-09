@@ -1,5 +1,7 @@
-﻿-- 20260608145119_efba8314-44ba-433b-bd18-ed24048dfda9.sql
+-- Run once in Supabase SQL Editor (your own project)
+-- Creates all tables, RLS policies, functions, and storage buckets
 
+-- 20260608145119_efba8314-44ba-433b-bd18-ed24048dfda9.sql
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
@@ -72,7 +74,7 @@ CREATE TABLE public.materials (
   project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   brand TEXT,
-  unit TEXT NOT NULL DEFAULT '??,
+  unit TEXT NOT NULL DEFAULT '個',
   quantity NUMERIC NOT NULL DEFAULT 0,
   unit_price NUMERIC NOT NULL DEFAULT 0,
   note TEXT,
@@ -96,7 +98,7 @@ CREATE TRIGGER trg_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH RO
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, display_name, brand_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)), '?曉蝝??);
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)), '現場紀錄');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -112,7 +114,6 @@ CREATE POLICY "own folder delete" ON storage.objects FOR DELETE TO authenticated
 USING (bucket_id = 'photos' AND (storage.foldername(name))[1] = auth.uid()::text);
 
 -- 20260608145145_87b9103e-f8dd-4262-9ba5-c1ef5022cf9d.sql
-
 REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
 
@@ -162,7 +163,6 @@ REVOKE EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC, a
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated, service_role;
 
 -- 20260608174107_88145d20-7593-444f-b64c-f4053f69e4a2.sql
-
 CREATE TABLE public.support_messages (
   id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -198,7 +198,6 @@ BEFORE UPDATE ON public.support_messages
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- 20260608180525_2e8ea4c9-d373-4971-811d-c69c31c832c7.sql
-
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
 
 ALTER TABLE public.support_messages
@@ -242,10 +241,9 @@ ALTER TABLE public.support_messages ALTER COLUMN question DROP NOT NULL;
 
 -- 20260608183926_fcdcb147-24be-4ed1-a866-83a2ae1d00f1.sql
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS permission_level smallint NOT NULL DEFAULT 2;
-COMMENT ON COLUMN public.profiles.permission_level IS '1=璆凋蜓(?汗), 2=撌乩犖, 3=撌亙銝颱遙, 4=蝞∠???;
+COMMENT ON COLUMN public.profiles.permission_level IS '1=業主(瀏覽), 2=工人, 3=工地主任, 4=管理員';
 
 -- 20260608185756_3fa34159-1601-435f-b3c6-1b01fad5e594.sql
-
 -- 1. takeover_at on support_messages
 ALTER TABLE public.support_messages
   ADD COLUMN IF NOT EXISTS takeover_at timestamptz;
@@ -346,7 +344,6 @@ CREATE TRIGGER teams_set_updated_at BEFORE UPDATE ON public.teams
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- 20260608185820_8d6e8198-095b-4c24-b1f7-0fcf25dbdb28.sql
-
 REVOKE EXECUTE ON FUNCTION public.is_team_member(uuid, uuid) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.team_role(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_team_member(uuid, uuid) TO authenticated, service_role;
@@ -356,7 +353,6 @@ GRANT EXECUTE ON FUNCTION public.team_role(uuid, uuid) TO authenticated, service
 ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS level smallint NOT NULL DEFAULT 2 CHECK (level BETWEEN 1 AND 4);
 
 -- 20260608192748_067b3fba-beef-480a-9568-6a24e20e44db.sql
-
 -- Revoke from PUBLIC and anon on all SECURITY DEFINER helper functions
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
@@ -370,7 +366,6 @@ GRANT EXECUTE ON FUNCTION public.team_role(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_team_member(uuid, uuid) TO authenticated;
 
 -- 20260608195352_8cc47554-d791-4fbc-af8c-fa5c0498b605.sql
-
 -- 1) Add image_url to support_messages
 ALTER TABLE public.support_messages ADD COLUMN IF NOT EXISTS image_url TEXT;
 
@@ -436,7 +431,6 @@ WITH CHECK (EXISTS (SELECT 1 FROM public.teams t WHERE t.id = team_invitations.t
 CREATE INDEX IF NOT EXISTS team_invitations_team_id_idx ON public.team_invitations(team_id);
 
 -- 20260608202212_5db5dc34-246d-4a30-b0aa-a858b7a9ec03.sql
-
 -- Allow team members to read shared project records
 CREATE POLICY "team members read materials"
 ON public.materials FOR SELECT TO authenticated
@@ -477,7 +471,6 @@ ON public.team_invitations FOR SELECT TO authenticated
 USING (used_by = auth.uid());
 
 -- 20260608205701_5f067dab-a951-4d77-a575-cd7f350b26af.sql
-
 -- 1) Restrict invited user from reading the token column
 DROP POLICY IF EXISTS "invited user reads own invitation" ON public.team_invitations;
 CREATE POLICY "invited user reads own invitation" ON public.team_invitations
@@ -528,7 +521,6 @@ CREATE POLICY "own folder update"
   );
 
 -- 20260609013345_c354a7ba-5dd0-4bc9-bdde-f041bdaa33c1.sql
-
 -- 1. Fix broken team photo storage policy join
 DROP POLICY IF EXISTS "team members read project photos" ON storage.objects;
 CREATE POLICY "team members read project photos"
@@ -637,7 +629,6 @@ WITH CHECK (
 );
 
 -- 20260609015652_81f40a5d-672f-4e92-85c4-b25cb083b458.sql
-
 REVOKE UPDATE ON public.profiles FROM authenticated;
 GRANT UPDATE (display_name, brand_name, avatar_url, watermark_enabled, updated_at) ON public.profiles TO authenticated;
 
@@ -668,7 +659,6 @@ ALTER TABLE public.projects
 CREATE INDEX IF NOT EXISTS idx_projects_share_token ON public.projects(share_token) WHERE share_token IS NOT NULL;
 
 -- 20260609073719_de99d38f-da9e-45e2-86f7-9a6c78dd4249.sql
-
 -- Subscriptions table
 CREATE TABLE public.subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -796,20 +786,20 @@ DECLARE
   _row public.subscription_codes;
   _sub public.subscriptions;
 BEGIN
-  IF _uid IS NULL THEN RAISE EXCEPTION '隢??餃'; END IF;
+  IF _uid IS NULL THEN RAISE EXCEPTION '請先登入'; END IF;
 
   SELECT * INTO _row FROM public.subscription_codes WHERE code = _code FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION '摨?銝???; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION '序號不存在'; END IF;
   IF _row.redeemed_by IS NOT NULL THEN
     IF _row.redeemed_by = _uid THEN
       RETURN jsonb_build_object('ok', true, 'already', true);
     END IF;
-    RAISE EXCEPTION '摨?撌脰◤雿輻';
+    RAISE EXCEPTION '序號已被使用';
   END IF;
 
   SELECT * INTO _sub FROM public.subscriptions WHERE id = _row.subscription_id;
-  IF _sub.expires_at <= now() THEN RAISE EXCEPTION '甇方??勗歇??'; END IF;
-  IF _sub.owner_user_id = _uid THEN RAISE EXCEPTION '?冽銝餃董??銝?閬?????; END IF;
+  IF _sub.expires_at <= now() THEN RAISE EXCEPTION '此訂閱已過期'; END IF;
+  IF _sub.owner_user_id = _uid THEN RAISE EXCEPTION '您是主帳號，不需要兌換序號'; END IF;
 
   UPDATE public.subscription_codes
     SET redeemed_by = _uid, redeemed_at = now()
@@ -822,7 +812,6 @@ $$;
 GRANT EXECUTE ON FUNCTION public.redeem_subscription_code(text) TO authenticated;
 
 -- 20260609081418_7910b44c-8f2f-417f-a31c-a65116a8955a.sql
-
 -- 1) Revoke EXECUTE from anon/public on SECURITY DEFINER functions that should not be callable anonymously
 REVOKE EXECUTE ON FUNCTION public.current_membership_expiry(uuid) FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.has_active_membership(uuid) FROM anon, public;
@@ -849,4 +838,3 @@ ON CONFLICT (id) DO UPDATE SET
   public = EXCLUDED.public,
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
-
