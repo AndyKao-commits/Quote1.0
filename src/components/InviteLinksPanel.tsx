@@ -14,7 +14,6 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
   const createFn = useServerFn(createInvite);
   const revokeFn = useServerFn(revokeInvite);
 
-  const [role, setRole] = useState<"editor" | "viewer">("viewer");
   const [level, setLevel] = useState<number>(1);
   const [ttl, setTtl] = useState<number>(24);
 
@@ -25,7 +24,7 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
 
   const createMut = useMutation({
     mutationFn: () =>
-      createFn({ data: { teamId, role, level, ttlHours: ttl } }),
+      createFn({ data: { teamId, role: "editor", level, ttlHours: ttl } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team-invites", teamId] }),
     onError: (e: Error) => alert(e.message),
   });
