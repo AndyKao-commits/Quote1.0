@@ -109,7 +109,7 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
                   {used ? "已使用" : expired ? "已過期" : "有效"}
                 </span>
                 <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">
-                  {inv.role === "editor" ? "編輯者" : "瀏覽者"} · L{inv.level}
+                  {LEVEL_META[inv.level]?.label ?? `L${inv.level}`}
                 </span>
                 <code className="flex-1 min-w-[180px] truncate rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                   {url}
