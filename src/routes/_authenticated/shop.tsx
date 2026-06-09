@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShoppingBag, Sparkles, PackageOpen, CreditCard, Lock } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
+import { useMembership } from "@/lib/useMembership";
 
 export const Route = createFileRoute("/_authenticated/shop")({
   head: () => ({ meta: [{ title: "商店 — 施工紀錄 PRO" }] }),
@@ -10,22 +11,24 @@ export const Route = createFileRoute("/_authenticated/shop")({
 
 function ShopPage() {
   const { data: isAdmin, isLoading } = useIsAdmin();
-  if (!isLoading && !isAdmin) {
+  const { data: membership, isLoading: ml } = useMembership();
+  const allowed = isAdmin === true || membership?.active === true;
+  if (!isLoading && !ml && !allowed) {
     return (
       <AppShell>
         <div className="card-surface mx-auto mt-10 max-w-md p-8 text-center">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-muted">
             <Lock className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h2 className="mt-4 text-lg font-bold">商店功能僅開放管理員</h2>
+          <h2 className="mt-4 text-lg font-bold">商店為付費會員專屬</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            商店系統目前由管理員設定與管理，敬請期待開放給所有使用者。
+            升級為付費會員或輸入主帳號分享的序號，即可解鎖商店功能。
           </p>
           <Link
-            to="/dashboard"
+            to="/profile"
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:brightness-110"
           >
-            返回儀表板
+            前往個人資料
           </Link>
         </div>
       </AppShell>

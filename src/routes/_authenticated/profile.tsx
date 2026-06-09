@@ -7,6 +7,7 @@ import { useIsAdmin } from "@/lib/useIsAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { PasswordInput } from "@/components/PasswordInput";
+import { MembershipPanel } from "@/components/MembershipPanel";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({ meta: [{ title: "個人資料 — 施工紀錄 PRO" }] }),
@@ -82,6 +83,8 @@ function ProfilePage() {
       <p className="mt-1 text-sm text-muted-foreground">所有資料都自動同步到雲端，換手機也不會不見。</p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <MembershipPanel />
+
         <section className="card-surface p-5 md:col-span-2">
           <AvatarUploader
             name={profile?.display_name ?? email}

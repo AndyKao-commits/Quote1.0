@@ -2,10 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle } from "lucide-react";
+import { Shield, Trash2, UserPlus, Loader2, Crown, UserMinus, AlertTriangle, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useIsAdmin } from "@/lib/useIsAdmin";
 import { adminListUsers, adminDeleteUser, adminSetRole, adminCreateUser } from "@/lib/admin.functions";
+import { adminGrantMembership, adminListMemberships, adminRevokeSubscription } from "@/lib/membership.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -61,6 +62,27 @@ function AdminPage() {
   const [name, setName] = useState("");
   const [makeAdmin, setMakeAdmin] = useState(false);
 
+  // Membership grant
+  const grantFn = useServerFn(adminGrantMembership);
+  const listMembershipsFn = useServerFn(adminListMemberships);
+  const revokeFn = useServerFn(adminRevokeSubscription);
+  const { data: memberships = [], refetch: refetchMems } = useQuery({
+    queryKey: ["admin-memberships"],
+    queryFn: () => listMembershipsFn({}),
+    enabled: isAdmin === true,
+  });
+  const grantMut = useMutation({
+    mutationFn: (v: { targetUserId: string; planSeats: 3 | 6 | 9 | 12; days: number }) => grantFn({ data: v }),
+    onSuccess: () => { refetchMems(); qc.invalidateQueries({ queryKey: ["my-membership"] }); },
+  });
+  const revokeMut = useMutation({
+    mutationFn: (subscriptionId: string) => revokeFn({ data: { subscriptionId } }),
+    onSuccess: () => { refetchMems(); qc.invalidateQueries({ queryKey: ["my-membership"] }); },
+  });
+  const [grantUser, setGrantUser] = useState<string>("");
+  const [grantSeats, setGrantSeats] = useState<3 | 6 | 9 | 12>(3);
+  const [grantDays, setGrantDays] = useState(30);
+
   if (checking) {
     return <AppShell><div className="grid place-items-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppShell>;
   }
@@ -112,6 +134,78 @@ function AdminPage() {
             建立會員
           </button>
         </form>
+      </section>
+
+      <section className="card-surface mt-4 p-5">
+        <h2 className="flex items-center gap-2 text-sm font-bold">
+          <Sparkles className="h-4 w-4 text-amber-500" /> 付費會員開關（測試用）
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          手動為任一會員開通付費功能，方案有 3 / 6 / 9 / 12 組序號可分享，預設 30 天到期。
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+          <select className={inp} value={grantUser} onChange={(e) => setGrantUser(e.target.value)}>
+            <option value="">選擇會員…</option>
+            {users.map((u: any) => (
+              <option key={u.id} value={u.id}>{u.display_name || u.email}</option>
+            ))}
+          </select>
+          <select className={inp} value={grantSeats} onChange={(e) => setGrantSeats(Number(e.target.value) as any)}>
+            {[3, 6, 9, 12].map((n) => <option key={n} value={n}>{n} 組方案</option>)}
+          </select>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            className={inp}
+            value={grantDays}
+            onChange={(e) => setGrantDays(Number(e.target.value) || 30)}
+            placeholder="天數"
+          />
+          <button
+            type="button"
+            disabled={!grantUser || grantMut.isPending}
+            onClick={() => grantMut.mutate(
+              { targetUserId: grantUser, planSeats: grantSeats, days: grantDays },
+              { onError: (e: any) => alert(e.message), onSuccess: () => setGrantUser("") },
+            )}
+            className="btn-touch inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground hover:brightness-110 disabled:opacity-60"
+          >
+            {grantMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            開通會員
+          </button>
+        </div>
+
+        {memberships.length > 0 && (
+          <ul className="mt-4 divide-y divide-border text-sm">
+            {memberships.map((s: any) => {
+              const u = users.find((x: any) => x.id === s.owner_user_id);
+              const expired = new Date(s.expires_at) <= new Date();
+              return (
+                <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{u?.display_name || u?.email || s.owner_user_id.slice(0, 8)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {s.plan_seats} 組 · 到期 {new Date(s.expires_at).toLocaleString("zh-TW", { dateStyle: "medium", timeStyle: "short" })}
+                      {expired ? " · 已過期" : ""}
+                      {s.created_by_admin ? " · 管理員開通" : ""}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm("確定撤銷此訂閱？所有相關序號也會失效。")) {
+                        revokeMut.mutate(s.id, { onError: (e: any) => alert(e.message) });
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-destructive/30 bg-card px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> 撤銷
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="card-surface mt-4 p-5">
