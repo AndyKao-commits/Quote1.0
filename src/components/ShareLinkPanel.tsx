@@ -13,9 +13,15 @@ export function ShareLinkPanel({ projectId }: { projectId: string }) {
     queryFn: () => getFn({ data: { projectId } }) as Promise<ShareSettings>,
   });
 
+  type UpdArgs = {
+    projectId: string;
+    enabled?: boolean;
+    showAmounts?: boolean;
+    showMaterials?: boolean;
+    regenerate?: boolean;
+  };
   const mut = useMutation({
-    mutationFn: (args: Parameters<typeof updateShareSettings>[0]["data"]) =>
-      updFn({ data: args }) as Promise<ShareSettings>,
+    mutationFn: (args: UpdArgs) => updFn({ data: args }) as Promise<ShareSettings>,
     onSuccess: (s) => qc.setQueryData(["share-settings", projectId], s),
   });
 
