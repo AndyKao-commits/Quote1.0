@@ -166,7 +166,6 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
   const listMembersFn = useServerFn(listTeamMembers);
   const inviteFn = useServerFn(inviteMember);
   const removeFn = useServerFn(removeMember);
-  const changeRoleFn = useServerFn(changeMemberRole);
   const renameFn = useServerFn(renameTeam);
   const deleteFn = useServerFn(deleteTeam);
 
@@ -177,8 +176,8 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
 
   const invKey = ["team-members", team.id];
   const inviteMut = useMutation({
-    mutationFn: (p: { email: string; role: "editor" | "viewer" }) =>
-      inviteFn({ data: { teamId: team.id, email: p.email, role: p.role } }),
+    mutationFn: (p: { email: string; level: number }) =>
+      inviteFn({ data: { teamId: team.id, email: p.email, role: "editor", level: p.level } }),
     onSuccess: () => {
       setInviteEmail("");
       qc.invalidateQueries({ queryKey: invKey });
@@ -194,12 +193,6 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
     },
     onError: (e: Error) => alert(e.message),
   });
-  const roleMut = useMutation({
-    mutationFn: (p: { uid: string; role: "editor" | "viewer" }) =>
-      changeRoleFn({ data: { teamId: team.id, userId: p.uid, role: p.role } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: invKey }),
-    onError: (e: Error) => alert(e.message),
-  });
   const levelFn = useServerFn(changeMemberLevel);
   const levelMut = useMutation({
     mutationFn: (p: { uid: string; level: number }) =>
@@ -209,7 +202,7 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
   });
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("editor");
+  const [inviteLevel, setInviteLevel] = useState<number>(2);
 
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(team.name);
