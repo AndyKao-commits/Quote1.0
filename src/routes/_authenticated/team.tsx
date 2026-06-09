@@ -3,14 +3,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  Users, Loader2, Plus, UserPlus, Trash2, Crown, Pencil, Eye, Edit3, Check, X,
+  Users, Loader2, Plus, UserPlus, Trash2, Crown, Pencil, User, Check, X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listMyTeams, createTeam, renameTeam, deleteTeam,
-  listTeamMembers, inviteMember, removeMember, changeMemberRole, changeMemberLevel,
+  listTeamMembers, inviteMember, removeMember, changeMemberLevel,
   LEVEL_META,
   type Team, type TeamMember,
 } from "@/lib/teams.functions";
@@ -28,14 +28,14 @@ const ROLE_META: Record<string, { label: string; icon: React.ReactNode; cls: str
     cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
   },
   editor: {
-    label: "編輯者",
-    icon: <Edit3 className="h-3 w-3" />,
+    label: "成員",
+    icon: <User className="h-3 w-3" />,
     cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   },
   viewer: {
-    label: "瀏覽者",
-    icon: <Eye className="h-3 w-3" />,
-    cls: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    label: "成員",
+    icon: <User className="h-3 w-3" />,
+    cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   },
 };
 
