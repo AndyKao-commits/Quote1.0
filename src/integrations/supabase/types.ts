@@ -236,6 +236,77 @@ export type Database = {
           },
         ]
       }
+      subscription_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          redeemed_at: string | null
+          redeemed_by: string | null
+          subscription_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          subscription_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_codes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          created_by_admin: boolean
+          expires_at: string
+          id: string
+          note: string | null
+          owner_user_id: string
+          plan_seats: number
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_admin?: boolean
+          expires_at: string
+          id?: string
+          note?: string | null
+          owner_user_id: string
+          plan_seats: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_admin?: boolean
+          expires_at?: string
+          id?: string
+          note?: string | null
+          owner_user_id?: string
+          plan_seats?: number
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           admin_reply: string | null
@@ -463,6 +534,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_membership_expiry: { Args: { _user: string }; Returns: string }
+      gen_subscription_code: { Args: never; Returns: string }
+      has_active_membership: { Args: { _user: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -474,6 +548,7 @@ export type Database = {
         Args: { _team: string; _user: string }
         Returns: boolean
       }
+      redeem_subscription_code: { Args: { _code: string }; Returns: Json }
       team_role: { Args: { _team: string; _user: string }; Returns: string }
     }
     Enums: {
