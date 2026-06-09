@@ -77,7 +77,7 @@ function TeamPage() {
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">團隊管理</h1>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        建立團隊、邀請註冊會員，共同管理案件。主持人可指派編輯或瀏覽權限。
+        建立團隊、邀請註冊會員，共同管理案件。主持人可指派 L1–L4 權限等級。
       </p>
 
       {/* Create team */}
