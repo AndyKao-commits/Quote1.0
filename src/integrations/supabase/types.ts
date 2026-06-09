@@ -173,9 +173,13 @@ export type Database = {
           customer_phone: string | null
           expected_end_date: string | null
           id: string
+          is_share_enabled: boolean
           name: string
           note: string | null
           scope: string | null
+          share_show_amounts: boolean
+          share_show_materials: boolean
+          share_token: string | null
           start_date: string
           status: string
           team_id: string | null
@@ -189,9 +193,13 @@ export type Database = {
           customer_phone?: string | null
           expected_end_date?: string | null
           id?: string
+          is_share_enabled?: boolean
           name: string
           note?: string | null
           scope?: string | null
+          share_show_amounts?: boolean
+          share_show_materials?: boolean
+          share_token?: string | null
           start_date: string
           status?: string
           team_id?: string | null
@@ -205,9 +213,13 @@ export type Database = {
           customer_phone?: string | null
           expected_end_date?: string | null
           id?: string
+          is_share_enabled?: boolean
           name?: string
           note?: string | null
           scope?: string | null
+          share_show_amounts?: boolean
+          share_show_materials?: boolean
+          share_token?: string | null
           start_date?: string
           status?: string
           team_id?: string | null

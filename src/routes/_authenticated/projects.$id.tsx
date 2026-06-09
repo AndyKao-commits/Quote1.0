@@ -24,6 +24,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { exportProjectPdf } from "@/lib/pdfExport";
+import { ShareLinkPanel } from "@/components/ShareLinkPanel";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: `案件詳情 — 施工紀錄 PRO` }] }),
@@ -243,54 +245,15 @@ function ProjectDetail() {
                 {allPhotos.length === 0 ? "還沒有照片，上傳或拍攝第一張吧！" : "這個分類還沒有照片。"}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {photos.map((p, i) => {
-                  const isSelected = selectedIds.has(p.id);
-                  return (
-                    <div key={p.id} className={`group relative aspect-square overflow-hidden rounded-xl border bg-muted ${batchMode && isSelected ? "border-primary ring-2 ring-primary" : "border-border"}`}>
-                      <button
-                        onClick={() => {
-                          if (batchMode) {
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
-                              return next;
-                            });
-                          } else {
-                            openLightbox(i);
-                          }
-                        }}
-                        className="block h-full w-full"
-                      >
-                        <PhotoImage path={p.storage_path} alt={p.note ?? ""} className={`h-full w-full object-cover transition ${batchMode ? "" : "group-hover:scale-105"}`} />
-                      </button>
-                      {batchMode ? (
-                        <div className="absolute left-1.5 top-1.5">
-                          {isSelected ? (
-                            <CheckSquare className="h-5 w-5 text-primary drop-shadow-sm" />
-                          ) : (
-                            <Square className="h-5 w-5 text-white/80 drop-shadow-sm" />
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                            {p.category === "before" ? "前" : p.category === "during" ? "中" : "後"}
-                          </span>
-                          <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-                            <button onClick={() => setEditNote({ id: p.id, note: p.note ?? "" })} className="rounded-md bg-black/55 p-1 text-white">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={() => setConfirmDelete({ kind: "photo", photo: p })} className="rounded-md bg-black/55 p-1 text-white">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <PhotosByDate
+                photos={photos}
+                batchMode={batchMode}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onOpen={(p) => openLightbox(photos.findIndex((x) => x.id === p.id))}
+                onEditNote={(p) => setEditNote({ id: p.id, note: p.note ?? "" })}
+                onDelete={(p) => setConfirmDelete({ kind: "photo", photo: p })}
+              />
             )}
 
             {photoIndex !== null && !batchMode && (
@@ -353,6 +316,7 @@ function ProjectDetail() {
             {project.scope && <InfoRow label="工程內容" value={project.scope} multiline />}
             {project.note && <InfoRow label="備註" value={project.note} multiline />}
             <TeamAssignRow project={project} />
+            <ShareLinkPanel projectId={project.id} />
           </div>
         )}
       </div>
@@ -538,6 +502,106 @@ function TeamAssignRow({ project }: { project: Project }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function PhotosByDate({
+  photos, batchMode, selectedIds, setSelectedIds, onOpen, onEditNote, onDelete,
+}: {
+  photos: Photo[];
+  batchMode: boolean;
+  selectedIds: Set<string>;
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onOpen: (p: Photo) => void;
+  onEditNote: (p: Photo) => void;
+  onDelete: (p: Photo) => void;
+}) {
+  const groups = new Map<string, Photo[]>();
+  for (const p of photos) {
+    const d = (p.created_at ?? "").slice(0, 10) || "未分類";
+    if (!groups.has(d)) groups.set(d, []);
+    groups.get(d)!.push(p);
+  }
+  const entries = Array.from(groups.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+  const [closed, setClosed] = useState<Set<string>>(new Set());
+  const toggle = (d: string) => setClosed((s) => { const n = new Set(s); n.has(d) ? n.delete(d) : n.add(d); return n; });
+
+  return (
+    <div className="space-y-3">
+      {entries.map(([date, items]) => {
+        const isClosed = closed.has(date);
+        const allSelected = batchMode && items.every((p) => selectedIds.has(p.id));
+        return (
+          <div key={date} className="card-surface overflow-hidden">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+              <button type="button" onClick={() => toggle(date)} className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                {isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                <span>{date}</span>
+                <span className="text-xs font-normal text-muted-foreground">· {items.length} 張</span>
+              </button>
+              {batchMode && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (allSelected) items.forEach((p) => next.delete(p.id));
+                    else items.forEach((p) => next.add(p.id));
+                    return next;
+                  })}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >{allSelected ? "取消整日" : "選取整日"}</button>
+              )}
+            </div>
+            {!isClosed && (
+              <div className="grid grid-cols-2 gap-2 p-2 sm:grid-cols-3 md:grid-cols-4">
+                {items.map((p) => {
+                  const isSelected = selectedIds.has(p.id);
+                  return (
+                    <div key={p.id} className={`group relative aspect-square overflow-hidden rounded-xl border bg-muted ${batchMode && isSelected ? "border-primary ring-2 ring-primary" : "border-border"}`}>
+                      <button
+                        onClick={() => {
+                          if (batchMode) {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                              return next;
+                            });
+                          } else {
+                            onOpen(p);
+                          }
+                        }}
+                        className="block h-full w-full"
+                      >
+                        <PhotoImage path={p.storage_path} alt={p.note ?? ""} className={`h-full w-full object-cover transition ${batchMode ? "" : "group-hover:scale-105"}`} />
+                      </button>
+                      {batchMode ? (
+                        <div className="absolute left-1.5 top-1.5">
+                          {isSelected ? <CheckSquare className="h-5 w-5 text-primary drop-shadow-sm" /> : <Square className="h-5 w-5 text-white/80 drop-shadow-sm" />}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            {p.category === "before" ? "前" : p.category === "during" ? "中" : "後"}
+                          </span>
+                          <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
+                            <button onClick={() => onEditNote(p)} className="rounded-md bg-black/55 p-1 text-white">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => onDelete(p)} className="rounded-md bg-black/55 p-1 text-white">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
