@@ -163,7 +163,7 @@ function SupportPage() {
   return (
     <AppShell>
       {/* Mobile fullscreen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
+      <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-3">
           <Link to="/dashboard" className="grid h-10 w-10 place-items-center rounded-lg hover:bg-secondary">
             <ArrowLeft className="h-5 w-5" />
