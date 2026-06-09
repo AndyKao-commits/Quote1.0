@@ -290,7 +290,7 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
           onSubmit={(e) => {
             e.preventDefault();
             if (!inviteEmail.trim() || inviteMut.isPending) return;
-            inviteMut.mutate({ email: inviteEmail.trim(), role: inviteRole });
+            inviteMut.mutate({ email: inviteEmail.trim(), level: inviteLevel });
           }}
         >
           <UserPlus className="h-4 w-4 text-primary" />
@@ -302,12 +302,14 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
             className="flex-1 min-w-[200px] rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <select
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as any)}
+            value={inviteLevel}
+            onChange={(e) => setInviteLevel(Number(e.target.value))}
             className="rounded-lg border border-input bg-background px-2 py-2 text-xs font-semibold outline-none"
+            title="權限等級"
           >
-            <option value="editor">編輯者（可建立案件）</option>
-            <option value="viewer">瀏覽者（僅瀏覽）</option>
+            {[1, 2, 3, 4].map((lv) => (
+              <option key={lv} value={lv}>{LEVEL_META[lv].label}</option>
+            ))}
           </select>
           <button
             type="submit"
