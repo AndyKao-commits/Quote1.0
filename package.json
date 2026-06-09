@@ -9,7 +9,10 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "verify:env": "node scripts/verify-env.mjs",
+    "setup:vercel-env": "powershell -ExecutionPolicy Bypass -File scripts/sync-vercel-env.ps1",
+    "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
