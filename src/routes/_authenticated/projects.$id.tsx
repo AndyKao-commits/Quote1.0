@@ -24,6 +24,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { exportProjectPdf } from "@/lib/pdfExport";
+import { ShareLinkPanel } from "@/components/ShareLinkPanel";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/projects/$id")({
   head: () => ({ meta: [{ title: `案件詳情 — 施工紀錄 PRO` }] }),
@@ -353,6 +355,7 @@ function ProjectDetail() {
             {project.scope && <InfoRow label="工程內容" value={project.scope} multiline />}
             {project.note && <InfoRow label="備註" value={project.note} multiline />}
             <TeamAssignRow project={project} />
+            <ShareLinkPanel projectId={project.id} />
           </div>
         )}
       </div>
