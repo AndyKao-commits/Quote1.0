@@ -163,7 +163,7 @@ function SupportPage() {
   return (
     <AppShell>
       <div className="mb-3 flex items-center gap-2">
-        <Link to="/dashboard" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary md:hidden">
+        <Link to="/profile" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary md:hidden">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <Bot className="h-6 w-6 text-primary" />

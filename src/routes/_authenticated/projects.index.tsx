@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, ClipboardList, Users } from "lucide-react";
+import { Search, ClipboardList, Users, Activity, CheckCircle2, CalendarCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useProjects } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 import { listMyTeams, type Team } from "@/lib/teams.functions";
 
 
@@ -24,6 +25,18 @@ function ProjectsList() {
     queryFn: () => teamsFn({}) as Promise<Team[]>,
   });
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: todayPids = [] } = useQuery({
+    queryKey: ["today-log-pids", today],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("work_logs").select("project_id").eq("date", today);
+      if (error) throw error;
+      return Array.from(new Set((data ?? []).map((r) => r.project_id)));
+    },
+  });
+  const activeCount = all.filter((p) => p.status === "active" || p.status === "review").length;
+  const doneCount = all.filter((p) => p.status === "done").length;
+  const todayCount = all.filter((p) => todayPids.includes(p.id)).length;
   const kw = q.trim().toLowerCase();
   let projects = kw
     ? all.filter((p) =>
@@ -38,17 +51,16 @@ function ProjectsList() {
 
   return (
     <AppShell>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">案件管理</h1>
-          <p className="text-sm text-muted-foreground">{all.length} 件總計</p>
-        </div>
-        <Link
-          to="/projects/new"
-          className="btn-touch inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" /> 新增案件
-        </Link>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">案件</h1>
+        <p className="mt-1 text-sm text-muted-foreground">管理所有工地紀錄</p>
+      </div>
+
+      <div className="mb-5 grid grid-cols-4 gap-2">
+        <StatChip label="進行中" value={activeCount} icon={<Activity className="h-3.5 w-3.5" />} />
+        <StatChip label="今日" value={todayCount} icon={<CalendarCheck className="h-3.5 w-3.5" />} />
+        <StatChip label="完工" value={doneCount} icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+        <StatChip label="總數" value={all.length} icon={<ClipboardList className="h-3.5 w-3.5" />} />
       </div>
 
       <div className="relative mb-4">
@@ -120,6 +132,16 @@ function ProjectsList() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+function StatChip({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+  return (
+    <div className="card-surface flex flex-col items-center gap-0.5 px-2 py-3 text-center">
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="text-lg font-bold tabular-nums">{value}</span>
+      <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+    </div>
   );
 }
 

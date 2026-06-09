@@ -39,7 +39,7 @@ function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password: pw });
       if (error) throw error;
       setDone(true);
-      setTimeout(() => nav({ to: "/dashboard" }), 1500);
+      setTimeout(() => nav({ to: "/projects" }), 1500);
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "更新失敗");
     } finally {

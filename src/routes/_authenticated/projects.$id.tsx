@@ -150,7 +150,7 @@ function ProjectDetail() {
         <TabBtn active={tab === "logs"} onClick={() => setTab("logs")} icon={<ClipboardList className="h-4 w-4" />}>施工日誌</TabBtn>
         <TabBtn active={tab === "photos"} onClick={() => setTab("photos")} icon={<Camera className="h-4 w-4" />}>照片</TabBtn>
         <TabBtn active={tab === "materials"} onClick={() => setTab("materials")} icon={<Package className="h-4 w-4" />}>材料</TabBtn>
-        <TabBtn active={tab === "info"} onClick={() => setTab("info")} icon={<Info className="h-4 w-4" />}>資訊</TabBtn>
+        <TabBtn active={tab === "info"} onClick={() => setTab("info")} icon={<Info className="h-4 w-4" />}>設定</TabBtn>
       </div>
 
       <div className="mt-5">
@@ -307,14 +307,13 @@ function ProjectDetail() {
 
         {tab === "info" && (
           <div className="card-surface space-y-4 p-5 text-sm">
-            <InfoRow label="案件名稱" value={project.name} />
-            <InfoRow label="客戶姓名" value={project.customer_name} />
-            {project.customer_phone && <InfoRow label="客戶電話" value={project.customer_phone} />}
-            <InfoRow label="工程地址" value={project.address} />
-            <InfoRow label="開工日期" value={project.start_date} />
-            {project.expected_end_date && <InfoRow label="預計完工" value={project.expected_end_date} />}
-            {project.scope && <InfoRow label="工程內容" value={project.scope} multiline />}
-            {project.note && <InfoRow label="備註" value={project.note} multiline />}
+            <p className="text-xs text-muted-foreground">基本資訊請見上方標題區。此處管理團隊歸屬與客戶分享。</p>
+            {(project.scope || project.note) && (
+              <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-4">
+                {project.scope && <InfoRow label="工程內容" value={project.scope} multiline />}
+                {project.note && <InfoRow label="備註" value={project.note} multiline />}
+              </div>
+            )}
             <TeamAssignRow project={project} />
             <ShareLinkPanel projectId={project.id} />
           </div>

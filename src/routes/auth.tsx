@@ -23,7 +23,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/dashboard" });
+      if (data.session) nav({ to: "/projects" });
     });
   }, [nav]);
 
@@ -35,18 +35,18 @@ function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email, password: pw,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/projects`,
             data: { display_name: name || email.split("@")[0] },
           },
         });
         if (error) throw error;
         const { data: s } = await supabase.auth.getSession();
-        if (s.session) nav({ to: "/dashboard" });
+        if (s.session) nav({ to: "/projects" });
         else setMsg("註冊成功，請查收 Email 確認信完成驗證。");
       } else if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
-        nav({ to: "/dashboard" });
+        nav({ to: "/projects" });
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
