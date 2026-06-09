@@ -4,12 +4,15 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useProfile, useSupportUnreadCount } from "@/lib/db";
 import { useIsAdmin } from "@/lib/useIsAdmin";
+import { useMembership } from "@/lib/useMembership";
 import { HeaderAvatarButton } from "./HeaderAvatarButton";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: profile } = useProfile();
   const { data: isAdmin } = useIsAdmin();
+  const { data: membership } = useMembership();
+  const showShop = isAdmin === true || membership?.active === true;
   const { data: unread = 0 } = useSupportUnreadCount(isAdmin === true);
   const brand = profile?.brand_name?.trim() || "施工紀錄 PRO";
   const isActive = (p: string) =>
@@ -31,9 +34,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink to="/projects" label="案件" icon={<FolderKanban className="h-4 w-4" />} active={isActive("/projects")} />
             <NavLink to="/team" label="團隊管理" icon={<Users className="h-4 w-4" />} active={isActive("/team")} />
             <NavLink to="/support" label="AI 客服" icon={<MessageCircle className="h-4 w-4" />} active={isActive("/support")} />
+            {showShop && (
+              <NavLink to="/shop" label="商店" icon={<ShoppingBag className="h-4 w-4" />} active={isActive("/shop")} />
+            )}
             {isAdmin && (
               <>
-                <NavLink to="/shop" label="商店" icon={<ShoppingBag className="h-4 w-4" />} active={isActive("/shop")} />
                 <NavLink to="/admin" label="管理員" icon={<Shield className="h-4 w-4" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
                 <NavLink
                   to="/admin/inbox"
@@ -67,9 +72,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <BottomLink to="/projects/new" label="新增" icon={<Plus className="h-5 w-5" />} active={pathname === "/projects/new"} primary />
           <BottomLink to="/support" label="客服" icon={<MessageCircle className="h-5 w-5" />} active={isActive("/support")} />
           <BottomLink to="/team" label="團隊" icon={<Users className="h-5 w-5" />} active={isActive("/team")} />
+          {showShop && (
+            <BottomLink to="/shop" label="商店" icon={<ShoppingBag className="h-5 w-5" />} active={isActive("/shop")} />
+          )}
           {isAdmin && (
             <>
-              <BottomLink to="/shop" label="商店" icon={<ShoppingBag className="h-5 w-5" />} active={isActive("/shop")} />
               <BottomLink to="/admin" label="管理員" icon={<Shield className="h-5 w-5" />} active={isActive("/admin") && !isActive("/admin/inbox")} />
               <BottomLink
                 to="/admin/inbox"
