@@ -245,54 +245,15 @@ function ProjectDetail() {
                 {allPhotos.length === 0 ? "還沒有照片，上傳或拍攝第一張吧！" : "這個分類還沒有照片。"}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {photos.map((p, i) => {
-                  const isSelected = selectedIds.has(p.id);
-                  return (
-                    <div key={p.id} className={`group relative aspect-square overflow-hidden rounded-xl border bg-muted ${batchMode && isSelected ? "border-primary ring-2 ring-primary" : "border-border"}`}>
-                      <button
-                        onClick={() => {
-                          if (batchMode) {
-                            setSelectedIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
-                              return next;
-                            });
-                          } else {
-                            openLightbox(i);
-                          }
-                        }}
-                        className="block h-full w-full"
-                      >
-                        <PhotoImage path={p.storage_path} alt={p.note ?? ""} className={`h-full w-full object-cover transition ${batchMode ? "" : "group-hover:scale-105"}`} />
-                      </button>
-                      {batchMode ? (
-                        <div className="absolute left-1.5 top-1.5">
-                          {isSelected ? (
-                            <CheckSquare className="h-5 w-5 text-primary drop-shadow-sm" />
-                          ) : (
-                            <Square className="h-5 w-5 text-white/80 drop-shadow-sm" />
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                            {p.category === "before" ? "前" : p.category === "during" ? "中" : "後"}
-                          </span>
-                          <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition group-hover:opacity-100">
-                            <button onClick={() => setEditNote({ id: p.id, note: p.note ?? "" })} className="rounded-md bg-black/55 p-1 text-white">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={() => setConfirmDelete({ kind: "photo", photo: p })} className="rounded-md bg-black/55 p-1 text-white">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <PhotosByDate
+                photos={photos}
+                batchMode={batchMode}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                onOpen={(p) => openLightbox(photos.findIndex((x) => x.id === p.id))}
+                onEditNote={(p) => setEditNote({ id: p.id, note: p.note ?? "" })}
+                onDelete={(p) => setConfirmDelete({ kind: "photo", photo: p })}
+              />
             )}
 
             {photoIndex !== null && !batchMode && (
