@@ -62,6 +62,27 @@ function AdminPage() {
   const [name, setName] = useState("");
   const [makeAdmin, setMakeAdmin] = useState(false);
 
+  // Membership grant
+  const grantFn = useServerFn(adminGrantMembership);
+  const listMembershipsFn = useServerFn(adminListMemberships);
+  const revokeFn = useServerFn(adminRevokeSubscription);
+  const { data: memberships = [], refetch: refetchMems } = useQuery({
+    queryKey: ["admin-memberships"],
+    queryFn: () => listMembershipsFn({}),
+    enabled: isAdmin === true,
+  });
+  const grantMut = useMutation({
+    mutationFn: (v: { targetUserId: string; planSeats: 3 | 6 | 9 | 12; days: number }) => grantFn({ data: v }),
+    onSuccess: () => { refetchMems(); qc.invalidateQueries({ queryKey: ["my-membership"] }); },
+  });
+  const revokeMut = useMutation({
+    mutationFn: (subscriptionId: string) => revokeFn({ data: { subscriptionId } }),
+    onSuccess: () => { refetchMems(); qc.invalidateQueries({ queryKey: ["my-membership"] }); },
+  });
+  const [grantUser, setGrantUser] = useState<string>("");
+  const [grantSeats, setGrantSeats] = useState<3 | 6 | 9 | 12>(3);
+  const [grantDays, setGrantDays] = useState(30);
+
   if (checking) {
     return <AppShell><div className="grid place-items-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div></AppShell>;
   }
