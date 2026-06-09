@@ -47,14 +47,6 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as "editor" | "viewer")}
-          className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs font-semibold outline-none"
-        >
-          <option value="viewer">瀏覽者</option>
-          <option value="editor">編輯者</option>
-        </select>
-        <select
           value={level}
           onChange={(e) => setLevel(Number(e.target.value))}
           className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs font-semibold outline-none"
