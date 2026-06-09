@@ -14,7 +14,6 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
   const createFn = useServerFn(createInvite);
   const revokeFn = useServerFn(revokeInvite);
 
-  const [role, setRole] = useState<"editor" | "viewer">("viewer");
   const [level, setLevel] = useState<number>(1);
   const [ttl, setTtl] = useState<number>(24);
 
@@ -25,7 +24,7 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
 
   const createMut = useMutation({
     mutationFn: () =>
-      createFn({ data: { teamId, role, level, ttlHours: ttl } }),
+      createFn({ data: { teamId, role: "editor", level, ttlHours: ttl } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team-invites", teamId] }),
     onError: (e: Error) => alert(e.message),
   });
@@ -47,14 +46,6 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
         <Link2 className="h-4 w-4 text-sky-600" /> 邀請連結
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as "editor" | "viewer")}
-          className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs font-semibold outline-none"
-        >
-          <option value="viewer">瀏覽者</option>
-          <option value="editor">編輯者</option>
-        </select>
         <select
           value={level}
           onChange={(e) => setLevel(Number(e.target.value))}
@@ -118,7 +109,7 @@ export function InviteLinksPanel({ teamId }: { teamId: string }) {
                   {used ? "已使用" : expired ? "已過期" : "有效"}
                 </span>
                 <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">
-                  {inv.role === "editor" ? "編輯者" : "瀏覽者"} · L{inv.level}
+                  {LEVEL_META[inv.level]?.label ?? `L${inv.level}`}
                 </span>
                 <code className="flex-1 min-w-[180px] truncate rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                   {url}

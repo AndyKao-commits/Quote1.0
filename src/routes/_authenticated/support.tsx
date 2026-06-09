@@ -137,19 +137,33 @@ function SupportPage() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const scrollToBottom = () => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    // Initial + content-change scroll
-    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
-    // Re-scroll when images / dynamic content resize the body
+    const scrollToBottom = () => {
+      // Instant scroll (smooth can be cancelled by new layout passes on mobile)
+      el.scrollTop = el.scrollHeight;
+    };
+    // Multiple rAFs to wait for layout + paint on mobile Safari
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
+    }));
+    // Re-scroll on any size change inside the scroll container (images loading, etc.)
     const ro = new ResizeObserver(scrollToBottom);
-    Array.from(el.children).forEach((c) => ro.observe(c as Element));
-    return () => ro.disconnect();
+    ro.observe(el);
+    Array.from(el.querySelectorAll("img")).forEach((img) => {
+      if (!(img as HTMLImageElement).complete) {
+        img.addEventListener("load", scrollToBottom, { once: true });
+      }
+    });
+    // Re-scroll on DOM mutation (new bubbles appended)
+    const mo = new MutationObserver(scrollToBottom);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => { ro.disconnect(); mo.disconnect(); };
   }, [bubbles, mut.isPending]);
 
   return (
     <AppShell>
       {/* Mobile fullscreen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden">
+      <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-3">
           <Link to="/dashboard" className="grid h-10 w-10 place-items-center rounded-lg hover:bg-secondary">
             <ArrowLeft className="h-5 w-5" />

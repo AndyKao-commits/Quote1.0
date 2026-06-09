@@ -3,14 +3,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  Users, Loader2, Plus, UserPlus, Trash2, Crown, Pencil, Eye, Edit3, Check, X,
+  Users, Loader2, Plus, UserPlus, Trash2, Crown, Pencil, User, Check, X,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listMyTeams, createTeam, renameTeam, deleteTeam,
-  listTeamMembers, inviteMember, removeMember, changeMemberRole, changeMemberLevel,
+  listTeamMembers, inviteMember, removeMember, changeMemberLevel,
   LEVEL_META,
   type Team, type TeamMember,
 } from "@/lib/teams.functions";
@@ -28,14 +28,14 @@ const ROLE_META: Record<string, { label: string; icon: React.ReactNode; cls: str
     cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
   },
   editor: {
-    label: "編輯者",
-    icon: <Edit3 className="h-3 w-3" />,
+    label: "成員",
+    icon: <User className="h-3 w-3" />,
     cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   },
   viewer: {
-    label: "瀏覽者",
-    icon: <Eye className="h-3 w-3" />,
-    cls: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    label: "成員",
+    icon: <User className="h-3 w-3" />,
+    cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   },
 };
 
@@ -77,7 +77,7 @@ function TeamPage() {
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">團隊管理</h1>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        建立團隊、邀請註冊會員，共同管理案件。主持人可指派編輯或瀏覽權限。
+        建立團隊、邀請註冊會員，共同管理案件。主持人可指派 L1–L4 權限等級。
       </p>
 
       {/* Create team */}
@@ -166,7 +166,6 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
   const listMembersFn = useServerFn(listTeamMembers);
   const inviteFn = useServerFn(inviteMember);
   const removeFn = useServerFn(removeMember);
-  const changeRoleFn = useServerFn(changeMemberRole);
   const renameFn = useServerFn(renameTeam);
   const deleteFn = useServerFn(deleteTeam);
 
@@ -177,8 +176,8 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
 
   const invKey = ["team-members", team.id];
   const inviteMut = useMutation({
-    mutationFn: (p: { email: string; role: "editor" | "viewer" }) =>
-      inviteFn({ data: { teamId: team.id, email: p.email, role: p.role } }),
+    mutationFn: (p: { email: string; level: number }) =>
+      inviteFn({ data: { teamId: team.id, email: p.email, role: "editor", level: p.level } }),
     onSuccess: () => {
       setInviteEmail("");
       qc.invalidateQueries({ queryKey: invKey });
@@ -194,12 +193,6 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
     },
     onError: (e: Error) => alert(e.message),
   });
-  const roleMut = useMutation({
-    mutationFn: (p: { uid: string; role: "editor" | "viewer" }) =>
-      changeRoleFn({ data: { teamId: team.id, userId: p.uid, role: p.role } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: invKey }),
-    onError: (e: Error) => alert(e.message),
-  });
   const levelFn = useServerFn(changeMemberLevel);
   const levelMut = useMutation({
     mutationFn: (p: { uid: string; level: number }) =>
@@ -209,7 +202,7 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
   });
 
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("editor");
+  const [inviteLevel, setInviteLevel] = useState<number>(2);
 
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(team.name);
@@ -297,7 +290,7 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
           onSubmit={(e) => {
             e.preventDefault();
             if (!inviteEmail.trim() || inviteMut.isPending) return;
-            inviteMut.mutate({ email: inviteEmail.trim(), role: inviteRole });
+            inviteMut.mutate({ email: inviteEmail.trim(), level: inviteLevel });
           }}
         >
           <UserPlus className="h-4 w-4 text-primary" />
@@ -309,12 +302,14 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
             className="flex-1 min-w-[200px] rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           <select
-            value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as any)}
+            value={inviteLevel}
+            onChange={(e) => setInviteLevel(Number(e.target.value))}
             className="rounded-lg border border-input bg-background px-2 py-2 text-xs font-semibold outline-none"
+            title="權限等級"
           >
-            <option value="editor">編輯者（可建立案件）</option>
-            <option value="viewer">瀏覽者（僅瀏覽）</option>
+            {[1, 2, 3, 4].map((lv) => (
+              <option key={lv} value={lv}>{LEVEL_META[lv].label}</option>
+            ))}
           </select>
           <button
             type="submit"
@@ -351,42 +346,30 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
                 <div className="truncate text-[11px] text-muted-foreground">{m.email || "—"}</div>
               </div>
               {isOwner && m.role !== "owner" ? (
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={m.role}
-                      onChange={(e) => roleMut.mutate({ uid: m.user_id, role: e.target.value as any })}
-                      disabled={roleMut.isPending}
-                      className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
-                      title="角色（影響案件權限）"
-                    >
-                      <option value="editor">編輯者</option>
-                      <option value="viewer">瀏覽者</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
-                          removeMut.mutate(m.user_id);
-                        }
-                      }}
-                      className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-                      title="移除"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-1">
                   <select
                     value={m.level}
                     onChange={(e) => levelMut.mutate({ uid: m.user_id, level: Number(e.target.value) })}
                     disabled={levelMut.isPending}
-                    className="rounded-lg border border-input bg-background px-2 py-0.5 text-[11px] font-semibold outline-none"
+                    className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
                     title="權限等級"
                   >
                     {[1, 2, 3, 4].map((lv) => (
                       <option key={lv} value={lv}>{LEVEL_META[lv].label}</option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
+                        removeMut.mutate(m.user_id);
+                      }
+                    }}
+                    className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                    title="移除"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-end gap-1">
