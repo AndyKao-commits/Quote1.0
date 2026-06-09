@@ -1,5 +1,5 @@
-# Sync .env variables to Vercel (Production, Preview, Development).
-# Run from project root after filling .env:  npm run setup:vercel-env
+# Sync .env variables to Vercel (production, preview, development).
+# Run: npm run setup:vercel-env
 
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
@@ -19,6 +19,8 @@ $keys = @(
   "LOVABLE_API_KEY"
 )
 
+$targets = @("production", "preview", "development")
+
 Get-Content ".env" | ForEach-Object {
   if ($_ -match '^\s*#' -or $_ -notmatch '=') { return }
   $parts = $_ -split '=', 2
@@ -26,8 +28,10 @@ Get-Content ".env" | ForEach-Object {
   if ($name -notin $keys) { return }
   $value = $parts[1].Trim().Trim('"').Trim("'")
   if (-not $value) { return }
-  Write-Host "Syncing $name ..."
-  $value | vercel env add $name production preview development --force
+  foreach ($target in $targets) {
+    Write-Host "Syncing $name ($target) ..."
+    vercel env add $name $target --value $value --force --yes --no-sensitive 2>&1 | Out-Null
+  }
 }
 
 Write-Host "`nDone. Redeploy: vercel --prod"

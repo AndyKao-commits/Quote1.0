@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "verify:env": "node scripts/verify-env.mjs",
+    "check:supabase": "node scripts/check-supabase.mjs",
     "setup:vercel-env": "powershell -ExecutionPolicy Bypass -File scripts/sync-vercel-env.ps1",
     "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1"
   },
