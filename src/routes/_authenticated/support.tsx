@@ -162,20 +162,26 @@ function SupportPage() {
 
   return (
     <AppShell>
-      {/* Mobile fullscreen overlay */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background md:hidden" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-3">
-          <Link to="/dashboard" className="grid h-10 w-10 place-items-center rounded-lg hover:bg-secondary">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary">
-              <Bot className="h-4 w-4" />
-            </span>
-            <div className="leading-tight">
-              <div className="text-sm font-bold">{AI_NAME}</div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground">線上客服</div>
-            </div>
+      <div className="mb-3 flex items-center gap-2">
+        <Link to="/dashboard" className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary md:hidden">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <Bot className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">AI 客服</h1>
+      </div>
+      <p className="mb-3 hidden text-sm text-muted-foreground md:block">
+        詢問 App 使用問題，AI 立即回覆。AI 無法回答的問題會自動轉交管理員。
+      </p>
+
+      <div className="card-surface flex h-[calc(100dvh-180px)] min-h-[420px] flex-col overflow-hidden md:h-[calc(100dvh-200px)]">
+        {/* Header (avatar + agent identity) */}
+        <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/15 text-primary">
+            <Bot className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-sm font-bold">{AI_NAME}</div>
+            <div className="mt-0.5 text-[10px] text-muted-foreground">線上客服</div>
           </div>
         </div>
         {!aiEnabled && (
@@ -205,47 +211,6 @@ function SupportPage() {
           onUploaded={(path) => imgMut.mutateAsync(path)}
           uploading={imgMut.isPending}
         />
-      </div>
-
-      {/* Desktop view */}
-      <div className="hidden md:block">
-        <div className="flex flex-wrap items-center gap-2">
-          <Bot className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">AI 客服</h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          詢問 App 使用問題，AI 立即回覆。AI 無法回答的問題會自動轉交管理員。
-        </p>
-
-        <div className="card-surface mt-6 flex h-[65vh] min-h-[480px] flex-col overflow-hidden">
-          {!aiEnabled && (
-            <div className="px-4 pt-3">
-              <IdleAutoRevertBanner
-                aiEnabled={aiEnabled}
-                takeoverAt={takeoverAt}
-                lastActivityAt={lastActivityAt}
-              />
-            </div>
-          )}
-          <ChatBody
-            scrollRef={scrollRef}
-            isLoading={isLoading}
-            bubbles={bubbles}
-            pending={mut.isPending}
-            userName={profile?.display_name}
-            userAvatar={profile?.avatar_url}
-          />
-          <Composer
-            taRef={taRef}
-            input={input}
-            setInput={setInput}
-            onSend={(q) => mut.mutate(q)}
-            pending={mut.isPending}
-            userId={userId}
-            onUploaded={(path) => imgMut.mutateAsync(path)}
-            uploading={imgMut.isPending}
-          />
-        </div>
       </div>
     </AppShell>
   );
