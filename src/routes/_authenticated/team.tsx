@@ -346,42 +346,30 @@ function TeamPanel({ team, me }: { team: Team; me: string }) {
                 <div className="truncate text-[11px] text-muted-foreground">{m.email || "—"}</div>
               </div>
               {isOwner && m.role !== "owner" ? (
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={m.role}
-                      onChange={(e) => roleMut.mutate({ uid: m.user_id, role: e.target.value as any })}
-                      disabled={roleMut.isPending}
-                      className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
-                      title="角色（影響案件權限）"
-                    >
-                      <option value="editor">編輯者</option>
-                      <option value="viewer">瀏覽者</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
-                          removeMut.mutate(m.user_id);
-                        }
-                      }}
-                      className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-                      title="移除"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-1">
                   <select
                     value={m.level}
                     onChange={(e) => levelMut.mutate({ uid: m.user_id, level: Number(e.target.value) })}
                     disabled={levelMut.isPending}
-                    className="rounded-lg border border-input bg-background px-2 py-0.5 text-[11px] font-semibold outline-none"
+                    className="rounded-lg border border-input bg-background px-2 py-1 text-xs font-semibold outline-none"
                     title="權限等級"
                   >
                     {[1, 2, 3, 4].map((lv) => (
                       <option key={lv} value={lv}>{LEVEL_META[lv].label}</option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`將「${m.display_name || m.email}」從團隊移除？`)) {
+                        removeMut.mutate(m.user_id);
+                      }
+                    }}
+                    className="grid h-8 w-8 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                    title="移除"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-end gap-1">
