@@ -32,7 +32,7 @@ function CtaButton({
   disabled = false,
 }: {
   className?: string;
-  onEnter?: () => void;
+  onEnter?: (rect: DOMRect) => void;
   disabled?: boolean;
 }) {
   return (
@@ -45,7 +45,7 @@ function CtaButton({
         }
         if (onEnter) {
           e.preventDefault();
-          onEnter();
+          onEnter(e.currentTarget.getBoundingClientRect());
         }
       }}
       aria-disabled={disabled}
@@ -60,12 +60,12 @@ function CtaButton({
 function LandingEnterOverlay({ rect }: { rect: DOMRect }) {
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
-  const scale = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.12;
+  const scale = Math.max(window.innerWidth / rect.width, window.innerHeight / rect.height) * 1.2;
 
   return (
     <div className="landing-enter-overlay" aria-hidden>
       <div
-        className="landing-enter-paper"
+        className="landing-enter-burst"
         style={{
           left: rect.left,
           top: rect.top,
@@ -75,9 +75,7 @@ function LandingEnterOverlay({ rect }: { rect: DOMRect }) {
           ["--enter-ty" as string]: `${window.innerHeight / 2 - cy}px`,
           ["--enter-scale" as string]: String(scale),
         }}
-      >
-        <MockPdfSummary className="!static !h-full !w-full !max-w-none !rotate-0 !shadow-none" />
-      </div>
+      />
       <p className="landing-enter-status">進入報價世界…</p>
     </div>
   );
@@ -292,7 +290,6 @@ function FeatureCard({ icon, title, desc }: { icon: ReactNode; title: string; de
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const heroPaperRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [entering, setEntering] = useState(false);
   const [enterRect, setEnterRect] = useState<DOMRect | null>(null);
@@ -307,7 +304,7 @@ export function LandingPage() {
     setShowSplash(false);
   }, []);
 
-  const startEnter = useCallback(() => {
+  const startEnter = useCallback((rect: DOMRect) => {
     if (entering) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -315,20 +312,13 @@ export function LandingPage() {
       return;
     }
 
-    const paper = heroPaperRef.current?.querySelector(".landing-mock-paper");
-    if (!paper) {
-      navigate({ to: "/auth" });
-      return;
-    }
-
-    const rect = paper.getBoundingClientRect();
     setEnterRect(rect);
     setEntering(true);
     document.documentElement.classList.add("landing-entering");
 
     window.setTimeout(() => {
       navigate({ to: "/auth" });
-    }, 1500);
+    }, 820);
   }, [entering, navigate]);
 
   useEffect(() => {
@@ -371,7 +361,7 @@ export function LandingPage() {
           <CtaButton className="landing-hero-cta mt-8 px-7 py-3.5 text-base" onEnter={startEnter} disabled={entering} />
         </ScrollReveal>
         <ScrollReveal from="right" delay={120} className="flex justify-center md:justify-end">
-          <div ref={heroPaperRef} className="landing-hero-visual w-full max-w-sm">
+          <div className="landing-hero-visual w-full max-w-sm">
             <MockPanel className="landing-hero-visual-panel">
               <MockPdfSummary className="!static !max-w-none !rotate-0 !shadow-none mx-auto" />
             </MockPanel>

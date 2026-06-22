@@ -714,65 +714,49 @@
     position: fixed;
     inset: 0;
     z-index: 200;
-    background: #f5f0e8;
-    animation: landing-enter-bg 1.5s ease forwards;
     pointer-events: all;
   }
-  .landing-enter-paper {
+  .landing-enter-burst {
     position: fixed;
     z-index: 2;
+    border-radius: 9999px;
+    background: #c45a3c;
     transform-origin: center center;
-    animation: landing-enter-zoom 1.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
-    overflow: hidden;
-    border-radius: 2px;
-    box-shadow: 0 28px 70px -24px rgba(26, 22, 18, 0.35);
+    animation: landing-enter-burst 0.72s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
   .landing-enter-status {
     position: fixed;
     left: 50%;
-    bottom: 18%;
+    top: 50%;
     z-index: 3;
-    transform: translateX(-50%);
-    font-size: 0.875rem;
+    transform: translate(-50%, -50%);
+    font-size: 0.9375rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
-    color: #6b5c4d;
+    letter-spacing: 0.14em;
+    color: #fff;
     opacity: 0;
-    animation: landing-enter-status 1.5s ease forwards;
+    animation: landing-enter-status 0.82s ease forwards;
   }
-  @keyframes landing-enter-bg {
-    0% {
-      background: rgb(245 240 232 / 0.72);
-    }
-    55% {
-      background: #f5f0e8;
-    }
-    100% {
-      background: #fff;
-    }
-  }
-  @keyframes landing-enter-zoom {
+  @keyframes landing-enter-burst {
     0% {
       transform: translate(0, 0) scale(1);
+      border-radius: 9999px;
     }
     100% {
       transform: translate(var(--enter-tx), var(--enter-ty)) scale(var(--enter-scale));
+      border-radius: 0;
     }
   }
   @keyframes landing-enter-status {
     0%,
-    20% {
+    52% {
       opacity: 0;
-      transform: translateX(-50%) translateY(8px);
+      transform: translate(-50%, -50%) translateY(10px);
     }
-    45%,
-    80% {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
+    62%,
     100% {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-4px);
+      opacity: 1;
+      transform: translate(-50%, -50%) translateY(0);
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -791,6 +775,10 @@
       transition: none;
     }
     .landing-hero-hint {
+      animation: none;
+    }
+    .landing-enter-burst,
+    .landing-enter-status {
       animation: none;
     }
     .landing-hero-visual-panel .landing-mock-paper,
