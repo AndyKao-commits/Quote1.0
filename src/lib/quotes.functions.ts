@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireQuoteAuth } from "@/lib/quote-auth-middleware";
 import { calcQuoteTotals, DEFAULT_QUOTE_TEMPLATE, type QuoteLine, QUOTE_LIMITS } from "@/lib/quotes.types";
-import { DEFAULT_QUOTE_TERMS } from "@/lib/quote-document.utils";
+import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText } from "@/lib/quote-document.utils";
+import { getSampleQuote, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 
 const lineSchema = z.object({
   id: z.string().optional(),
@@ -248,6 +249,69 @@ export const createQuote = createServerFn({ method: "POST" })
         quantity: l.quantity,
         unit_price: l.unit_price,
         note: null,
+      })),
+    );
+    if (lineErr) throw new Error(lineErr.message);
+
+    return { id: quoteId };
+  });
+
+export const createSampleQuote = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ sampleId: z.enum(["bathroom", "full-home"]) }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const sample = getSampleQuote(data.sampleId as SampleQuoteId);
+    if (!sample) throw new Error("找不到範例報價");
+
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    const tax_included = profile?.default_tax_included ?? false;
+    const show_tax_breakdown = profile?.default_show_tax_breakdown ?? true;
+    const totals = calcQuoteTotals(sample.lines, { tax_included, show_tax_breakdown, tax_rate: 0.05 });
+    const payment_schedule = formatPaymentScheduleText(totals.total);
+
+    const quoteRowBase = {
+      user_id: userId,
+      title: sample.title,
+      template: DEFAULT_QUOTE_TEMPLATE,
+      client_name: sample.client_name,
+      client_company: sample.client_company,
+      client_phone: sample.client_phone,
+      client_address: sample.client_address,
+      show_seller_tax_id: profile?.default_show_tax_id ?? false,
+      show_buyer_tax_id: profile?.default_show_tax_id ?? false,
+      seller_tax_id: profile?.seller_tax_id ?? null,
+      tax_included,
+      show_tax_breakdown,
+      tax_rate: 0.05,
+      terms: profile?.default_terms?.trim() || DEFAULT_QUOTE_TERMS,
+      subtotal: totals.subtotal,
+      tax_amount: totals.tax_amount,
+      total: totals.total,
+    };
+
+    let { data: inserted, error } = await supabase
+      .from("quotes")
+      .insert({ ...quoteRowBase, payment_schedule })
+      .select("id")
+      .single();
+    if (error?.message?.includes("payment_schedule")) {
+      ({ data: inserted, error } = await supabase.from("quotes").insert(quoteRowBase).select("id").single());
+    }
+    if (error) throw new Error(error.message);
+
+    const quoteId = inserted.id as string;
+    const { error: lineErr } = await supabase.from("quote_lines").insert(
+      sample.lines.map((l, i) => ({
+        quote_id: quoteId,
+        user_id: userId,
+        sort_order: i,
+        line_type: l.line_type,
+        name: l.name,
+        unit: l.unit,
+        quantity: l.quantity,
+        unit_price: l.unit_price,
+        note: l.note ?? null,
       })),
     );
     if (lineErr) throw new Error(lineErr.message);

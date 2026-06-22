@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation } from "@tanstack/react-query";
 import { AppShell } from "@/components/BdgAppShell";
-import { createQuote } from "@/lib/quotes.functions";
+import { createQuote, createSampleQuote } from "@/lib/quotes.functions";
+import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_app/quotes/new")({
 function NewQuotePage() {
   const nav = useNavigate();
   const createFn = useServerFn(createQuote);
+  const sampleFn = useServerFn(createSampleQuote);
   const [err, setErr] = useState<string | null>(null);
 
   const create = useMutation({
@@ -30,29 +32,61 @@ function NewQuotePage() {
     },
   });
 
+  const createSample = useMutation({
+    mutationFn: (sampleId: SampleQuoteId) =>
+      sampleFn({ data: { sampleId } }) as Promise<{ id: string }>,
+    onSuccess: (res) => {
+      if (!res?.id) throw new Error("建立範例失敗");
+      nav({ to: "/quotes/$id", params: { id: res.id }, replace: true });
+    },
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "建立範例失敗";
+      setErr(msg);
+      toast.error(msg);
+    },
+  });
+
+  const busy = create.isPending || createSample.isPending;
+
   return (
     <AppShell>
       <h1 className="text-xl font-semibold tracking-tight">新建報價</h1>
-      <p className="mt-1 text-sm text-stone-500">建立工程施工報價單，填寫客戶與明細後即可匯出 PDF</p>
+      <p className="mt-1 text-sm text-stone-500">建立空白報價，或先開啟範例學習操作流程</p>
 
       {err && (
-        <p className="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-          {err}
-        </p>
+        <p className="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{err}</p>
       )}
+
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        {SAMPLE_QUOTES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setErr(null);
+              createSample.mutate(s.id as SampleQuoteId);
+            }}
+            className="bdg-card p-5 text-left transition hover:border-stone-300 disabled:opacity-60"
+          >
+            <p className="font-semibold">{s.tabLabel}</p>
+            <p className="mt-1 text-xs text-stone-500">{s.hint}</p>
+          </button>
+        ))}
+      </div>
 
       <div className="relative z-50 mt-8 pb-6">
         <button
           type="button"
-          disabled={create.isPending}
+          disabled={busy}
           onClick={() => {
             setErr(null);
             create.mutate();
           }}
           className="bdg-btn bdg-btn-primary px-8 py-3 text-base"
         >
-          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          開始填寫
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          空白報價
         </button>
       </div>
     </AppShell>

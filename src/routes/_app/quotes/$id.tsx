@@ -9,6 +9,7 @@ import { QuoteLineList } from "@/components/QuoteLineList";
 import { CsvImportButton } from "@/components/CsvImportButton";
 import { AppShell } from "@/components/BdgAppShell";
 import { QuoteDocument } from "@/components/QuoteDocument";
+import { QuotePreviewPane } from "@/components/QuotePreviewPane";
 import {
   getQuote, saveQuote, publishShare, listCatalogItems, getProfile,
 } from "@/lib/quotes.functions";
@@ -18,6 +19,7 @@ import {
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
+import { getSampleQuote, SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 
 export const Route = createFileRoute("/_app/quotes/$id")({
   head: () => ({ meta: [{ title: "編輯報價 — 報得過" }] }),
@@ -231,8 +233,52 @@ function QuoteEditorPage() {
     setImportMsg(errors.length ? `${base}（${errors.length} 行已略過）` : base);
   }
 
+  function loadSample(sampleId: SampleQuoteId) {
+    const sample = getSampleQuote(sampleId);
+    if (!sample) return;
+    if (!confirm(`載入「${sample.tabLabel}」？目前未儲存的內容會被取代。`)) return;
+
+    const payment = formatPaymentScheduleText(
+      calcQuoteTotals(sample.lines, {
+        tax_included: form.tax_included,
+        show_tax_breakdown: form.show_tax_breakdown,
+        tax_rate: Number(form.tax_rate ?? 0.05),
+      }).total,
+    );
+
+    setForm({
+      ...form,
+      title: sample.title,
+      client_name: sample.client_name,
+      client_company: sample.client_company,
+      client_phone: sample.client_phone,
+      client_address: sample.client_address,
+      terms: DEFAULT_QUOTE_TERMS,
+      payment_schedule: payment,
+    });
+    setLines(sample.lines.map((l, i) => ({ ...l, sort_order: i })));
+    setPaymentTouched(false);
+    setImportMsg(`已載入${sample.tabLabel}，記得按儲存`);
+  }
+
   const editor = (
     <div className="space-y-5">
+      <div className="bdg-card p-4">
+        <p className="bdg-section-title mb-2">學習範例</p>
+        <p className="mb-3 text-xs text-stone-500">載入完整範例報價，觀察欄位與 PDF 排版（可再修改後儲存）。</p>
+        <div className="flex flex-wrap gap-2">
+          {SAMPLE_QUOTES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => loadSample(s.id as SampleQuoteId)}
+              className="bdg-btn bdg-btn-secondary text-xs"
+            >
+              {s.tabLabel}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="bdg-card space-y-3 p-4">
         <p className="bdg-section-title">客戶</p>
         <Field label="報價標題" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
@@ -373,13 +419,13 @@ function QuoteEditorPage() {
         <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
       </div>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <div className={`quote-preview-root -mx-4 overflow-auto bg-stone-200/70 md:mx-0 md:rounded md:border md:border-[var(--bdg-line)] ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <div className="inline-block p-1">
-            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
-          </div>
-        </div>
+        <QuotePreviewPane
+          className={`quote-editor-pan md:mx-0 lg:sticky lg:top-20 ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
+        >
+          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+        </QuotePreviewPane>
       </div>
 
       {previewFull && (
@@ -387,11 +433,9 @@ function QuoteEditorPage() {
           <div className="flex shrink-0 justify-end pb-1">
             <button type="button" onClick={() => setPreviewFull(false)} className="rounded-full bg-white p-2"><X className="h-5 w-5" /></button>
           </div>
-          <div className="quote-preview-root is-fullscreen min-h-0 flex-1 overflow-auto bg-stone-200/80 p-1">
-            <div className="inline-block">
-              <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
-            </div>
-          </div>
+          <QuotePreviewPane fullscreen className="min-h-0 flex-1">
+            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+          </QuotePreviewPane>
           <div className="mx-auto mt-3 flex gap-2">
             <button type="button" onClick={doExport} className="rounded-full bg-white px-5 py-2 text-sm font-semibold">下載 PDF</button>
             <button type="button" onClick={doShare} className="rounded-full bg-[#06C755] px-5 py-2 text-sm font-semibold text-white">LINE 分享</button>
