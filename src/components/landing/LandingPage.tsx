@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  ChevronDown,
   Copy,
   Download,
   Eye,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 const BRAND = "報得過";
+const SPLASH_KEY = "bdg_landing_splash";
 
 const SUMMARY_ROWS = [
   { name: "泥作工程", total: "680,000" },
@@ -81,7 +83,27 @@ function LandingEnterOverlay({ rect }: { rect: DOMRect }) {
   );
 }
 
-function useReveal(threshold = 0.15) {
+function LandingSplash({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onDone, 1500);
+    return () => window.clearTimeout(timer);
+  }, [onDone]);
+
+  return (
+    <div className="landing-splash" aria-hidden>
+      <div className="landing-splash-inner">
+        <img src="/favicon.svg" alt="" className="landing-splash-logo" />
+        <p className="landing-splash-brand">{BRAND}</p>
+        <p className="landing-splash-tagline">專業報價，三分鐘搞定</p>
+        <div className="landing-splash-bar">
+          <div className="landing-splash-bar-fill" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function useScrollReveal(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -95,7 +117,7 @@ function useReveal(threshold = 0.15) {
           io.disconnect();
         }
       },
-      { threshold, rootMargin: "0px 0px -8% 0px" },
+      { threshold, rootMargin: "0px 0px -6% 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -104,23 +126,41 @@ function useReveal(threshold = 0.15) {
   return { ref, visible };
 }
 
-function RevealSection({
+function ScrollReveal({
   children,
   className = "",
   delay = 0,
+  from = "up",
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
+  from?: "up" | "left" | "right";
 }) {
-  const { ref, visible } = useReveal();
+  const { ref, visible } = useScrollReveal();
   return (
     <div
       ref={ref}
-      className={`landing-reveal ${visible ? "is-visible" : ""} ${className}`}
+      className={`landing-scroll-item landing-scroll-item--${from} ${visible ? "is-visible" : ""} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
+    </div>
+  );
+}
+
+function MockPanel({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`landing-mock-panel ${className}`}>
+      <div className="landing-mock-panel-chrome">
+        <div className="flex gap-1.5">
+          <span className="landing-mock-dot" />
+          <span className="landing-mock-dot" />
+          <span className="landing-mock-dot" />
+        </div>
+        <span className="landing-mock-panel-title">報價預覽</span>
+      </div>
+      <div className="landing-mock-panel-body">{children}</div>
     </div>
   );
 }
@@ -256,6 +296,16 @@ export function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [entering, setEntering] = useState(false);
   const [enterRect, setEnterRect] = useState<DOMRect | null>(null);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+    return !sessionStorage.getItem(SPLASH_KEY);
+  });
+
+  const finishSplash = useCallback(() => {
+    sessionStorage.setItem(SPLASH_KEY, "1");
+    setShowSplash(false);
+  }, []);
 
   const startEnter = useCallback(() => {
     if (entering) return;
@@ -293,7 +343,9 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="bdg-theme landing-page min-h-screen bg-[#F5F0E8] text-[#1a1612]">
+    <div className="bdg-theme landing-page min-h-screen bg-gradient-to-br from-[#F5F0E8] via-[#F5F0E8] to-[#C45A3C]/10 text-[#1a1612]">
+      {showSplash ? <LandingSplash onDone={finishSplash} /> : null}
+
       <header className={`landing-header sticky top-0 z-50 transition-all duration-300 ${scrolled ? "is-scrolled border-b border-[#e8dfd3] bg-[#F5F0E8]/92 backdrop-blur-md shadow-sm" : ""}`}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <span className="flex items-center gap-2 font-display text-lg font-bold">
@@ -307,35 +359,41 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section className="landing-hero mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-8 md:grid-cols-2 md:gap-12 md:pb-24 md:pt-14">
-        <RevealSection>
-          <p className="text-xs font-semibold tracking-[0.28em] text-[#C45A3C]">FOR FIELD & STUDIO</p>
-          <h1 className="mt-4 text-4xl font-bold leading-[1.12] tracking-tight md:text-5xl lg:text-[3.25rem]">
+      <section className="landing-hero relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-6xl items-center gap-10 px-4 pb-20 pt-8 md:grid-cols-2 md:gap-12 md:pb-24 md:pt-14">
+        <ScrollReveal from="left">
+          <p className="landing-hero-eyebrow text-xs font-semibold tracking-[0.28em] text-[#C45A3C]">FOR FIELD & STUDIO</p>
+          <h1 className="landing-hero-title mt-4 text-4xl font-bold leading-[1.12] tracking-tight md:text-5xl lg:text-[3.25rem]">
             三分鐘，<br />做出客戶願意簽的報價。
           </h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-[#6b5c4d] md:text-lg">
+          <p className="landing-hero-sub mt-5 max-w-md text-base leading-relaxed text-[#6b5c4d] md:text-lg">
             給師傅、統包、剛接案的設計師。填完項目，右邊就是給客戶看的專業報價單。
           </p>
-          <CtaButton className="mt-8 px-7 py-3.5 text-base" onEnter={startEnter} disabled={entering} />
-        </RevealSection>
-        <RevealSection delay={120} className="flex justify-center md:justify-end">
-          <div ref={heroPaperRef} className="landing-hero-visual">
-            <MockPdfSummary />
+          <CtaButton className="landing-hero-cta mt-8 px-7 py-3.5 text-base" onEnter={startEnter} disabled={entering} />
+        </ScrollReveal>
+        <ScrollReveal from="right" delay={120} className="flex justify-center md:justify-end">
+          <div ref={heroPaperRef} className="landing-hero-visual w-full max-w-sm">
+            <MockPanel className="landing-hero-visual-panel">
+              <MockPdfSummary className="!static !max-w-none !rotate-0 !shadow-none mx-auto" />
+            </MockPanel>
           </div>
-        </RevealSection>
+        </ScrollReveal>
+        <a href="#features" className="landing-hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-xs font-semibold text-[#6b5c4d] md:bottom-8">
+          往下探索功能
+          <ChevronDown className="h-4 w-4" />
+        </a>
       </section>
 
-      <section className="border-t border-[#e8dfd3]/80 bg-white/50 py-16 md:py-24">
+      <section id="features" className="border-t border-[#e8dfd3]/80 bg-white/50 py-16 md:py-24">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 md:grid-cols-2 md:gap-16">
-          <RevealSection className="order-2 md:order-1">
+          <ScrollReveal from="left" className="order-2 md:order-1">
             <div className="flex justify-center">
-              <div className="landing-stack">
+              <div className="landing-stack landing-scroll-item">
                 <MockPdfSummary className="landing-stack-back" />
                 <MockPdfSummary className="landing-stack-front" />
               </div>
             </div>
-          </RevealSection>
-          <RevealSection className="order-1 md:order-2" delay={80}>
+          </ScrollReveal>
+          <ScrollReveal from="right" className="order-1 md:order-2" delay={80}>
             <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Professional</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">工程施工報價單，<br />該有的都有。</h2>
             <ul className="mt-6 space-y-4 text-[#6b5c4d]">
@@ -346,69 +404,69 @@ export function LandingPage() {
                 </li>
               ))}
             </ul>
-          </RevealSection>
+          </ScrollReveal>
         </div>
       </section>
 
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
-          <RevealSection className="mx-auto max-w-2xl text-center">
+          <ScrollReveal className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Live preview</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">左邊填、右邊就是成品</h2>
             <p className="mt-4 text-base text-[#6b5c4d] md:text-lg">不用猜排版。改一個數字，總價與付款明細跟著更新。</p>
-          </RevealSection>
-          <RevealSection delay={100} className="mt-10 md:mt-14">
+          </ScrollReveal>
+          <ScrollReveal delay={100} from="up" className="mt-10 md:mt-14">
             <MockEditorSplit className="mx-auto max-w-3xl" />
-          </RevealSection>
+          </ScrollReveal>
         </div>
       </section>
 
       <section className="border-t border-[#e8dfd3]/80 bg-white/50 py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
-          <RevealSection className="mx-auto max-w-2xl text-center">
+          <ScrollReveal className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Catalog</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">常用工項存起來，下次秒帶入</h2>
             <p className="mt-4 text-base text-[#6b5c4d]">項目庫搜尋帶入明細，也支援 CSV 匯入，大量項目不用重打。</p>
-          </RevealSection>
+          </ScrollReveal>
           <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            <RevealSection delay={0}>
+            <ScrollReveal delay={0} from="left">
               <div className="landing-feature-card h-full">
                 <Package className="mb-3 h-8 w-8 text-[#C45A3C]" />
                 <h3 className="font-semibold">項目庫</h3>
                 <p className="mt-2 text-sm text-[#6b5c4d]">泥作、木作、水電…常用單價一次建好，編輯時搜尋即帶入。</p>
               </div>
-            </RevealSection>
-            <RevealSection delay={80}>
+            </ScrollReveal>
+            <ScrollReveal delay={80} from="right">
               <div className="landing-feature-card h-full">
                 <FileSpreadsheet className="mb-3 h-8 w-8 text-[#C45A3C]" />
                 <h3 className="font-semibold">CSV 匯入</h3>
                 <p className="mt-2 text-sm text-[#6b5c4d]">從 Excel 整理好的明細，上傳後自動對應欄位。</p>
               </div>
-            </RevealSection>
+            </ScrollReveal>
           </div>
         </div>
       </section>
 
       <section className="py-16 md:py-24">
         <div className="mx-auto max-w-6xl px-4">
-          <RevealSection className="mx-auto max-w-2xl text-center">
+          <ScrollReveal className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Deliver</p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">做好就送，不用再排版</h2>
-          </RevealSection>
+          </ScrollReveal>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            <RevealSection delay={0}><FeatureCard icon={<Download className="h-5 w-5" />} title="PDF 匯出" desc="A4 滿版輸出，直接寄給客戶或列印簽章。" /></RevealSection>
-            <RevealSection delay={60}><FeatureCard icon={<Share2 className="h-5 w-5" />} title="LINE 分享" desc="一鍵產生連結，附上總價與預覽頁。" /></RevealSection>
-            <RevealSection delay={120}><FeatureCard icon={<Copy className="h-5 w-5" />} title="複製舊報價" desc="同客戶改價再送，歷史紀錄隨時調出。" /></RevealSection>
+            <ScrollReveal delay={0} from="left"><FeatureCard icon={<Download className="h-5 w-5" />} title="PDF 匯出" desc="A4 滿版輸出，直接寄給客戶或列印簽章。" /></ScrollReveal>
+            <ScrollReveal delay={60} from="up"><FeatureCard icon={<Share2 className="h-5 w-5" />} title="LINE 分享" desc="一鍵產生連結，附上總價與預覽頁。" /></ScrollReveal>
+            <ScrollReveal delay={120} from="right"><FeatureCard icon={<Copy className="h-5 w-5" />} title="複製舊報價" desc="同客戶改價再送，歷史紀錄隨時調出。" /></ScrollReveal>
           </div>
         </div>
       </section>
 
       <section className="border-t border-[#e8dfd3] bg-[#1a1612] py-16 text-white md:py-20">
-        <RevealSection className="mx-auto max-w-2xl px-4 text-center">
+        <ScrollReveal className="mx-auto max-w-2xl px-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">下一張報價，從這裡開始</h2>
           <p className="mt-4 text-white/70">註冊後即可建立報價、匯出 PDF、分享給客戶。</p>
           <CtaButton className="mt-8 px-8 py-3.5 text-base hover:brightness-110" onEnter={startEnter} disabled={entering} />
-        </RevealSection>
+        </ScrollReveal>
       </section>
 
       <footer className="border-t border-white/10 bg-[#1a1612] py-6 text-center text-xs text-white/40">{BRAND}</footer>
