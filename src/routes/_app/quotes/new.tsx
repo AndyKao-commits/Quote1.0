@@ -35,7 +35,10 @@ function NewQuotePage() {
           show_tax_breakdown: profile?.default_show_tax_breakdown ?? false,
           tax_rate: 0.05,
           terms: profile?.default_terms ?? null,
-          lines: [{ sort_order: 0, name: "項目一", unit: "式", quantity: 1, unit_price: 0 }],
+          lines: [
+            { sort_order: 0, line_type: "group", name: "泥作工程", unit: "—", quantity: 0, unit_price: 0 },
+            { sort_order: 1, line_type: "item", name: "地坪整平", unit: "式", quantity: 1, unit_price: 0 },
+          ],
         },
       });
       nav({ to: "/quotes/$id", params: { id: res.id } });

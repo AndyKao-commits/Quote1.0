@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS public.quote_lines (
   quote_id UUID NOT NULL REFERENCES public.quotes(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   sort_order INT NOT NULL DEFAULT 0,
+  line_type TEXT NOT NULL DEFAULT 'item',
   name TEXT NOT NULL,
   unit TEXT NOT NULL DEFAULT '式',
   quantity NUMERIC NOT NULL DEFAULT 1,

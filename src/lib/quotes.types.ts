@@ -40,9 +40,12 @@ export interface CatalogItem {
   sort_order: number;
 }
 
+export type QuoteLineType = "group" | "item";
+
 export interface QuoteLine {
   id?: string;
   sort_order: number;
+  line_type: QuoteLineType;
   name: string;
   unit: string;
   quantity: number;
@@ -95,10 +98,9 @@ export function calcQuoteTotals(
   lines: QuoteLine[],
   opts: { tax_included: boolean; show_tax_breakdown: boolean; tax_rate: number },
 ) {
-  const subtotal = lines.reduce(
-    (s, l) => s + Number(l.quantity || 0) * Number(l.unit_price || 0),
-    0,
-  );
+  const subtotal = lines
+    .filter((l) => (l.line_type ?? "item") !== "group")
+    .reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unit_price || 0), 0);
   let tax_amount = 0;
   let total = subtotal;
   if (opts.show_tax_breakdown || opts.tax_included) {

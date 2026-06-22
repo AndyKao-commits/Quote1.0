@@ -3,8 +3,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Download, Eye, Loader2, Plus, Save, Search, Share2, Trash2, X,
+  Download, Eye, Loader2, Save, Search, Share2, X,
 } from "lucide-react";
+import { QuoteLineList } from "@/components/QuoteLineList";
 import { AppShell } from "@/components/BdgAppShell";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import {
@@ -50,7 +51,13 @@ function QuoteEditorPage() {
   useEffect(() => {
     if (data) {
       setForm({ ...data, quote_lines: undefined });
-      setLines((data.quote_lines ?? []).map((l: any, i: number) => ({ ...l, sort_order: i })));
+      setLines(
+        (data.quote_lines ?? []).map((l: any, i: number) => ({
+          ...l,
+          sort_order: i,
+          line_type: l.line_type ?? "item",
+        })),
+      );
       if (data.share_token) setShareUrl(`${window.location.origin}/q/${data.share_token}`);
     }
   }, [data]);
@@ -126,14 +133,19 @@ function QuoteEditorPage() {
   }
 
   async function doExport() {
+    const prevTab = tab;
+    if (window.innerWidth < 1024) setTab("preview");
+    setPreviewFull(false);
     setExporting(true);
     try {
       await saveMut.mutateAsync();
+      await new Promise((r) => setTimeout(r, 200));
       await exportQuotePdf(`${form.client_name || "報價"}-${form.title}.pdf`);
     } catch (e) {
       alert(e instanceof Error ? e.message : "匯出失敗");
     } finally {
       setExporting(false);
+      if (window.innerWidth < 1024 && prevTab === "edit") setTab("edit");
     }
   }
 
@@ -198,7 +210,17 @@ function QuoteEditorPage() {
                 key={c.id}
                 type="button"
                 onClick={() => {
-                  setLines([...lines, { sort_order: lines.length, name: c.name, unit: c.unit, quantity: 1, unit_price: Number(c.unit_price) }]);
+                  setLines([
+                    ...lines,
+                    {
+                      sort_order: lines.length,
+                      line_type: "item" as const,
+                      name: c.name,
+                      unit: c.unit,
+                      quantity: 1,
+                      unit_price: Number(c.unit_price),
+                    },
+                  ]);
                   setKw("");
                 }}
                 className="flex w-full justify-between border-b border-[#f0e6d8] px-3 py-2 text-left text-sm last:border-0 hover:bg-[#F5F0E8]"
@@ -209,20 +231,7 @@ function QuoteEditorPage() {
             ))}
           </div>
         )}
-        <div className="space-y-2">
-          {lines.map((l, i) => (
-            <div key={i} className="grid grid-cols-12 gap-1 rounded-xl border border-[#e8dfd3] bg-white p-2">
-              <input value={l.name} onChange={(e) => { const n = [...lines]; n[i] = { ...l, name: e.target.value }; setLines(n); }} className="col-span-5 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm" placeholder="項目" />
-              <input value={l.unit} onChange={(e) => { const n = [...lines]; n[i] = { ...l, unit: e.target.value }; setLines(n); }} className="col-span-2 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm" placeholder="單位" />
-              <input type="number" value={l.quantity} onChange={(e) => { const n = [...lines]; n[i] = { ...l, quantity: Number(e.target.value) }; setLines(n); }} className="col-span-2 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm" />
-              <input type="number" value={l.unit_price} onChange={(e) => { const n = [...lines]; n[i] = { ...l, unit_price: Number(e.target.value) }; setLines(n); }} className="col-span-2 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm" />
-              <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 flex items-center justify-center text-rose-500"><Trash2 className="h-4 w-4" /></button>
-            </div>
-          ))}
-        </div>
-        <button type="button" onClick={() => setLines([...lines, { sort_order: lines.length, name: "", unit: "式", quantity: 1, unit_price: 0 }])} className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[#C45A3C]">
-          <Plus className="h-4 w-4" /> 新增項目
-        </button>
+        <QuoteLineList lines={lines} onChange={setLines} />
       </div>
 
       <Field label="備註" value={form.note ?? ""} onChange={(v) => setForm({ ...form, note: v })} multiline />
@@ -257,10 +266,10 @@ function QuoteEditorPage() {
         <button type="button" onClick={() => setTab("preview")} className={`flex-1 rounded-lg py-2 text-sm font-semibold ${tab === "preview" ? "bg-[#C45A3C] text-white" : "bg-white"}`}>預覽</button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className={`rounded-2xl border border-[#e8dfd3] bg-[#FDFBF7] p-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <div className={`overflow-auto rounded-2xl border border-[#e8dfd3] bg-[#ece3d6] p-2 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+        <div className={`min-w-0 overflow-hidden rounded-2xl border border-[#e8dfd3] bg-[#FDFBF7] p-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
+        <div className={`min-w-0 overflow-x-auto rounded-2xl border border-[#e8dfd3] bg-[#ece3d6] p-2 ${tab === "edit" ? "hidden lg:block" : ""}`}>
+          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview exportTarget />
         </div>
       </div>
 
@@ -304,4 +313,4 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-const inp = "w-full rounded-xl border border-[#ece3d6] bg-white px-3 py-2 text-sm outline-none focus:border-[#C45A3C]";
+const inp = "w-full min-w-0 rounded-xl border border-[#ece3d6] bg-white px-3 py-2 text-sm break-words outline-none focus:border-[#C45A3C]";

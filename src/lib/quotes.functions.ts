@@ -6,6 +6,7 @@ import { calcQuoteTotals, type QuoteLine, type QuoteTemplate } from "@/lib/quote
 const lineSchema = z.object({
   id: z.string().optional(),
   sort_order: z.number(),
+  line_type: z.enum(["group", "item"]).optional().default("item"),
   name: z.string().min(1),
   unit: z.string(),
   quantity: z.number().min(0),
@@ -286,6 +287,7 @@ export const saveQuote = createServerFn({ method: "POST" })
       quote_id: quoteId,
       user_id: userId,
       sort_order: i,
+      line_type: l.line_type ?? "item",
       name: l.name,
       unit: l.unit,
       quantity: l.quantity,
@@ -320,6 +322,7 @@ export const duplicateQuote = createServerFn({ method: "POST" })
           quote_id: inserted.id,
           user_id: userId,
           sort_order: l.sort_order,
+          line_type: l.line_type ?? "item",
           name: l.name,
           unit: l.unit,
           quantity: l.quantity,

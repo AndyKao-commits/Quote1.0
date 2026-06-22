@@ -177,4 +177,8 @@
     font-family: var(--font-sans);
     --bdg-brand: #C45A3C;
   }
+  .quote-doc {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
 }
