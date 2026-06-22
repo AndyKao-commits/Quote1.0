@@ -1,9 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireQuoteAuth } from "@/lib/quote-auth-middleware";
 import { calcQuoteTotals, DEFAULT_QUOTE_TEMPLATE, type QuoteLine, QUOTE_LIMITS } from "@/lib/quotes.types";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText } from "@/lib/quote-document.utils";
 import { getSampleQuote, type SampleQuoteId } from "@/lib/landing-demo-quotes";
+import {
+  assertNotRateLimited,
+  recordRateLimitFailure,
+  shareLookupBucket,
+} from "@/lib/rate-limit.server";
 
 const lineSchema = z.object({
   id: z.string().optional(),
@@ -41,6 +47,17 @@ const quoteInput = z.object({
 
 function randomToken() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
+const SHARE_VALID_DAYS = 90;
+
+function shareExpiresAtFromNow() {
+  return new Date(Date.now() + SHARE_VALID_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function extendShareExpiry(current: string | null | undefined) {
+  const base = current && new Date(current) > new Date() ? new Date(current) : new Date();
+  return new Date(base.getTime() + SHARE_VALID_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 export const DEMO_CATALOG_ITEMS = [
@@ -182,6 +199,10 @@ export const getQuote = createServerFn({ method: "GET" })
 export const getQuoteByShareToken = createServerFn({ method: "GET" })
   .inputValidator(z.object({ token: z.string() }))
   .handler(async ({ data }) => {
+    const request = getRequest();
+    const shareBucket = shareLookupBucket(request);
+    await assertNotRateLimited(shareBucket);
+
     const { getSupabaseAdmin } = await import("@/lib/supabase-admin.server");
     const supabase = getSupabaseAdmin();
     const { data: quote, error } = await supabase
@@ -190,7 +211,13 @@ export const getQuoteByShareToken = createServerFn({ method: "GET" })
       .eq("share_token", data.token)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!quote) throw new Error("連結已失效");
+    if (!quote?.share_token) {
+      await recordRateLimitFailure(shareBucket);
+      throw new Error("連結已失效或已過期");
+    }
+    if (quote.share_expires_at && new Date(quote.share_expires_at) < new Date()) {
+      throw new Error("分享連結已過期");
+    }
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", quote.user_id).maybeSingle();
     const { data: lines } = await supabase
       .from("quote_lines")
@@ -448,7 +475,7 @@ export const publishShare = createServerFn({ method: "POST" })
     const { supabase, userId } = context as { supabase: any; userId: string };
     const { data: quote, error: readErr } = await supabase
       .from("quotes")
-      .select("share_token")
+      .select("share_token, share_expires_at")
       .eq("id", data.id)
       .eq("user_id", userId)
       .maybeSingle();
@@ -456,13 +483,60 @@ export const publishShare = createServerFn({ method: "POST" })
     if (!quote) throw new Error("找不到報價");
 
     const token = quote.share_token ?? randomToken();
+    const updates: Record<string, unknown> = { share_token: token, status: "sent" };
+    if (!quote.share_expires_at) {
+      updates.share_expires_at = shareExpiresAtFromNow();
+    }
+
     const { error } = await supabase
       .from("quotes")
-      .update({ share_token: token, status: "sent" })
+      .update(updates)
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
-    return { token, reused: Boolean(quote.share_token) };
+    return {
+      token,
+      reused: Boolean(quote.share_token),
+      share_expires_at: (quote.share_expires_at as string | null) ?? (updates.share_expires_at as string),
+    };
+  });
+
+export const revokeShare = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { error } = await supabase
+      .from("quotes")
+      .update({ share_token: null, share_expires_at: null, status: "draft" })
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const renewShare = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { data: quote, error: readErr } = await supabase
+      .from("quotes")
+      .select("share_token, share_expires_at")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!quote?.share_token) throw new Error("尚未建立分享連結");
+
+    const share_expires_at = extendShareExpiry(quote.share_expires_at);
+    const { error } = await supabase
+      .from("quotes")
+      .update({ share_expires_at })
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { share_expires_at };
   });
 
 export const seedDemoCatalog = createServerFn({ method: "POST" })

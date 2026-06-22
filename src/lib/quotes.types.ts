@@ -84,6 +84,7 @@ export interface Quote {
   tax_amount: number;
   total: number;
   share_token: string | null;
+  share_expires_at: string | null;
   created_at: string;
   updated_at: string;
   quote_lines?: QuoteLine[];
@@ -144,6 +145,15 @@ export function formatMoney(n: number) {
     currency: "TWD",
     maximumFractionDigits: 0,
   }).format(n);
+}
+
+export function formatShareExpiry(iso: string | null | undefined) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString("zh-TW", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 export function lineShareText(quote: Quote, url: string) {

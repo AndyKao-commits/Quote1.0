@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
   tax_amount NUMERIC NOT NULL DEFAULT 0,
   total NUMERIC NOT NULL DEFAULT 0,
   share_token TEXT UNIQUE,
+  share_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

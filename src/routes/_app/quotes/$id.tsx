@@ -11,10 +11,10 @@ import { AppShell } from "@/components/BdgAppShell";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import { QuotePreviewPane } from "@/components/QuotePreviewPane";
 import {
-  getQuote, saveQuote, publishShare, listCatalogItems, getProfile,
+  getQuote, saveQuote, publishShare, revokeShare, renewShare, listCatalogItems, getProfile,
 } from "@/lib/quotes.functions";
 import {
-  calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, type QuoteLine,
+  calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, formatShareExpiry, type QuoteLine,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { shareViaLine } from "@/lib/line-share";
@@ -33,6 +33,8 @@ function QuoteEditorPage() {
   const getFn = useServerFn(getQuote);
   const saveFn = useServerFn(saveQuote);
   const shareFn = useServerFn(publishShare);
+  const revokeShareFn = useServerFn(revokeShare);
+  const renewShareFn = useServerFn(renewShare);
   const catalogFn = useServerFn(listCatalogItems);
   const profileFn = useServerFn(getProfile);
 
@@ -216,8 +218,25 @@ function QuoteEditorPage() {
     const res = await shareFn({ data: { id } });
     const url = `${window.location.origin}/q/${res.token}`;
     setShareUrl(url);
+    setForm((prev: any) => ({
+      ...prev,
+      share_token: res.token,
+      share_expires_at: res.share_expires_at,
+    }));
     const text = lineShareText({ ...quotePreview, client_name: form.client_name }, url);
     await shareViaLine(text);
+  }
+
+  async function doRevokeShare() {
+    if (!confirm("確定作廢分享連結？客戶將無法再開啟此連結。")) return;
+    await revokeShareFn({ data: { id } });
+    setShareUrl(null);
+    setForm((prev: any) => ({ ...prev, share_token: null, share_expires_at: null }));
+  }
+
+  async function doRenewShare() {
+    const res = await renewShareFn({ data: { id } });
+    setForm((prev: any) => ({ ...prev, share_expires_at: res.share_expires_at }));
   }
 
   function handleQuoteLinesCsv(text: string) {
@@ -405,9 +424,23 @@ function QuoteEditorPage() {
       </div>
 
       {shareUrl && (
-        <p className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
-          分享連結（長期有效）：<span className="break-all text-stone-600">{shareUrl}</span>
-        </p>
+        <div className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
+          <p>
+            分享連結
+            {form?.share_expires_at
+              ? `（有效至 ${formatShareExpiry(form.share_expires_at)}）`
+              : "（長期有效）"}
+          </p>
+          <p className="mt-1 break-all text-stone-600">{shareUrl}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={doRenewShare} className="bdg-btn bdg-btn-secondary py-1 text-xs">
+              延長 90 天
+            </button>
+            <button type="button" onClick={doRevokeShare} className="bdg-btn bdg-btn-secondary py-1 text-xs text-rose-700">
+              作廢連結
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="mb-3 flex gap-2 md:hidden">

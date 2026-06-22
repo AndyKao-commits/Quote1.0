@@ -9,7 +9,7 @@ import { QuotePreviewPane } from "@/components/QuotePreviewPane";
 import { getQuoteByShareToken } from "@/lib/quotes.functions";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { shareViaLine } from "@/lib/line-share";
-import { formatMoney, lineShareText } from "@/lib/quotes.types";
+import { formatMoney, formatShareExpiry, lineShareText } from "@/lib/quotes.types";
 
 export const Route = createFileRoute("/q/$token")({
   head: () => ({ meta: [{ title: "報價預覽 — 報得過" }] }),
@@ -73,7 +73,11 @@ function SharePage() {
           <p className="text-sm text-[#6b5c4d]">
             {data.quote.client_name || "客戶"} · {formatMoney(Number(data.quote.total))}
           </p>
-          <p className="mt-1 text-xs text-stone-500">此連結長期有效，可隨時開啟預覽與下載 PDF</p>
+          <p className="mt-1 text-xs text-stone-500">
+            {data.quote.share_expires_at
+              ? `此連結有效至 ${formatShareExpiry(data.quote.share_expires_at)}`
+              : "此連結長期有效"}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
