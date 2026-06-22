@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
 import { getProfile, updateProfile } from "@/lib/quotes.functions";
-import { templateMeta, type QuoteTemplate } from "@/lib/quotes.types";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "設定 — 報得過" }] }),
@@ -49,28 +48,12 @@ function SettingsPage() {
         {form.logo_url?.trim() && (
           <div className="flex items-center gap-3 rounded-xl border border-[#ece3d6] bg-[#FDFBF7] p-3">
             <img src={form.logo_url} alt="" className="h-12 w-12 rounded-lg object-contain" />
-            <p className="text-xs text-[#6b5c4d]">預覽：會顯示在頂部導覽列與「工作室」模板 PDF</p>
+            <p className="text-xs text-[#6b5c4d]">預覽：會顯示在頂部導覽列與報價單 PDF</p>
           </div>
         )}
         <Field label="品牌色（hex）" value={form.brand_color ?? "#C45A3C"} onChange={(v) => setForm({ ...form, brand_color: v })} />
         <Field label="賣方統編（選填）" value={form.seller_tax_id ?? ""} onChange={(v) => setForm({ ...form, seller_tax_id: v })} />
         <Field label="預設條款" value={form.default_terms ?? ""} onChange={(v) => setForm({ ...form, default_terms: v })} multiline />
-
-        <div>
-          <p className="mb-2 text-xs font-semibold text-[#6b5c4d]">預設模板</p>
-          <div className="flex flex-wrap gap-2">
-            {(Object.keys(templateMeta) as QuoteTemplate[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setForm({ ...form, default_template: t })}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${form.default_template === t ? "bg-[#C45A3C] text-white" : "border border-[#e8dfd3] bg-[#F5F0E8]"}`}
-              >
-                {templateMeta[t].label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <Toggle checked={form.default_show_tax_id} onChange={(v) => setForm({ ...form, default_show_tax_id: v })} label="新報價預設顯示統編" />
         <Toggle checked={form.default_tax_included} onChange={(v) => setForm({ ...form, default_tax_included: v })} label="新報價預設含稅" />

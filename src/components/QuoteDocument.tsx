@@ -1,4 +1,4 @@
-import type { Profile, Quote, QuoteLine, QuoteTemplate } from "@/lib/quotes.types";
+import type { Profile, Quote, QuoteLine } from "@/lib/quotes.types";
 import {
   amountToChineseUpper,
   buildGroupSummaryRows,
@@ -25,7 +25,7 @@ export function QuoteDocument({
   profile,
   preview = false,
 }: {
-  quote: Partial<Quote> & { template: QuoteTemplate; title: string; client_name: string };
+  quote: Partial<Quote> & { title: string; client_name: string };
   lines: QuoteLine[];
   profile?: Partial<Profile> | null;
   preview?: boolean;
@@ -84,7 +84,7 @@ function QuotePage({
   pageIndex,
   totalPages,
 }: {
-  quote: Partial<Quote> & { template: QuoteTemplate; title: string; client_name: string };
+  quote: Partial<Quote> & { title: string; client_name: string };
   profile?: Partial<Profile> | null;
   allLines: QuoteLine[];
   page: DocumentPage;
@@ -94,11 +94,7 @@ function QuotePage({
   totalPages: number;
 }) {
   const company = profile?.company_name || profile?.display_name || "報得過";
-  const tpl = quote.template;
-  const fontFamily =
-    tpl === "formal"
-      ? "'Noto Serif TC', 'Noto Serif', serif"
-      : "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
+  const fontFamily = "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
   const isSummary = page.kind === "summary";
 
@@ -128,7 +124,6 @@ function QuotePage({
         quote={quote}
         profile={profile}
         company={company}
-        template={tpl}
         summary={isSummary}
       />
 
@@ -178,13 +173,11 @@ function ProHeader({
   quote,
   profile,
   company,
-  template,
   summary = false,
 }: {
   quote: Partial<Quote> & { title: string; client_name: string };
   profile?: Partial<Profile> | null;
   company: string;
-  template: QuoteTemplate;
   summary?: boolean;
 }) {
   const dateStr = formatQuoteDate(quote);
@@ -202,7 +195,7 @@ function ProHeader({
         ) : null}
         <p
           className={`font-semibold tracking-wide text-[#222] ${
-            template === "studio" ? (summary ? "text-base" : "text-sm") : summary ? "text-xs" : "text-[11px]"
+            summary ? "text-xs" : "text-[11px]"
           }`}
         >
           {company}
@@ -245,12 +238,6 @@ function ProHeader({
           </p>
         )}
       </div>
-
-      {template === "studio" && quote.cover_image_url && !summary && (
-        <div className="mt-1 flex justify-end">
-          <img src={quote.cover_image_url} alt="" className="h-12 w-12 object-cover" />
-        </div>
-      )}
     </header>
   );
 }

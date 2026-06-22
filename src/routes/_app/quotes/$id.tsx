@@ -13,7 +13,7 @@ import {
   getQuote, saveQuote, publishShare, listCatalogItems, getProfile,
 } from "@/lib/quotes.functions";
 import {
-  calcQuoteTotals, prepareQuoteLinesForSave, templateMeta, lineShareText, type QuoteLine, type QuoteTemplate,
+  calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, type QuoteLine,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
@@ -123,8 +123,6 @@ function QuoteEditorPage() {
         data: {
           id,
           title: form.title,
-          template: form.template as QuoteTemplate,
-          contact_id: form.contact_id,
           client_name: form.client_name,
           client_company: form.client_company,
           client_phone: form.client_phone,
@@ -235,22 +233,6 @@ function QuoteEditorPage() {
 
   const editor = (
     <div className="space-y-5">
-      <div>
-        <p className="bdg-section-title mb-2">模板</p>
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(templateMeta) as QuoteTemplate[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setForm({ ...form, template: t })}
-              className={`bdg-btn text-xs ${form.template === t ? "bdg-btn-primary" : "bdg-btn-secondary"}`}
-            >
-              {templateMeta[t].label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="bdg-card space-y-3 p-4">
         <p className="bdg-section-title">客戶</p>
         <Field label="報價標題" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
@@ -260,9 +242,6 @@ function QuoteEditorPage() {
           <Field label="電話" value={form.client_phone ?? ""} onChange={(v) => setForm({ ...form, client_phone: v })} />
         </div>
         <Field label="地址" value={form.client_address ?? ""} onChange={(v) => setForm({ ...form, client_address: v })} />
-        {form.template === "studio" && (
-          <Field label="封面圖 URL" value={form.cover_image_url ?? ""} onChange={(v) => setForm({ ...form, cover_image_url: v })} />
-        )}
       </div>
 
       <div className="bdg-card p-4">

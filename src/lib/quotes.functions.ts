@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireQuoteAuth } from "@/lib/quote-auth-middleware";
-import { calcQuoteTotals, type QuoteLine, type QuoteTemplate, QUOTE_LIMITS } from "@/lib/quotes.types";
+import { calcQuoteTotals, DEFAULT_QUOTE_TEMPLATE, type QuoteLine, QUOTE_LIMITS } from "@/lib/quotes.types";
 import { DEFAULT_QUOTE_TERMS } from "@/lib/quote-document.utils";
 
 const lineSchema = z.object({
@@ -17,9 +17,7 @@ const lineSchema = z.object({
 
 const quoteInput = z.object({
   id: z.string().optional(),
-  contact_id: z.string().nullable().optional(),
   title: z.string(),
-  template: z.enum(["craft", "studio", "formal"]),
   client_name: z.string(),
   client_company: z.string().nullable().optional(),
   client_phone: z.string().nullable().optional(),
@@ -77,7 +75,6 @@ export const updateProfile = createServerFn({ method: "POST" })
       phone: z.string().nullable().optional(),
       logo_url: z.string().nullable().optional(),
       brand_color: z.string().optional(),
-      default_template: z.enum(["craft", "studio", "formal"]).optional(),
       default_terms: z.string().nullable().optional(),
       default_show_tax_id: z.boolean().optional(),
       default_tax_included: z.boolean().optional(),
@@ -88,57 +85,6 @@ export const updateProfile = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
     const { error } = await supabase.from("profiles").update(data).eq("id", userId);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const listContacts = createServerFn({ method: "GET" })
-  .middleware([requireQuoteAuth])
-  .handler(async ({ context }) => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("user_id", userId)
-      .order("name");
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  });
-
-export const saveContact = createServerFn({ method: "POST" })
-  .middleware([requireQuoteAuth])
-  .inputValidator(
-    z.object({
-      id: z.string().optional(),
-      name: z.string().min(1),
-      company: z.string().nullable().optional(),
-      phone: z.string().nullable().optional(),
-      email: z.string().nullable().optional(),
-      tax_id: z.string().nullable().optional(),
-      address: z.string().nullable().optional(),
-      note: z.string().nullable().optional(),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
-    const row = { ...data, user_id: userId };
-    delete (row as { id?: string }).id;
-    if (data.id) {
-      const { error } = await supabase.from("contacts").update(row).eq("id", data.id).eq("user_id", userId);
-      if (error) throw new Error(error.message);
-      return { id: data.id };
-    }
-    const { data: inserted, error } = await supabase.from("contacts").insert(row).select("id").single();
-    if (error) throw new Error(error.message);
-    return { id: inserted.id };
-  });
-
-export const deleteContact = createServerFn({ method: "POST" })
-  .middleware([requireQuoteAuth])
-  .inputValidator(z.object({ id: z.string() }))
-  .handler(async ({ context, data }) => {
-    const { supabase, userId } = context as { supabase: any; userId: string };
-    const { error } = await supabase.from("contacts").delete().eq("id", data.id).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -255,8 +201,8 @@ export const getQuoteByShareToken = createServerFn({ method: "GET" })
 
 export const createQuote = createServerFn({ method: "POST" })
   .middleware([requireQuoteAuth])
-  .inputValidator(z.object({ template: z.enum(["craft", "studio", "formal"]) }))
-  .handler(async ({ context, data }) => {
+  .inputValidator(z.object({}).optional())
+  .handler(async ({ context }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
     const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
 
@@ -273,7 +219,7 @@ export const createQuote = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         title: "工程施工報價單",
-        template: data.template,
+        template: DEFAULT_QUOTE_TEMPLATE,
         client_name: "",
         show_seller_tax_id: profile?.default_show_tax_id ?? false,
         show_buyer_tax_id: profile?.default_show_tax_id ?? false,
@@ -321,9 +267,8 @@ export const saveQuote = createServerFn({ method: "POST" })
     });
     const quoteRowBase = {
       user_id: userId,
-      contact_id: data.contact_id ?? null,
       title: data.title,
-      template: data.template as QuoteTemplate,
+      template: DEFAULT_QUOTE_TEMPLATE,
       client_name: data.client_name,
       client_company: data.client_company ?? null,
       client_phone: data.client_phone ?? null,

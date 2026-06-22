@@ -11,6 +11,11 @@ export function clampText(s: string, max: number) {
 }
 export type QuoteStatus = "draft" | "sent" | "archived";
 
+export type QuoteTemplate = "craft" | "studio" | "formal";
+
+/** 全系統統一使用工程施工報價單版型 */
+export const DEFAULT_QUOTE_TEMPLATE: QuoteTemplate = "craft";
+
 export interface Profile {
   id: string;
   display_name: string | null;
@@ -25,18 +30,6 @@ export interface Profile {
   default_tax_included: boolean;
   default_show_tax_breakdown: boolean;
   seller_tax_id: string | null;
-}
-
-export interface Contact {
-  id: string;
-  user_id: string;
-  name: string;
-  company: string | null;
-  phone: string | null;
-  email: string | null;
-  tax_id: string | null;
-  address: string | null;
-  note: string | null;
 }
 
 export interface CatalogItem {
@@ -95,15 +88,6 @@ export interface Quote {
   updated_at: string;
   quote_lines?: QuoteLine[];
 }
-
-export const templateMeta: Record<
-  QuoteTemplate,
-  { label: string; desc: string }
-> = {
-  craft: { label: "簡易", desc: "工程施工報價單格式，專業表格" },
-  studio: { label: "工作室", desc: "含 Logo，適合設計師事務所" },
-  formal: { label: "正式文件", desc: "襯線字體，正式報價用" },
-};
 
 export function calcQuoteTotals(
   lines: QuoteLine[],

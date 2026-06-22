@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Package, Settings, User } from "lucide-react";
+import { FileText, Package, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 import { getProfile } from "@/lib/quotes.functions";
 
@@ -32,7 +32,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="hidden items-center gap-0.5 md:flex">
             <Nav to="/quotes" label="報價" active={isActive("/quotes")} />
             <Nav to="/items" label="項目庫" active={isActive("/items")} />
-            <Nav to="/contacts" label="聯絡人" active={isActive("/contacts")} />
             <Nav to="/settings" label="設定" active={isActive("/settings")} />
           </nav>
           <Link to="/quotes/new" className="bdg-btn bdg-btn-primary shrink-0">
@@ -46,7 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Bottom to="/quotes" label="報價" icon={<FileText className="h-5 w-5" />} active={isActive("/quotes") && !pathname.includes("/new")} />
           <Bottom to="/quotes/new" label="新建" icon={<FileText className="h-5 w-5" />} active={pathname.includes("/new")} primary />
           <Bottom to="/items" label="項目" icon={<Package className="h-5 w-5" />} active={isActive("/items")} />
-          <Bottom to="/settings" label="設定" icon={<Settings className="h-5 w-5" />} active={isActive("/settings") || isActive("/contacts")} />
+          <Bottom to="/settings" label="設定" icon={<Settings className="h-5 w-5" />} active={isActive("/settings")} />
         </div>
       </nav>
     </div>

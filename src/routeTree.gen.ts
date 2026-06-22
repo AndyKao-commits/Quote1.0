@@ -16,7 +16,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as QTokenRouteImport } from './routes/q/$token'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppItemsRouteImport } from './routes/_app/items'
-import { Route as AppContactsRouteImport } from './routes/_app/contacts'
 import { Route as AppQuotesIndexRouteImport } from './routes/_app/quotes/index'
 import { Route as AppQuotesNewRouteImport } from './routes/_app/quotes/new'
 import { Route as AppQuotesIdRouteImport } from './routes/_app/quotes/$id'
@@ -55,11 +54,6 @@ const AppItemsRoute = AppItemsRouteImport.update({
   path: '/items',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppContactsRoute = AppContactsRouteImport.update({
-  id: '/contacts',
-  path: '/contacts',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
   id: '/quotes/',
   path: '/quotes/',
@@ -80,7 +74,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/contacts': typeof AppContactsRoute
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
@@ -92,7 +85,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/contacts': typeof AppContactsRoute
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
@@ -106,7 +98,6 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/_app/contacts': typeof AppContactsRoute
   '/_app/items': typeof AppItemsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
@@ -120,7 +111,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/contacts'
     | '/items'
     | '/settings'
     | '/q/$token'
@@ -132,7 +122,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/contacts'
     | '/items'
     | '/settings'
     | '/q/$token'
@@ -145,7 +134,6 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/reset-password'
-    | '/_app/contacts'
     | '/_app/items'
     | '/_app/settings'
     | '/q/$token'
@@ -213,13 +201,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppItemsRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/_app/contacts': {
-      id: '/_app/contacts'
-      path: '/contacts'
-      fullPath: '/contacts'
-      preLoaderRoute: typeof AppContactsRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
     '/_app/quotes/': {
       id: '/_app/quotes/'
       path: '/quotes'
@@ -245,7 +226,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteRouteChildren {
-  AppContactsRoute: typeof AppContactsRoute
   AppItemsRoute: typeof AppItemsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppQuotesIdRoute: typeof AppQuotesIdRoute
@@ -254,7 +234,6 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppContactsRoute: AppContactsRoute,
   AppItemsRoute: AppItemsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppQuotesIdRoute: AppQuotesIdRoute,
