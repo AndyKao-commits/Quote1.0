@@ -18,7 +18,10 @@ SUPABASE_SERVICE_ROLE_KEY=你的-service-role-key（僅伺服器，勿公開）
 ## 資料庫初始化
 
 1. 打開 [Supabase SQL Editor](https://supabase.com/dashboard/project/tsnjjdwmrvloemwizmdi/sql/new)
-2. 貼上並執行 `supabase/bootstrap-quotes.sql`
+2. 從 GitHub 打開 `supabase/bootstrap-quotes.sql`，**全選複製**（第一行必須是 `CREATE OR REPLACE FUNCTION`，不要複製 README 裡的說明文字）
+3. 貼到 SQL Editor → Run
+
+若出現 `syntax error at or near "-"`，代表複製到 Markdown 說明文字了，請改複製 `.sql` 檔案內容。
 
 ## 本機開發
 

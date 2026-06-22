@@ -1,10 +1,8 @@
--- 報得過 Quote1.0 — 在 Supabase SQL Editor 執行此檔
-
 CREATE OR REPLACE FUNCTION public.set_updated_at() RETURNS TRIGGER AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   display_name TEXT,
   company_name TEXT,
@@ -22,7 +20,7 @@ CREATE TABLE public.profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.contacts (
+CREATE TABLE IF NOT EXISTS public.contacts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -36,7 +34,7 @@ CREATE TABLE public.contacts (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.catalog_items (
+CREATE TABLE IF NOT EXISTS public.catalog_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -48,7 +46,7 @@ CREATE TABLE public.catalog_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.quotes (
+CREATE TABLE IF NOT EXISTS public.quotes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   contact_id UUID REFERENCES public.contacts(id) ON DELETE SET NULL,
@@ -79,7 +77,7 @@ CREATE TABLE public.quotes (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE public.quote_lines (
+CREATE TABLE IF NOT EXISTS public.quote_lines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   quote_id UUID NOT NULL REFERENCES public.quotes(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -105,24 +103,41 @@ ALTER TABLE public.catalog_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.quote_lines ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "own profile" ON public.profiles;
 CREATE POLICY "own profile" ON public.profiles FOR ALL USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "own contacts" ON public.contacts;
 CREATE POLICY "own contacts" ON public.contacts FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own catalog" ON public.catalog_items;
 CREATE POLICY "own catalog" ON public.catalog_items FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own quotes" ON public.quotes;
 CREATE POLICY "own quotes" ON public.quotes FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "own quote lines" ON public.quote_lines;
 CREATE POLICY "own quote lines" ON public.quote_lines FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "public share read quotes" ON public.quotes;
 CREATE POLICY "public share read quotes" ON public.quotes FOR SELECT USING (share_token IS NOT NULL);
+
+DROP POLICY IF EXISTS "public share read lines" ON public.quote_lines;
 CREATE POLICY "public share read lines" ON public.quote_lines FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.quotes q WHERE q.id = quote_id AND q.share_token IS NOT NULL));
 
-CREATE INDEX contacts_user_idx ON public.contacts(user_id, name);
-CREATE INDEX catalog_user_idx ON public.catalog_items(user_id, sort_order);
-CREATE INDEX quotes_user_idx ON public.quotes(user_id, created_at DESC);
-CREATE INDEX quote_lines_quote_idx ON public.quote_lines(quote_id, sort_order);
-CREATE INDEX quotes_share_token_idx ON public.quotes(share_token) WHERE share_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS contacts_user_idx ON public.contacts(user_id, name);
+CREATE INDEX IF NOT EXISTS catalog_user_idx ON public.catalog_items(user_id, sort_order);
+CREATE INDEX IF NOT EXISTS quotes_user_idx ON public.quotes(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS quote_lines_quote_idx ON public.quote_lines(quote_id, sort_order);
+CREATE INDEX IF NOT EXISTS quotes_share_token_idx ON public.quotes(share_token) WHERE share_token IS NOT NULL;
 
+DROP TRIGGER IF EXISTS trg_profiles_updated ON public.profiles;
 CREATE TRIGGER trg_profiles_updated BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_contacts_updated ON public.contacts;
 CREATE TRIGGER trg_contacts_updated BEFORE UPDATE ON public.contacts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_quotes_updated ON public.quotes;
 CREATE TRIGGER trg_quotes_updated BEFORE UPDATE ON public.quotes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
