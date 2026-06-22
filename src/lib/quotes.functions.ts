@@ -446,14 +446,23 @@ export const publishShare = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
-    const token = randomToken();
+    const { data: quote, error: readErr } = await supabase
+      .from("quotes")
+      .select("share_token")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!quote) throw new Error("找不到報價");
+
+    const token = quote.share_token ?? randomToken();
     const { error } = await supabase
       .from("quotes")
       .update({ share_token: token, status: "sent" })
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
-    return { token };
+    return { token, reused: Boolean(quote.share_token) };
   });
 
 export const seedDemoCatalog = createServerFn({ method: "POST" })

@@ -17,6 +17,7 @@ import {
   calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, type QuoteLine,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
+import { shareViaLine } from "@/lib/line-share";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
 import { getSampleQuote, SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
@@ -216,7 +217,7 @@ function QuoteEditorPage() {
     const url = `${window.location.origin}/q/${res.token}`;
     setShareUrl(url);
     const text = lineShareText({ ...quotePreview, client_name: form.client_name }, url);
-    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, "_blank");
+    await shareViaLine(text);
   }
 
   function handleQuoteLinesCsv(text: string) {
@@ -403,7 +404,11 @@ function QuoteEditorPage() {
         </button>
       </div>
 
-      {shareUrl && <p className="mb-3 truncate rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">分享連結：{shareUrl}</p>}
+      {shareUrl && (
+        <p className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
+          分享連結（長期有效）：<span className="break-all text-stone-600">{shareUrl}</span>
+        </p>
+      )}
 
       <div className="mb-3 flex gap-2 md:hidden">
         <button type="button" onClick={() => setTab("edit")} className={`flex-1 bdg-btn text-sm ${tab === "edit" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>編輯</button>
