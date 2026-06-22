@@ -42,6 +42,21 @@ function randomToken() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 }
 
+export const DEMO_CATALOG_ITEMS = [
+  { name: "拆除工程", unit: "式", unit_price: 15000, category: "拆除", keywords: ["拆除", "敲除", "清運"] },
+  { name: "泥作工程", unit: "式", unit_price: 45000, category: "泥作", keywords: ["泥作", "粉刷", "地坪"] },
+  { name: "防水工程", unit: "式", unit_price: 28000, category: "防水", keywords: ["防水", "浴室", "露台"] },
+  { name: "水電配管", unit: "式", unit_price: 35000, category: "水電", keywords: ["水電", "配管", "插座"] },
+  { name: "油漆粉刷", unit: "式", unit_price: 22000, category: "油漆", keywords: ["油漆", "粉刷", "批土"] },
+  { name: "木作櫃體", unit: "尺", unit_price: 3500, category: "木作", keywords: ["木作", "櫃體", "系統櫃"] },
+  { name: "鋁窗更換", unit: "才", unit_price: 2800, category: "鋁窗", keywords: ["鋁窗", "窗戶", "氣密窗"] },
+  { name: "地坪工程", unit: "坪", unit_price: 4500, category: "地坪", keywords: ["地坪", "SPC", "超耐磨"] },
+  { name: "衛浴設備", unit: "式", unit_price: 18000, category: "衛浴", keywords: ["衛浴", "馬桶", "面盆"] },
+  { name: "廚房工程", unit: "式", unit_price: 55000, category: "廚房", keywords: ["廚房", "櫥櫃", "檯面"] },
+  { name: "設計監工", unit: "式", unit_price: 60000, category: "設計", keywords: ["設計", "監工", "圖面"] },
+  { name: "清潔收工", unit: "式", unit_price: 8000, category: "其他", keywords: ["清潔", "收工", "細清"] },
+] as const;
+
 export const getProfile = createServerFn({ method: "GET" })
   .middleware([requireQuoteAuth])
   .handler(async ({ context }) => {
@@ -363,15 +378,25 @@ export const seedDemoCatalog = createServerFn({ method: "POST" })
   .middleware([requireQuoteAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
-    const { count } = await supabase.from("catalog_items").select("*", { count: "exact", head: true }).eq("user_id", userId);
-    if ((count ?? 0) > 0) return { ok: true, skipped: true };
-    const items = [
-      { name: "泥作工程", unit: "式", unit_price: 45000, category: "泥作", keywords: ["泥作", "粉刷"] },
-      { name: "防水工程", unit: "式", unit_price: 28000, category: "防水", keywords: ["防水", "浴室"] },
-      { name: "木作櫃體", unit: "尺", unit_price: 3500, category: "木作", keywords: ["木作", "櫃子"] },
-      { name: "設計監工", unit: "式", unit_price: 60000, category: "設計", keywords: ["設計", "監工"] },
-      { name: "清潔收工", unit: "式", unit_price: 8000, category: "其他", keywords: ["清潔", "收工"] },
-    ];
-    await supabase.from("catalog_items").insert(items.map((it, i) => ({ ...it, user_id: userId, sort_order: i })));
-    return { ok: true };
+    const { data: existing, error: listErr } = await supabase
+      .from("catalog_items")
+      .select("name, sort_order")
+      .eq("user_id", userId);
+    if (listErr) throw new Error(listErr.message);
+
+    const existingNames = new Set((existing ?? []).map((r: { name: string }) => r.name));
+    const maxSort = (existing ?? []).reduce((m: number, r: { sort_order: number }) => Math.max(m, r.sort_order ?? 0), -1);
+    const toInsert = DEMO_CATALOG_ITEMS.filter((it) => !existingNames.has(it.name)).map((it, i) => ({
+      ...it,
+      user_id: userId,
+      sort_order: maxSort + 1 + i,
+    }));
+
+    if (!toInsert.length) {
+      return { ok: true, added: 0, message: "示範項目已全部在項目庫中" };
+    }
+
+    const { error } = await supabase.from("catalog_items").insert(toInsert);
+    if (error) throw new Error(error.message);
+    return { ok: true, added: toInsert.length, message: `已載入 ${toInsert.length} 項示範項目` };
   });

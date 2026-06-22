@@ -19,6 +19,7 @@ function ItemsPage() {
   const seedFn = useServerFn(seedDemoCatalog);
   const { data: items = [], isLoading } = useQuery({ queryKey: ["catalog"], queryFn: () => listFn({}) as Promise<any[]> });
   const [form, setForm] = useState({ name: "", unit: "式", unit_price: 0, category: "", keywords: "" });
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: () =>
@@ -37,14 +38,54 @@ function ItemsPage() {
     },
   });
 
+  const seed = useMutation({
+    mutationFn: () => seedFn({}) as Promise<{ ok: boolean; added: number; message: string }>,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+      setSeedMsg(res.message);
+    },
+    onError: (e) => setSeedMsg(e instanceof Error ? e.message : "載入失敗"),
+  });
+
+  const seedButton = (
+    <button
+      type="button"
+      disabled={seed.isPending}
+      onClick={() => {
+        setSeedMsg(null);
+        seed.mutate();
+      }}
+      className="inline-flex items-center gap-2 rounded-full border-2 border-[#C45A3C] bg-[#C45A3C]/5 px-5 py-2.5 text-sm font-bold text-[#C45A3C] transition hover:bg-[#C45A3C]/10 disabled:opacity-60"
+    >
+      {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+      載入示範項目
+    </button>
+  );
+
   return (
     <AppShell>
-      <h1 className="text-2xl font-bold text-[#1a1612]">快速項目庫</h1>
-      <p className="mt-1 text-sm text-[#6b5c4d]">編輯報價時可用關鍵字搜尋帶入</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1a1612]">快速項目庫</h1>
+          <p className="mt-1 text-sm text-[#6b5c4d]">編輯報價時可用關鍵字搜尋帶入（泥作、防水、水電…）</p>
+        </div>
+        {items.length > 0 && seedButton}
+      </div>
 
-      <button type="button" onClick={() => seedFn({})} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#C45A3C]">
-        <Sparkles className="h-4 w-4" /> 載入示範項目
-      </button>
+      {seedMsg && (
+        <p className="mt-4 rounded-xl border border-[#C45A3C]/30 bg-[#C45A3C]/10 px-4 py-2 text-sm font-medium text-[#8B4513]">
+          {seedMsg}
+        </p>
+      )}
+
+      {!isLoading && items.length === 0 && (
+        <div className="mt-6 rounded-2xl border border-dashed border-[#C45A3C]/40 bg-[#FDFBF7] p-8 text-center">
+          <Sparkles className="mx-auto h-8 w-8 text-[#C45A3C]" />
+          <p className="mt-3 font-bold text-[#1a1612]">項目庫還是空的</p>
+          <p className="mt-1 text-sm text-[#6b5c4d]">一鍵載入 12 項常見工程示範（拆除、泥作、防水、水電、木作…）</p>
+          <div className="mt-5">{seedButton}</div>
+        </div>
+      )}
 
       <div className="mt-6 rounded-2xl border border-[#e8dfd3] bg-white p-4">
         <p className="mb-3 text-sm font-bold">新增項目</p>
@@ -62,7 +103,7 @@ function ItemsPage() {
 
       {isLoading ? (
         <p className="mt-6 text-sm text-[#6b5c4d]">載入中…</p>
-      ) : (
+      ) : items.length > 0 ? (
         <ul className="mt-6 space-y-2">
           {items.map((it: any) => (
             <li key={it.id} className="flex items-center justify-between rounded-xl border border-[#e8dfd3] bg-white px-4 py-3">
@@ -80,7 +121,7 @@ function ItemsPage() {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </AppShell>
   );
 }
