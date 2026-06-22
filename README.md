@@ -40,8 +40,43 @@ npm run dev
 - 含稅／統編由使用者自行開關
 - LINE 分享（短連結 + 預覽頁 `/q/:token`）
 
-## 部署
+## 部署到 Vercel（可上線）
 
-推送到 `main` 後 Vercel 自動 build（`nitro preset: vercel`）。
+專案已設定 `nitro preset: vercel`，可直接部署。
 
-記得在 Supabase Auth → URL Configuration 加入你的 Vercel 網域。
+### 步驟 1：建立 Vercel 專案
+
+1. 登入 [vercel.com](https://vercel.com)
+2. **Add New → Project**
+3. 選擇 GitHub repo（`AndyKao-commits/dowaterlightout` 或你的 `Quote1.0` fork）
+4. **Branch** 選 `cursor/baodeguo-quote1-bd62`（或合併到 `main` 後選 main）
+5. Framework 會自動辨識為 TanStack Start
+
+### 步驟 2：環境變數（Vercel → Settings → Environment Variables）
+
+| 名稱 | 值 |
+|------|-----|
+| `SUPABASE_URL` | `https://tsnjjdwmrvloemwizmdi.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API → **service_role**（Secret key） |
+
+### 步驟 3：Supabase Auth 網址
+
+部署完成後取得 Vercel 網址（例如 `https://quote10.vercel.app`），到 Supabase：
+
+**Authentication → URL Configuration**
+
+- **Site URL**：`https://你的網域.vercel.app`
+- **Redirect URLs** 新增：
+  - `https://你的網域.vercel.app/**`
+  - `http://localhost:5173/**`（本機開發用）
+
+### 步驟 4：Deploy
+
+點 **Deploy**，約 1–2 分鐘後即可用網址登入使用。
+
+### 資料庫（若尚未執行）
+
+```sql
+ALTER TABLE public.quote_lines
+  ADD COLUMN IF NOT EXISTS line_type TEXT NOT NULL DEFAULT 'item';
+```

@@ -133,19 +133,15 @@ function QuoteEditorPage() {
   }
 
   async function doExport() {
-    const prevTab = tab;
-    if (window.innerWidth < 1024) setTab("preview");
     setPreviewFull(false);
     setExporting(true);
     try {
       await saveMut.mutateAsync();
-      await new Promise((r) => setTimeout(r, 200));
       await exportQuotePdf(`${form.client_name || "報價"}-${form.title}.pdf`);
     } catch (e) {
       alert(e instanceof Error ? e.message : "匯出失敗");
     } finally {
       setExporting(false);
-      if (window.innerWidth < 1024 && prevTab === "edit") setTab("edit");
     }
   }
 
@@ -266,10 +262,18 @@ function QuoteEditorPage() {
         <button type="button" onClick={() => setTab("preview")} className={`flex-1 rounded-lg py-2 text-sm font-semibold ${tab === "preview" ? "bg-[#C45A3C] text-white" : "bg-white"}`}>預覽</button>
       </div>
 
+      {/* PDF 匯出專用離屏節點：不可 display:none / visibility:hidden，否則 PDF 會空白 */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
+      >
+        <QuoteDocument quote={quotePreview} lines={lines} profile={profile} exportTarget />
+      </div>
+
       <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         <div className={`min-w-0 overflow-hidden rounded-2xl border border-[#e8dfd3] bg-[#FDFBF7] p-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
         <div className={`min-w-0 overflow-x-auto rounded-2xl border border-[#e8dfd3] bg-[#ece3d6] p-2 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview exportTarget />
+          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
         </div>
       </div>
 
