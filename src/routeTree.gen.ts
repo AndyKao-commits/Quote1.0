@@ -11,26 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QTokenRouteImport } from './routes/q/$token'
-import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
-import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
-import { Route as AuthenticatedShopRouteImport } from './routes/_authenticated/shop'
-import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
-import { Route as AuthenticatedInviteRouteImport } from './routes/_authenticated/invite'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppItemsRouteImport } from './routes/_app/items'
 import { Route as AppContactsRouteImport } from './routes/_app/contacts'
-import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects.index'
-import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AppQuotesIndexRouteImport } from './routes/_app/quotes/index'
-import { Route as ShareProjectTokenRouteImport } from './routes/share.project.$token'
-import { Route as AuthenticatedProjectsNewRouteImport } from './routes/_authenticated/projects.new'
-import { Route as AuthenticatedProjectsIdRouteImport } from './routes/_authenticated/projects.$id'
-import { Route as AuthenticatedAdminInboxRouteImport } from './routes/_authenticated/admin.inbox'
 import { Route as AppQuotesNewRouteImport } from './routes/_app/quotes/new'
 import { Route as AppQuotesIdRouteImport } from './routes/_app/quotes/$id'
 
@@ -42,10 +29,6 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -62,36 +45,6 @@ const QTokenRoute = QTokenRouteImport.update({
   path: '/q/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedShopRoute = AuthenticatedShopRouteImport.update({
-  id: '/shop',
-  path: '/shop',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedInviteRoute = AuthenticatedInviteRouteImport.update({
-  id: '/invite',
-  path: '/invite',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -107,42 +60,10 @@ const AppContactsRoute = AppContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AuthenticatedProjectsIndexRoute =
-  AuthenticatedProjectsIndexRouteImport.update({
-    id: '/projects/',
-    path: '/projects/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AppQuotesIndexRoute = AppQuotesIndexRouteImport.update({
   id: '/quotes/',
   path: '/quotes/',
   getParentRoute: () => AppRouteRoute,
-} as any)
-const ShareProjectTokenRoute = ShareProjectTokenRouteImport.update({
-  id: '/share/project/$token',
-  path: '/share/project/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedProjectsNewRoute =
-  AuthenticatedProjectsNewRouteImport.update({
-    id: '/projects/new',
-    path: '/projects/new',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedProjectsIdRoute = AuthenticatedProjectsIdRouteImport.update({
-  id: '/projects/$id',
-  path: '/projects/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminInboxRoute = AuthenticatedAdminInboxRouteImport.update({
-  id: '/admin/inbox',
-  path: '/admin/inbox',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AppQuotesNewRoute = AppQuotesNewRouteImport.update({
   id: '/quotes/new',
@@ -162,22 +83,10 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AppContactsRoute
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/invite': typeof AuthenticatedInviteRoute
-  '/profile': typeof AuthenticatedProfileRoute
-  '/shop': typeof AuthenticatedShopRoute
-  '/support': typeof AuthenticatedSupportRoute
-  '/team': typeof AuthenticatedTeamRoute
   '/q/$token': typeof QTokenRoute
   '/quotes/$id': typeof AppQuotesIdRoute
   '/quotes/new': typeof AppQuotesNewRoute
-  '/admin/inbox': typeof AuthenticatedAdminInboxRoute
-  '/projects/$id': typeof AuthenticatedProjectsIdRoute
-  '/projects/new': typeof AuthenticatedProjectsNewRoute
-  '/share/project/$token': typeof ShareProjectTokenRoute
   '/quotes/': typeof AppQuotesIndexRoute
-  '/admin/': typeof AuthenticatedAdminIndexRoute
-  '/projects/': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -186,49 +95,24 @@ export interface FileRoutesByTo {
   '/contacts': typeof AppContactsRoute
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/invite': typeof AuthenticatedInviteRoute
-  '/profile': typeof AuthenticatedProfileRoute
-  '/shop': typeof AuthenticatedShopRoute
-  '/support': typeof AuthenticatedSupportRoute
-  '/team': typeof AuthenticatedTeamRoute
   '/q/$token': typeof QTokenRoute
   '/quotes/$id': typeof AppQuotesIdRoute
   '/quotes/new': typeof AppQuotesNewRoute
-  '/admin/inbox': typeof AuthenticatedAdminInboxRoute
-  '/projects/$id': typeof AuthenticatedProjectsIdRoute
-  '/projects/new': typeof AuthenticatedProjectsNewRoute
-  '/share/project/$token': typeof ShareProjectTokenRoute
   '/quotes': typeof AppQuotesIndexRoute
-  '/admin': typeof AuthenticatedAdminIndexRoute
-  '/projects': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
-  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/items': typeof AppItemsRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/invite': typeof AuthenticatedInviteRoute
-  '/_authenticated/profile': typeof AuthenticatedProfileRoute
-  '/_authenticated/shop': typeof AuthenticatedShopRoute
-  '/_authenticated/support': typeof AuthenticatedSupportRoute
-  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/q/$token': typeof QTokenRoute
   '/_app/quotes/$id': typeof AppQuotesIdRoute
   '/_app/quotes/new': typeof AppQuotesNewRoute
-  '/_authenticated/admin/inbox': typeof AuthenticatedAdminInboxRoute
-  '/_authenticated/projects/$id': typeof AuthenticatedProjectsIdRoute
-  '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRoute
-  '/share/project/$token': typeof ShareProjectTokenRoute
   '/_app/quotes/': typeof AppQuotesIndexRoute
-  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
-  '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -239,22 +123,10 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/items'
     | '/settings'
-    | '/dashboard'
-    | '/invite'
-    | '/profile'
-    | '/shop'
-    | '/support'
-    | '/team'
     | '/q/$token'
     | '/quotes/$id'
     | '/quotes/new'
-    | '/admin/inbox'
-    | '/projects/$id'
-    | '/projects/new'
-    | '/share/project/$token'
     | '/quotes/'
-    | '/admin/'
-    | '/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -263,58 +135,31 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/items'
     | '/settings'
-    | '/dashboard'
-    | '/invite'
-    | '/profile'
-    | '/shop'
-    | '/support'
-    | '/team'
     | '/q/$token'
     | '/quotes/$id'
     | '/quotes/new'
-    | '/admin/inbox'
-    | '/projects/$id'
-    | '/projects/new'
-    | '/share/project/$token'
     | '/quotes'
-    | '/admin'
-    | '/projects'
   id:
     | '__root__'
     | '/'
     | '/_app'
-    | '/_authenticated'
     | '/auth'
     | '/reset-password'
     | '/_app/contacts'
     | '/_app/items'
     | '/_app/settings'
-    | '/_authenticated/dashboard'
-    | '/_authenticated/invite'
-    | '/_authenticated/profile'
-    | '/_authenticated/shop'
-    | '/_authenticated/support'
-    | '/_authenticated/team'
     | '/q/$token'
     | '/_app/quotes/$id'
     | '/_app/quotes/new'
-    | '/_authenticated/admin/inbox'
-    | '/_authenticated/projects/$id'
-    | '/_authenticated/projects/new'
-    | '/share/project/$token'
     | '/_app/quotes/'
-    | '/_authenticated/admin/'
-    | '/_authenticated/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
-  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   QTokenRoute: typeof QTokenRoute
-  ShareProjectTokenRoute: typeof ShareProjectTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -331,13 +176,6 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -361,48 +199,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/team': {
-      id: '/_authenticated/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof AuthenticatedTeamRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/support': {
-      id: '/_authenticated/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof AuthenticatedSupportRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/shop': {
-      id: '/_authenticated/shop'
-      path: '/shop'
-      fullPath: '/shop'
-      preLoaderRoute: typeof AuthenticatedShopRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/profile': {
-      id: '/_authenticated/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof AuthenticatedProfileRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/invite': {
-      id: '/_authenticated/invite'
-      path: '/invite'
-      fullPath: '/invite'
-      preLoaderRoute: typeof AuthenticatedInviteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -424,54 +220,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContactsRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/_authenticated/projects/': {
-      id: '/_authenticated/projects/'
-      path: '/projects'
-      fullPath: '/projects/'
-      preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/': {
-      id: '/_authenticated/admin/'
-      path: '/admin'
-      fullPath: '/admin/'
-      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_app/quotes/': {
       id: '/_app/quotes/'
       path: '/quotes'
       fullPath: '/quotes/'
       preLoaderRoute: typeof AppQuotesIndexRouteImport
       parentRoute: typeof AppRouteRoute
-    }
-    '/share/project/$token': {
-      id: '/share/project/$token'
-      path: '/share/project/$token'
-      fullPath: '/share/project/$token'
-      preLoaderRoute: typeof ShareProjectTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/projects/new': {
-      id: '/_authenticated/projects/new'
-      path: '/projects/new'
-      fullPath: '/projects/new'
-      preLoaderRoute: typeof AuthenticatedProjectsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/projects/$id': {
-      id: '/_authenticated/projects/$id'
-      path: '/projects/$id'
-      fullPath: '/projects/$id'
-      preLoaderRoute: typeof AuthenticatedProjectsIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/inbox': {
-      id: '/_authenticated/admin/inbox'
-      path: '/admin/inbox'
-      fullPath: '/admin/inbox'
-      preLoaderRoute: typeof AuthenticatedAdminInboxRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_app/quotes/new': {
       id: '/_app/quotes/new'
@@ -512,45 +266,12 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
-interface AuthenticatedRouteRouteChildren {
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedInviteRoute: typeof AuthenticatedInviteRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
-  AuthenticatedShopRoute: typeof AuthenticatedShopRoute
-  AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
-  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
-  AuthenticatedAdminInboxRoute: typeof AuthenticatedAdminInboxRoute
-  AuthenticatedProjectsIdRoute: typeof AuthenticatedProjectsIdRoute
-  AuthenticatedProjectsNewRoute: typeof AuthenticatedProjectsNewRoute
-  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
-  AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
-}
-
-const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedInviteRoute: AuthenticatedInviteRoute,
-  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
-  AuthenticatedShopRoute: AuthenticatedShopRoute,
-  AuthenticatedSupportRoute: AuthenticatedSupportRoute,
-  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
-  AuthenticatedAdminInboxRoute: AuthenticatedAdminInboxRoute,
-  AuthenticatedProjectsIdRoute: AuthenticatedProjectsIdRoute,
-  AuthenticatedProjectsNewRoute: AuthenticatedProjectsNewRoute,
-  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
-  AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
-}
-
-const AuthenticatedRouteRouteWithChildren =
-  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
-  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   QTokenRoute: QTokenRoute,
-  ShareProjectTokenRoute: ShareProjectTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

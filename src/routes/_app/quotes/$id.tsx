@@ -6,6 +6,7 @@ import {
   Download, Eye, Loader2, Save, Search, Share2, X,
 } from "lucide-react";
 import { QuoteLineList } from "@/components/QuoteLineList";
+import { CsvImportButton } from "@/components/CsvImportButton";
 import { AppShell } from "@/components/BdgAppShell";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import {
@@ -15,6 +16,7 @@ import {
   calcQuoteTotals, templateMeta, lineShareText, type QuoteLine, type QuoteTemplate,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
+import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 
 export const Route = createFileRoute("/_app/quotes/$id")({
   head: () => ({ meta: [{ title: "編輯報價 — 報得過" }] }),
@@ -47,6 +49,7 @@ function QuoteEditorPage() {
   const [exporting, setExporting] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
+  const [importMsg, setImportMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (data) {
@@ -154,6 +157,18 @@ function QuoteEditorPage() {
     window.open(`https://line.me/R/msg/text/?${encodeURIComponent(text)}`, "_blank");
   }
 
+  function handleQuoteLinesCsv(text: string) {
+    const { rows, errors } = parseQuoteLinesCsv(text);
+    if (!rows.length) {
+      setImportMsg(errors[0] ?? "CSV 沒有有效資料");
+      return;
+    }
+    const imported = quoteLineCsvToQuoteLines(rows, lines.length);
+    setLines([...lines, ...imported]);
+    const base = `已匯入 ${imported.length} 行明細`;
+    setImportMsg(errors.length ? `${base}（${errors.length} 行已略過）` : base);
+  }
+
   const editor = (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -194,7 +209,24 @@ function QuoteEditorPage() {
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold text-[#6b5c4d]">項目</p>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-[#6b5c4d]">項目</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadCsv("報價明細範本.csv", quoteLinesToCsv())}
+              className="text-xs font-semibold text-[#C45A3C] hover:underline"
+            >
+              下載範本
+            </button>
+            <CsvImportButton label="匯入 CSV" onFile={handleQuoteLinesCsv} />
+          </div>
+        </div>
+        {importMsg && (
+          <p className="mb-2 rounded-lg border border-[#C45A3C]/30 bg-[#C45A3C]/10 px-3 py-2 text-xs font-medium text-[#8B4513]">
+            {importMsg}
+          </p>
+        )}
         <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a7b6a]" />
           <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder="關鍵字搜尋項目庫…" className={`${inp} pl-9`} />

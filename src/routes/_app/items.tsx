@@ -4,7 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
-import { listCatalogItems, saveCatalogItem, deleteCatalogItem, seedDemoCatalog } from "@/lib/quotes.functions";
+import { CsvImportButton } from "@/components/CsvImportButton";
+import { listCatalogItems, saveCatalogItem, deleteCatalogItem, seedDemoCatalog, bulkImportCatalog } from "@/lib/quotes.functions";
+import { catalogRowsToCsv, downloadCsv, parseCatalogCsv } from "@/lib/csv-import";
 
 export const Route = createFileRoute("/_app/items")({
   head: () => ({ meta: [{ title: "快速項目庫 — 報得過" }] }),
@@ -17,6 +19,7 @@ function ItemsPage() {
   const saveFn = useServerFn(saveCatalogItem);
   const delFn = useServerFn(deleteCatalogItem);
   const seedFn = useServerFn(seedDemoCatalog);
+  const importFn = useServerFn(bulkImportCatalog);
   const { data: items = [], isLoading } = useQuery({ queryKey: ["catalog"], queryFn: () => listFn({}) as Promise<any[]> });
   const [form, setForm] = useState({ name: "", unit: "式", unit_price: 0, category: "", keywords: "" });
   const [seedMsg, setSeedMsg] = useState<string | null>(null);
@@ -47,6 +50,28 @@ function ItemsPage() {
     onError: (e) => setSeedMsg(e instanceof Error ? e.message : "載入失敗"),
   });
 
+  const importCsv = useMutation({
+    mutationFn: (items: ReturnType<typeof parseCatalogCsv>["rows"]) =>
+      importFn({ data: { items } }) as Promise<{ message: string; added: number; skipped: number }>,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["catalog"] });
+      setSeedMsg(res.message);
+    },
+    onError: (e) => setSeedMsg(e instanceof Error ? e.message : "匯入失敗"),
+  });
+
+  async function handleCatalogCsv(text: string) {
+    const { rows, errors } = parseCatalogCsv(text);
+    if (!rows.length) {
+      setSeedMsg(errors[0] ?? "CSV 沒有有效資料");
+      return;
+    }
+    const res = await importCsv.mutateAsync(rows);
+    if (errors.length) {
+      setSeedMsg(`${res.message}（${errors.length} 行已略過）`);
+    }
+  }
+
   const seedButton = (
     <button
       type="button"
@@ -69,7 +94,17 @@ function ItemsPage() {
           <h1 className="text-2xl font-bold text-[#1a1612]">快速項目庫</h1>
           <p className="mt-1 text-sm text-[#6b5c4d]">編輯報價時可用關鍵字搜尋帶入（泥作、防水、水電…）</p>
         </div>
-        {items.length > 0 && seedButton}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => downloadCsv("項目庫範本.csv", catalogRowsToCsv())}
+            className="text-sm font-semibold text-[#C45A3C] hover:underline"
+          >
+            下載範本
+          </button>
+          <CsvImportButton label="匯入 CSV" busy={importCsv.isPending} onFile={handleCatalogCsv} />
+          {items.length > 0 && seedButton}
+        </div>
       </div>
 
       {seedMsg && (
@@ -83,7 +118,10 @@ function ItemsPage() {
           <Sparkles className="mx-auto h-8 w-8 text-[#C45A3C]" />
           <p className="mt-3 font-bold text-[#1a1612]">項目庫還是空的</p>
           <p className="mt-1 text-sm text-[#6b5c4d]">一鍵載入 12 項常見工程示範（拆除、泥作、防水、水電、木作…）</p>
-          <div className="mt-5">{seedButton}</div>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <CsvImportButton label="匯入 CSV" busy={importCsv.isPending} onFile={handleCatalogCsv} />
+            {seedButton}
+          </div>
         </div>
       )}
 

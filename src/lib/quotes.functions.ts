@@ -400,3 +400,66 @@ export const seedDemoCatalog = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, added: toInsert.length, message: `已載入 ${toInsert.length} 項示範項目` };
   });
+
+const catalogImportRow = z.object({
+  name: z.string().min(1),
+  unit: z.string(),
+  unit_price: z.number().min(0),
+  category: z.string().nullable().optional(),
+  keywords: z.array(z.string()).optional(),
+});
+
+export const bulkImportCatalog = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ items: z.array(catalogImportRow).min(1).max(500) }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { data: existing, error: listErr } = await supabase
+      .from("catalog_items")
+      .select("name, sort_order")
+      .eq("user_id", userId);
+    if (listErr) throw new Error(listErr.message);
+
+    const existingNames = new Set((existing ?? []).map((r: { name: string }) => r.name));
+    const maxSort = (existing ?? []).reduce((m: number, r: { sort_order: number }) => Math.max(m, r.sort_order ?? 0), -1);
+
+    const toInsert: Array<{
+      user_id: string;
+      name: string;
+      unit: string;
+      unit_price: number;
+      category: string | null;
+      keywords: string[];
+      sort_order: number;
+    }> = [];
+    let skipped = 0;
+
+    data.items.forEach((it) => {
+      if (existingNames.has(it.name)) {
+        skipped++;
+        return;
+      }
+      existingNames.add(it.name);
+      toInsert.push({
+        user_id: userId,
+        name: it.name,
+        unit: it.unit,
+        unit_price: it.unit_price,
+        category: it.category ?? null,
+        keywords: it.keywords ?? [],
+        sort_order: maxSort + 1 + toInsert.length,
+      });
+    });
+
+    if (!toInsert.length) {
+      return { ok: true, added: 0, skipped, message: skipped ? `共 ${skipped} 項已存在，未新增` : "沒有可匯入的項目" };
+    }
+
+    const { error } = await supabase.from("catalog_items").insert(toInsert);
+    if (error) throw new Error(error.message);
+    const msg =
+      skipped > 0
+        ? `已匯入 ${toInsert.length} 項，略過 ${skipped} 項重複名稱`
+        : `已匯入 ${toInsert.length} 項`;
+    return { ok: true, added: toInsert.length, skipped, message: msg };
+  });
