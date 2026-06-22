@@ -1,17 +1,33 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, History, Package, Settings, User } from "lucide-react";
 import type { ReactNode } from "react";
+import { getProfile } from "@/lib/quotes.functions";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (p: string) => pathname.startsWith(p);
+  const profileFn = useServerFn(getProfile);
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileFn({}) as Promise<{ logo_url?: string | null; company_name?: string | null; display_name?: string | null } | null>,
+    staleTime: 60_000,
+  });
+
+  const brandLabel = profile?.company_name || profile?.display_name || "報得過";
 
   return (
     <div className="bdg-theme min-h-screen bg-[#F5F0E8]">
       <header className="sticky top-0 z-40 border-b border-[#e8dfd3] bg-[#F5F0E8]/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/quotes" className="font-display text-lg font-bold tracking-tight text-[#1a1612]">
-            報得過
+          <Link to="/quotes" className="flex min-w-0 items-center gap-2 font-display text-lg font-bold tracking-tight text-[#1a1612]">
+            {profile?.logo_url ? (
+              <img src={profile.logo_url} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+            ) : (
+              <img src="/favicon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg" />
+            )}
+            <span className="truncate">{brandLabel}</span>
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
             <Nav to="/quotes" label="報價" icon={<FileText className="h-4 w-4" />} active={isActive("/quotes")} />

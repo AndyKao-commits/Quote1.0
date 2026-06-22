@@ -18,7 +18,10 @@ function Landing() {
   return (
     <div className="bdg-theme min-h-screen overflow-hidden bg-[#F5F0E8]">
       <header className="mx-auto flex max-w-4xl items-center justify-between px-4 py-5">
-        <span className="font-display text-xl font-bold text-[#1a1612]">報得過</span>
+        <span className="flex items-center gap-2 font-display text-xl font-bold text-[#1a1612]">
+          <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
+          報得過
+        </span>
         <Link to="/auth" className="text-sm font-semibold text-[#6b5c4d] hover:text-[#1a1612]">
           登入
         </Link>

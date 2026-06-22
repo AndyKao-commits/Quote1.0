@@ -46,6 +46,12 @@ function SettingsPage() {
         <Field label="公司／工作室名稱" value={form.company_name ?? ""} onChange={(v) => setForm({ ...form, company_name: v })} />
         <Field label="電話" value={form.phone ?? ""} onChange={(v) => setForm({ ...form, phone: v })} />
         <Field label="Logo 圖片 URL" value={form.logo_url ?? ""} onChange={(v) => setForm({ ...form, logo_url: v })} />
+        {form.logo_url?.trim() && (
+          <div className="flex items-center gap-3 rounded-xl border border-[#ece3d6] bg-[#FDFBF7] p-3">
+            <img src={form.logo_url} alt="" className="h-12 w-12 rounded-lg object-contain" />
+            <p className="text-xs text-[#6b5c4d]">預覽：會顯示在頂部導覽列與「工作室」模板 PDF</p>
+          </div>
+        )}
         <Field label="品牌色（hex）" value={form.brand_color ?? "#C45A3C"} onChange={(v) => setForm({ ...form, brand_color: v })} />
         <Field label="賣方統編（選填）" value={form.seller_tax_id ?? ""} onChange={(v) => setForm({ ...form, seller_tax_id: v })} />
         <Field label="預設條款" value={form.default_terms ?? ""} onChange={(v) => setForm({ ...form, default_terms: v })} multiline />
