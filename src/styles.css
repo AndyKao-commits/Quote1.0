@@ -173,4 +173,8 @@
   .btn-touch {
     min-height: 2.75rem;
   }
+  .bdg-theme {
+    font-family: var(--font-sans);
+    --bdg-brand: #C45A3C;
+  }
 }

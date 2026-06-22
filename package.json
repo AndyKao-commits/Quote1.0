@@ -1,5 +1,5 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "baodeguo-quote",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -15,7 +15,8 @@
     "setup:storage": "node scripts/setup-storage.mjs",
     "setup:vercel-env": "powershell -ExecutionPolicy Bypass -File scripts/sync-vercel-env.ps1",
     "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1",
-    "build:bootstrap-sql": "node scripts/build-bootstrap-sql.mjs"
+    "build:bootstrap-sql": "node scripts/build-bootstrap-sql.mjs",
+    "bootstrap:db": "node scripts/bootstrap-db.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
@@ -91,6 +92,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "pg": "^8.22.0",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",

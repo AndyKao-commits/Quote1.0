@@ -73,27 +73,19 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const OG_IMAGE = "https://dowaterlightout.lovable.app/__l5e/assets-v1/c62d5eac-df5a-4cbb-833a-1d40eefaeb0e/og-tech.jpg";
-const OG_DESC = "現場施工紀錄、案件管理、施工日誌、照片浮水印與 PDF 報告，一站搞定。";
+const OG_DESC = "三分鐘做出客戶願意簽的報價。PDF 預覽、LINE 分享、項目庫、歷史複製。";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
-      { title: "施工紀錄 PRO — 案件管理、施工日誌、PDF 報告" },
+      { title: "報得過 — 快速生成漂亮報價單" },
       { name: "description", content: OG_DESC },
-      { name: "author", content: "施工紀錄 PRO" },
-      { property: "og:title", content: "施工紀錄 PRO" },
+      { name: "author", content: "報得過" },
+      { property: "og:title", content: "報得過" },
       { property: "og:description", content: OG_DESC },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: OG_IMAGE },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "施工紀錄 PRO" },
-      { name: "twitter:description", content: OG_DESC },
-      { name: "twitter:image", content: OG_IMAGE },
     ],
     links: [
       {

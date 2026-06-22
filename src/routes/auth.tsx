@@ -1,58 +1,55 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Wrench, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { signIn, signUp } from "@/lib/auth.functions";
+import { setSession, getAccessToken } from "@/lib/session";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "登入 — 施工紀錄 PRO" }] }),
+  head: () => ({ meta: [{ title: "登入 — 報得過" }] }),
   component: AuthPage,
 });
 
-type Mode = "signin" | "signup" | "forgot";
+type Mode = "signin" | "signup";
 
 function AuthPage() {
   const nav = useNavigate();
+  const signInFn = useServerFn(signIn);
+  const signUpFn = useServerFn(signUp);
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/projects" });
-    });
+    if (getAccessToken()) nav({ to: "/quotes" });
   }, [nav]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null); setMsg(null); setBusy(true);
+    setErr(null);
+    setMsg(null);
+    setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password: pw,
-          options: {
-            emailRedirectTo: `${window.location.origin}/projects`,
-            data: { display_name: name || email.split("@")[0] },
-          },
-        });
-        if (error) throw error;
-        const { data: s } = await supabase.auth.getSession();
-        if (s.session) nav({ to: "/projects" });
-        else setMsg("註冊成功，請查收 Email 確認信完成驗證。");
-      } else if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-        if (error) throw error;
-        nav({ to: "/projects" });
+        const res = await signUpFn({ data: { email, password: pw, display_name: name, company_name: company } });
+        if ("needs_confirm" in res && res.needs_confirm) {
+          setMsg("註冊成功，請查收 Email 確認信。");
+          return;
+        }
+        if ("access_token" in res) {
+          setSession(res.access_token, res.refresh_token!);
+          nav({ to: "/quotes/new" });
+        }
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-        setMsg("已寄出重設密碼信，請查收 Email（含垃圾信件夾）。");
+        const res = await signInFn({ data: { email, password: pw } });
+        setSession(res.access_token, res.refresh_token);
+        nav({ to: "/quotes" });
       }
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "操作失敗");
@@ -62,89 +59,44 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-primary/10 p-4">
+    <div className="bdg-theme flex min-h-screen items-center justify-center bg-[#F5F0E8] p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-2">
-          <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-elevated)]">
-            <Wrench className="h-5 w-5" />
-          </span>
-          <span className="font-display text-xl font-bold">施工紀錄 PRO</span>
+        <Link to="/" className="mb-8 block text-center font-display text-2xl font-bold text-[#1a1612]">
+          報得過
         </Link>
-
-        <div className="card-surface p-6">
-          {mode !== "forgot" && (
-            <div className="mb-5 flex gap-1 rounded-lg border border-border p-1">
+        <div className="rounded-2xl border border-[#e8dfd3] bg-white p-6 shadow-sm">
+          <div className="mb-5 flex gap-1 rounded-lg border border-[#ece3d6] p-1">
+            {(["signin", "signup"] as const).map((m) => (
               <button
+                key={m}
                 type="button"
-                onClick={() => { setMode("signin"); setErr(null); setMsg(null); }}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signin" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-              >登入</button>
-              <button
-                type="button"
-                onClick={() => { setMode("signup"); setErr(null); setMsg(null); }}
-                className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition ${mode === "signup" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-              >註冊</button>
-            </div>
-          )}
-          {mode === "forgot" && (
-            <h2 className="mb-4 text-base font-bold">忘記密碼</h2>
-          )}
-
+                onClick={() => setMode(m)}
+                className={`flex-1 rounded-md py-2 text-sm font-semibold ${mode === m ? "bg-[#C45A3C] text-white" : "text-[#6b5c4d]"}`}
+              >
+                {m === "signin" ? "登入" : "註冊"}
+              </button>
+            ))}
+          </div>
           <form onSubmit={submit} className="space-y-3">
             {mode === "signup" && (
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-muted-foreground">顯示名稱</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="師傅大名" className={inp} />
-              </label>
+              <>
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" className={inp} />
+                <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="公司／工作室（選填）" className={inp} />
+              </>
             )}
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-muted-foreground">Email</span>
-              <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inp} />
-            </label>
-            {mode !== "forgot" && (
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-muted-foreground">密碼</span>
-                <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} />
-              </label>
-            )}
-
-            {err && <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">{err}</p>}
-            {msg && <p className="rounded-md bg-primary/10 px-3 py-2 text-xs text-primary">{msg}</p>}
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="btn-touch inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-[var(--shadow-elevated)] hover:brightness-110 disabled:opacity-60"
-            >
+            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={inp} />
+            <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="密碼（至少 6 碼）" />
+            {err && <p className="text-sm text-rose-600">{err}</p>}
+            {msg && <p className="text-sm text-[#C45A3C]">{msg}</p>}
+            <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#C45A3C] py-3 text-sm font-bold text-white disabled:opacity-60">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              {mode === "signin" ? "登入" : mode === "signup" ? "建立帳號" : "寄送重設信"}
+              {mode === "signin" ? "登入" : "建立帳號"}
             </button>
           </form>
-
-          <div className="mt-4 flex items-center justify-between text-xs">
-            {mode !== "forgot" ? (
-              <button
-                type="button"
-                onClick={() => { setMode("forgot"); setErr(null); setMsg(null); }}
-                className="text-muted-foreground hover:text-foreground hover:underline"
-              >
-                忘記密碼？
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setMode("signin"); setErr(null); setMsg(null); }}
-                className="text-muted-foreground hover:text-foreground hover:underline"
-              >
-                ← 回登入
-              </button>
-            )}
-            <Link to="/" className="text-muted-foreground hover:underline">回首頁</Link>
-          </div>
         </div>
       </div>
     </div>
   );
 }
 
-const inp = "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+const inp = "w-full rounded-xl border border-[#ece3d6] px-3 py-2.5 text-sm outline-none focus:border-[#C45A3C]";
