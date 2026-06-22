@@ -13,7 +13,7 @@ import {
   getQuote, saveQuote, publishShare, listCatalogItems, getProfile,
 } from "@/lib/quotes.functions";
 import {
-  calcQuoteTotals, templateMeta, lineShareText, type QuoteLine, type QuoteTemplate,
+  calcQuoteTotals, prepareQuoteLinesForSave, templateMeta, lineShareText, type QuoteLine, type QuoteTemplate,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
@@ -84,6 +84,9 @@ function QuoteEditorPage() {
   const saveMut = useMutation({
     mutationFn: async () => {
       if (!form) return;
+      const { lines: saveLines, skipped } = prepareQuoteLinesForSave(lines);
+      if (!saveLines.length) throw new Error("至少需要一筆有名稱的項目");
+      if (skipped > 0) setLines(saveLines);
       return saveFn({
         data: {
           id,
@@ -106,9 +109,17 @@ function QuoteEditorPage() {
           note: form.note,
           terms: form.terms,
           cover_image_url: form.cover_image_url,
-          lines: lines.map((l, i) => ({ ...l, sort_order: i })),
+          lines: saveLines,
         },
       });
+    },
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "儲存失敗";
+      if (msg.includes("String must contain at least 1 character")) {
+        setImportMsg("有項目名稱是空的，請填寫或刪除空白列後再儲存");
+        return;
+      }
+      setImportMsg(msg);
     },
   });
 
@@ -163,8 +174,10 @@ function QuoteEditorPage() {
       setImportMsg(errors[0] ?? "CSV 沒有有效資料");
       return;
     }
-    const imported = quoteLineCsvToQuoteLines(rows, lines.length);
-    setLines([...lines, ...imported]);
+    const existing = lines.filter((l) => l.name.trim());
+    const imported = quoteLineCsvToQuoteLines(rows, existing.length);
+    const merged = [...existing, ...imported].map((l, i) => ({ ...l, sort_order: i }));
+    setLines(merged);
     const base = `已匯入 ${imported.length} 行明細`;
     setImportMsg(errors.length ? `${base}（${errors.length} 行已略過）` : base);
   }

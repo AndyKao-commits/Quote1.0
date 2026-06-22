@@ -237,6 +237,11 @@ export function parseQuoteLinesCsv(text: string): { rows: QuoteLineCsvRow[]; err
   return { rows, errors };
 }
 
+function escCsvField(s: string) {
+  if (/[",\n\r\[]/.test(s) || s !== s.trim()) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
 export function catalogRowsToCsv(): string {
   const header = "項目名稱,單位,單價,分類,關鍵字";
   const sample = "拆除工程,式,15000,拆除,拆除 敲除";

@@ -123,6 +123,15 @@ export function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+/** Drop blank-name rows before save; server rejects name shorter than 1 char. */
+export function prepareQuoteLinesForSave(lines: QuoteLine[]) {
+  const kept = lines.filter((l) => l.name.trim());
+  return {
+    lines: kept.map((l, i) => ({ ...l, sort_order: i, name: l.name.trim() })),
+    skipped: lines.length - kept.length,
+  };
+}
+
 export function formatMoney(n: number) {
   return new Intl.NumberFormat("zh-TW", {
     style: "currency",
