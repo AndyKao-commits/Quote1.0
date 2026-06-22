@@ -40,7 +40,31 @@ npm run dev
 - 含稅／統編由使用者自行開關
 - LINE 分享（短連結 + 預覽頁 `/q/:token`）
 
-## 部署到 Vercel（可上線）
+## 自動部署（設定一次，之後免手動）
+
+程式 push 到 `cursor/baodeguo-quote1-bd62` 後，GitHub Actions 會自動同步到 **Quote1.0 main**，Vercel 會自動 build。
+
+### 只需做一次（約 2 分鐘）
+
+1. 建立 Token：https://github.com/settings/tokens?type=beta  
+   - Repository access → **Only select** → 選 `Quote1.0`  
+   - Permissions → **Contents: Read and write**  
+   - 產生後複製 token
+
+2. 加入 Secret：https://github.com/AndyKao-commits/dowaterlightout/settings/secrets/actions  
+   - **New repository secret**  
+   - Name：`QUOTE1_PUSH_TOKEN`  
+   - Value：貼上 token
+
+3. Vercel 已連 `Quote1.0` 且 branch 為 `main` 即可（你已完成）
+
+之後每次更新程式，**不用再** `git push quote1` 或手動 Redeploy。
+
+手動重跑：GitHub → dowaterlightout → Actions → Deploy Quote1.0 → Run workflow
+
+---
+
+## 部署到 Vercel（首次）
 
 專案已設定 `nitro preset: vercel`，可直接部署。
 
