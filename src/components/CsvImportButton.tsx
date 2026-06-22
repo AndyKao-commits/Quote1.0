@@ -34,7 +34,7 @@ export function CsvImportButton({ label = "匯入 CSV", accept = ".csv,text/csv"
         type="button"
         disabled={disabled}
         onClick={() => ref.current?.click()}
-        className="inline-flex items-center gap-2 rounded-full border border-[#e8dfd3] bg-white px-4 py-2 text-sm font-semibold text-[#1a1612] transition hover:bg-[#F5F0E8] disabled:opacity-60"
+        className="bdg-btn bdg-btn-secondary"
       >
         {disabled ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
         {label}

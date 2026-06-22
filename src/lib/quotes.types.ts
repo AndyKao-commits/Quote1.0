@@ -1,4 +1,14 @@
-export type QuoteTemplate = "craft" | "studio" | "formal";
+export const QUOTE_LIMITS = {
+  lineName: 100,
+  lineNote: 200,
+  catalogName: 100,
+} as const;
+
+export function clampText(s: string, max: number) {
+  const chars = Array.from(s);
+  if (chars.length <= max) return s;
+  return chars.slice(0, max).join("");
+}
 export type QuoteStatus = "draft" | "sent" | "archived";
 
 export interface Profile {
@@ -75,6 +85,7 @@ export interface Quote {
   valid_until: string | null;
   note: string | null;
   terms: string | null;
+  payment_schedule: string | null;
   cover_image_url: string | null;
   subtotal: number;
   tax_amount: number;
@@ -89,9 +100,9 @@ export const templateMeta: Record<
   QuoteTemplate,
   { label: string; desc: string }
 > = {
-  craft: { label: "工班清楚", desc: "表格清楚，適合師傅與統包" },
-  studio: { label: "工作室", desc: "可放 Logo 與照片，適合設計師" },
-  formal: { label: "正式文件", desc: "襯線排版，適合對公司報價" },
+  craft: { label: "簡易", desc: "工程施工報價單格式，專業表格" },
+  studio: { label: "工作室", desc: "含 Logo，適合設計師事務所" },
+  formal: { label: "正式文件", desc: "襯線字體，正式報價用" },
 };
 
 export function calcQuoteTotals(
@@ -123,12 +134,23 @@ export function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
-/** Drop blank-name rows before save; server rejects name shorter than 1 char. */
+/** Drop blank rows and enforce name / note length limits before save. */
 export function prepareQuoteLinesForSave(lines: QuoteLine[]) {
   const kept = lines.filter((l) => l.name.trim());
+  let truncated = 0;
+  const normalized = kept.map((l, i) => {
+    const name = clampText(l.name.trim(), QUOTE_LIMITS.lineName);
+    const rawNote = l.note?.trim() || "";
+    const note = rawNote ? clampText(rawNote, QUOTE_LIMITS.lineNote) : null;
+    if (name.length < l.name.trim().length || (rawNote && note && note.length < rawNote.length)) {
+      truncated++;
+    }
+    return { ...l, sort_order: i, name, note };
+  });
   return {
-    lines: kept.map((l, i) => ({ ...l, sort_order: i, name: l.name.trim() })),
+    lines: normalized,
     skipped: lines.length - kept.length,
+    truncated,
   };
 }
 

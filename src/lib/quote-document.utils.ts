@@ -1,0 +1,356 @@
+import type { QuoteLine } from "@/lib/quotes.types";
+
+/** 預設條款（顯示時自動加 壹貳參…） */
+export const DEFAULT_QUOTE_TERMS = `初估報價單時間於三個月內有效。
+除本報價列出之工程外，工程由甲方自行發包，甲方需另支付乙方工程10%工程監管費。
+付款明細金額皆以施工報價單為主，多退少補則不在另行簽約。
+工程中加減帳於尾款結算，驗收完畢後更新於完工請款單。
+若社區有限制施工時間或限制搬運動線而衍生之費用則由甲方負擔。`;
+
+export function resolveQuoteTerms(terms: string | null | undefined) {
+  return terms?.trim() || DEFAULT_QUOTE_TERMS;
+}
+
+const PAYMENT_PHASES = [
+  { label: "第一期－簽約之訂金", pct: 0.05, suffix: "（簽約五日內）" },
+  { label: "第二期－開工款", pct: 0.30, suffix: "（開工五日前）" },
+  { label: "第三期－中繼款", pct: 0.30, suffix: "" },
+  { label: "第四期－中繼款", pct: 0.30, suffix: "" },
+  { label: "第五期－尾款", pct: 0.05, suffix: "（驗收後）" },
+] as const;
+
+/** 依總價自動產生付款明細；可傳入自訂多行文字覆寫 */
+export function buildPaymentSchedule(total: number, custom?: string | null): string[] {
+  if (custom?.trim()) {
+    return custom
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  const n = Math.round(Number(total) || 0);
+  if (n <= 0) return [];
+
+  let allocated = 0;
+  return PAYMENT_PHASES.map((phase, i) => {
+    const isLast = i === PAYMENT_PHASES.length - 1;
+    const amount = isLast ? n - allocated : Math.round(n * phase.pct);
+    allocated += amount;
+    const pct = `${Math.round(phase.pct * 100)}%`;
+    return `${phase.label} ${pct}：$${amount.toLocaleString("zh-TW")} 元整${phase.suffix}`;
+  });
+}
+
+/** 編輯器預填用：多行付款明細文字 */
+export function formatPaymentScheduleText(total: number, custom?: string | null) {
+  if (custom?.trim()) return custom.trim();
+  return buildPaymentSchedule(total).join("\n");
+}
+
+export function resolveQuotePaymentSchedule(total: number, custom?: string | null) {
+  return formatPaymentScheduleText(total, custom);
+}
+
+export interface GroupSummaryRow {
+  key: number;
+  index: number;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  note: string;
+}
+
+/** 第一頁：每個工種一列（式／1／工種小計） */
+export function buildGroupSummaryRows(lines: QuoteLine[]): GroupSummaryRow[] {
+  const rows: GroupSummaryRow[] = [];
+  let group: QuoteLine | null = null;
+  let items: QuoteLine[] = [];
+
+  const flush = () => {
+    if (group) {
+      const total = items.reduce(
+        (s, l) => s + Number(l.quantity || 0) * Number(l.unit_price || 0),
+        0,
+      );
+      rows.push({
+        key: rows.length,
+        index: rows.length + 1,
+        name: group.name,
+        unit: "式",
+        quantity: 1,
+        unitPrice: total,
+        total,
+        note: group.note?.trim() || "",
+      });
+    } else {
+      for (const l of items) {
+        const total = Number(l.quantity || 0) * Number(l.unit_price || 0);
+        rows.push({
+          key: rows.length,
+          index: rows.length + 1,
+          name: l.name,
+          unit: l.unit || "式",
+          quantity: Number(l.quantity) || 1,
+          unitPrice: Number(l.unit_price) || 0,
+          total,
+          note: l.note?.trim() || "",
+        });
+      }
+    }
+    group = null;
+    items = [];
+  };
+
+  for (const l of lines) {
+    if (isGroupLine(l)) {
+      flush();
+      group = l;
+    } else if (group) {
+      items.push(l);
+    } else {
+      items.push(l);
+    }
+  }
+  flush();
+  return rows;
+}
+
+const DIGITS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+
+/** 1 → 一, 10 → 十, 11 → 十一 */
+export function chineseNumeral(n: number): string {
+  if (n <= 0) return "";
+  if (n < 10) return DIGITS[n];
+  if (n === 10) return "十";
+  if (n < 20) return `十${DIGITS[n - 10]}`;
+  if (n < 100) {
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    return `${DIGITS[tens]}十${ones ? DIGITS[ones] : ""}`;
+  }
+  return String(n);
+}
+
+/** 工種標籤：一、二…；細項：1、2… */
+export function buildLineLabels(lines: QuoteLine[]): string[] {
+  let groupIdx = 0;
+  let itemIdx = 0;
+  return lines.map((l) => {
+    if (isGroupLine(l)) {
+      groupIdx++;
+      itemIdx = 0;
+      return chineseNumeral(groupIdx);
+    }
+    itemIdx++;
+    return String(itemIdx);
+  });
+}
+
+/** 工種列顯示：一、泥作工程 */
+export function groupDisplayName(label: string, name: string) {
+  return `${label}、${name}`;
+}
+
+const TERM_MARKERS = ["壹", "貳", "參", "肆", "伍", "陸", "柒", "捌", "玖", "拾"];
+
+export function formatTermsList(terms: string): string[] {
+  return terms
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((line, i) => {
+      const marker = TERM_MARKERS[i] ?? String(i + 1);
+      const cleaned = line.replace(/^[壹貳參肆伍陸柒捌玖拾\d]+[、.．]\s*/, "");
+      return `${marker}、${cleaned}`;
+    });
+}
+
+const UPPER_DIGITS = ["零", "壹", "貳", "參", "肆", "伍", "陸", "柒", "捌", "玖"];
+const UPPER_UNITS = ["", "拾", "佰", "仟"];
+
+function sectionToChineseUpper(n: number): string {
+  let str = "";
+  let needZero = false;
+  for (let i = 0; i < 4; i++) {
+    const d = Math.floor(n / 10 ** i) % 10;
+    if (d === 0) {
+      needZero = true;
+    } else {
+      if (needZero && str) str = `零${str}`;
+      needZero = false;
+      str = `${UPPER_DIGITS[d]}${UPPER_UNITS[i]}${str}`;
+    }
+  }
+  return str;
+}
+
+/** 金額中文大寫（新台幣） */
+export function amountToChineseUpper(amount: number): string {
+  const n = Math.round(Number(amount) || 0);
+  if (n <= 0) return "新台幣零元整";
+
+  const parts: string[] = [];
+  let rest = n;
+  const big = ["", "萬", "億"];
+  for (let i = 0; i < big.length && rest > 0; i++) {
+    const section = rest % 10000;
+    if (section > 0) {
+      const s = sectionToChineseUpper(section);
+      parts.unshift(`${s}${big[i]}`);
+    } else if (parts.length > 0) {
+      parts.unshift("零");
+    }
+    rest = Math.floor(rest / 10000);
+  }
+  return `${parts.join("")} 元整`;
+}
+
+export function formatQuoteDate(quote: { created_at?: string; valid_until?: string | null }) {
+  const raw = quote.created_at || quote.valid_until;
+  const d = raw ? new Date(raw.includes("T") ? raw : `${raw}T12:00:00`) : new Date();
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}`;
+}
+
+export function isGroupLine(l: QuoteLine) {
+  return (l.line_type ?? "item") === "group";
+}
+
+/** 是否為該工種區塊內最後一筆細項 */
+export function isLastItemInGroup(lines: QuoteLine[], idx: number): boolean {
+  if (isGroupLine(lines[idx])) return false;
+  const next = lines[idx + 1];
+  return !next || isGroupLine(next);
+}
+
+/** 工種細項小計（從工種標題到 idx 為止） */
+export function calcGroupSubtotal(lines: QuoteLine[], itemIdx: number): number {
+  let g = itemIdx;
+  while (g >= 0 && !isGroupLine(lines[g])) g--;
+  let sum = 0;
+  for (let i = g + 1; i <= itemIdx; i++) {
+    if (!isGroupLine(lines[i])) {
+      sum += Number(lines[i].quantity || 0) * Number(lines[i].unit_price || 0);
+    }
+  }
+  return sum;
+}
+
+export interface QuotePageSlice {
+  lines: QuoteLine[];
+  lineStart: number;
+  isFirst: boolean;
+  isLast: boolean;
+}
+
+export type DocumentPage =
+  | { kind: "summary" }
+  | ({ kind: "detail" } & QuotePageSlice);
+
+/** 第一頁為工種摘要；其餘為明細 */
+export function paginateQuoteDocument(lines: QuoteLine[]): DocumentPage[] {
+  const detail = paginateQuoteLines(lines);
+  const pages: DocumentPage[] = [{ kind: "summary" }];
+  for (const slice of detail) {
+    pages.push({ kind: "detail", ...slice });
+  }
+  return pages;
+}
+
+export type TableRow =
+  | { type: "group"; line: QuoteLine; label: string; key: number }
+  | { type: "item"; line: QuoteLine; label: string; key: number }
+  | { type: "subtotal"; amount: number; key: string };
+
+export function buildTableRows(
+  pageLines: QuoteLine[],
+  allLines: QuoteLine[],
+  lineStart: number,
+  labels: string[],
+  opts?: { groupSubtotals?: boolean },
+): TableRow[] {
+  const showSub = opts?.groupSubtotals ?? false;
+  const rows: TableRow[] = [];
+  pageLines.forEach((l, i) => {
+    const globalIdx = lineStart + i;
+    const label = labels[globalIdx] ?? "";
+    if (isGroupLine(l)) {
+      rows.push({ type: "group", line: l, label, key: globalIdx });
+    } else {
+      rows.push({ type: "item", line: l, label, key: globalIdx });
+      if (showSub && isLastItemInGroup(allLines, globalIdx)) {
+        rows.push({
+          type: "subtotal",
+          amount: calcGroupSubtotal(allLines, globalIdx),
+          key: `sub-${globalIdx}`,
+        });
+      }
+    }
+  });
+  return rows;
+}
+
+function estimateLineWeight(l: QuoteLine): number {
+  const nameLen = Array.from(l.name).length;
+  const noteLen = Array.from(l.note ?? "").length;
+  let w = 1;
+  w += Math.floor(nameLen / 28);
+  if (noteLen > 0) w += Math.floor(noteLen / 40);
+  return Math.max(1, w);
+}
+
+/** 明細頁每頁 39 行（與範本相同，含工種標題列） */
+export const DETAIL_ROWS_PER_PAGE = 39;
+
+const BUDGET_DETAIL = DETAIL_ROWS_PER_PAGE;
+const BUDGET_DETAIL_CONT = DETAIL_ROWS_PER_PAGE;
+const FOOTER_RESERVE_DETAIL = 0;
+
+/** Split quote lines into detail pages (summary page is separate). */
+export function paginateQuoteLines(lines: QuoteLine[]): QuotePageSlice[] {
+  if (!lines.length) return [];
+
+  const pages: QuotePageSlice[] = [];
+  let idx = 0;
+
+  while (idx < lines.length) {
+    const isFirst = pages.length === 0;
+    const budget = isFirst ? BUDGET_DETAIL : BUDGET_DETAIL_CONT;
+    let take = 0;
+    let used = 0;
+
+    while (idx + take < lines.length) {
+      const w = estimateLineWeight(lines[idx + take]);
+      const after = lines.length - idx - take - 1;
+      const maxUsed = after === 0 ? budget - FOOTER_RESERVE_DETAIL : budget;
+
+      if (take > 0 && used + w > maxUsed) break;
+      if (take === 0 && w > budget) {
+        take = 1;
+        used = w;
+        break;
+      }
+      if (used + w > budget) break;
+
+      used += w;
+      take++;
+    }
+
+    if (take === 0) take = 1;
+
+    pages.push({
+      lines: lines.slice(idx, idx + take),
+      lineStart: idx,
+      isFirst,
+      isLast: false,
+    });
+    idx += take;
+  }
+
+  if (pages.length) pages[pages.length - 1].isLast = true;
+  return pages;
+}

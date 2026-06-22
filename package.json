@@ -16,7 +16,8 @@
     "setup:vercel-env": "powershell -ExecutionPolicy Bypass -File scripts/sync-vercel-env.ps1",
     "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1",
     "build:bootstrap-sql": "node scripts/build-bootstrap-sql.mjs",
-    "bootstrap:db": "node scripts/bootstrap-db.mjs"
+    "bootstrap:db": "node scripts/bootstrap-db.mjs",
+    "generate:three-page-csv": "node scripts/generate-three-page-quote-csv.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",

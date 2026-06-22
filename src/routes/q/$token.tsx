@@ -51,8 +51,10 @@ function SharePage() {
           <Share2 className="h-4 w-4" /> 轉傳 LINE
         </button>
       </div>
-      <div className="mx-auto max-w-3xl overflow-auto px-2">
-        <QuoteDocument quote={data.quote} lines={data.lines} profile={data.profile} preview />
+      <div className="quote-preview-root overflow-auto px-1 py-2">
+        <div className="inline-block">
+          <QuoteDocument quote={data.quote} lines={data.lines} profile={data.profile} preview />
+        </div>
       </div>
     </div>
   );

@@ -1,17 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireQuoteAuth } from "@/lib/quote-auth-middleware";
-import { calcQuoteTotals, type QuoteLine, type QuoteTemplate } from "@/lib/quotes.types";
+import { calcQuoteTotals, type QuoteLine, type QuoteTemplate, QUOTE_LIMITS } from "@/lib/quotes.types";
+import { DEFAULT_QUOTE_TERMS } from "@/lib/quote-document.utils";
 
 const lineSchema = z.object({
   id: z.string().optional(),
   sort_order: z.number(),
   line_type: z.enum(["group", "item"]).optional().default("item"),
-  name: z.string().min(1),
+  name: z.string().min(1).max(QUOTE_LIMITS.lineName),
   unit: z.string(),
   quantity: z.number().min(0),
   unit_price: z.number().min(0),
-  note: z.string().nullable().optional(),
+  note: z.string().max(QUOTE_LIMITS.lineNote).nullable().optional(),
 });
 
 const quoteInput = z.object({
@@ -34,6 +35,7 @@ const quoteInput = z.object({
   valid_until: z.string().nullable().optional(),
   note: z.string().nullable().optional(),
   terms: z.string().nullable().optional(),
+  payment_schedule: z.string().nullable().optional(),
   cover_image_url: z.string().nullable().optional(),
   lines: z.array(lineSchema),
 });
@@ -159,7 +161,7 @@ export const saveCatalogItem = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       id: z.string().optional(),
-      name: z.string().min(1),
+      name: z.string().min(1).max(QUOTE_LIMITS.catalogName),
       unit: z.string(),
       unit_price: z.number(),
       category: z.string().nullable().optional(),
@@ -251,6 +253,62 @@ export const getQuoteByShareToken = createServerFn({ method: "GET" })
     return { quote, profile, lines: lines ?? [] };
   });
 
+export const createQuote = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ template: z.enum(["craft", "studio", "formal"]) }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+
+    const lines: QuoteLine[] = [
+      { sort_order: 0, line_type: "group", name: "泥作工程", unit: "—", quantity: 0, unit_price: 0 },
+      { sort_order: 1, line_type: "item", name: "地坪整平", unit: "式", quantity: 1, unit_price: 0 },
+    ];
+    const tax_included = profile?.default_tax_included ?? false;
+    const show_tax_breakdown = profile?.default_show_tax_breakdown ?? true;
+    const totals = calcQuoteTotals(lines, { tax_included, show_tax_breakdown, tax_rate: 0.05 });
+
+    const { data: inserted, error } = await supabase
+      .from("quotes")
+      .insert({
+        user_id: userId,
+        title: "工程施工報價單",
+        template: data.template,
+        client_name: "",
+        show_seller_tax_id: profile?.default_show_tax_id ?? false,
+        show_buyer_tax_id: profile?.default_show_tax_id ?? false,
+        seller_tax_id: profile?.seller_tax_id ?? null,
+        tax_included,
+        show_tax_breakdown,
+        tax_rate: 0.05,
+        terms: profile?.default_terms?.trim() || DEFAULT_QUOTE_TERMS,
+        subtotal: totals.subtotal,
+        tax_amount: totals.tax_amount,
+        total: totals.total,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const quoteId = inserted.id as string;
+    const { error: lineErr } = await supabase.from("quote_lines").insert(
+      lines.map((l, i) => ({
+        quote_id: quoteId,
+        user_id: userId,
+        sort_order: i,
+        line_type: l.line_type,
+        name: l.name,
+        unit: l.unit,
+        quantity: l.quantity,
+        unit_price: l.unit_price,
+        note: null,
+      })),
+    );
+    if (lineErr) throw new Error(lineErr.message);
+
+    return { id: quoteId };
+  });
+
 export const saveQuote = createServerFn({ method: "POST" })
   .middleware([requireQuoteAuth])
   .inputValidator(quoteInput)
@@ -261,7 +319,7 @@ export const saveQuote = createServerFn({ method: "POST" })
       show_tax_breakdown: data.show_tax_breakdown,
       tax_rate: data.tax_rate,
     });
-    const quoteRow = {
+    const quoteRowBase = {
       user_id: userId,
       contact_id: data.contact_id ?? null,
       title: data.title,
@@ -287,13 +345,28 @@ export const saveQuote = createServerFn({ method: "POST" })
       total: totals.total,
     };
 
+    const quoteRowWithPayment = {
+      ...quoteRowBase,
+      payment_schedule: data.payment_schedule ?? null,
+    };
+
     let quoteId = data.id;
     if (quoteId) {
-      const { error } = await supabase.from("quotes").update(quoteRow).eq("id", quoteId).eq("user_id", userId);
+      let { error } = await supabase.from("quotes").update(quoteRowWithPayment).eq("id", quoteId).eq("user_id", userId);
+      if (error?.message?.includes("payment_schedule")) {
+        ({ error } = await supabase.from("quotes").update(quoteRowBase).eq("id", quoteId).eq("user_id", userId));
+      }
       if (error) throw new Error(error.message);
       await supabase.from("quote_lines").delete().eq("quote_id", quoteId);
     } else {
-      const { data: inserted, error } = await supabase.from("quotes").insert(quoteRow).select("id").single();
+      let { data: inserted, error } = await supabase.from("quotes").insert(quoteRowWithPayment).select("id").single();
+      if (error?.message?.includes("payment_schedule")) {
+        ({ data: inserted, error } = await supabase
+          .from("quotes")
+          .insert(quoteRowBase)
+          .select("id")
+          .single());
+      }
       if (error) throw new Error(error.message);
       quoteId = inserted.id;
     }
@@ -402,7 +475,7 @@ export const seedDemoCatalog = createServerFn({ method: "POST" })
   });
 
 const catalogImportRow = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1).max(QUOTE_LIMITS.catalogName),
   unit: z.string(),
   unit_price: z.number().min(0),
   category: z.string().nullable().optional(),

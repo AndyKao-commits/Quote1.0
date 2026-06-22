@@ -36,20 +36,20 @@ function QuotesPage() {
     <AppShell>
       <div className="mb-5 flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1a1612]">報價紀錄</h1>
-          <p className="mt-1 text-sm text-[#6b5c4d]">複製舊報價，改價再送</p>
+          <h1 className="text-xl font-semibold tracking-tight">報價紀錄</h1>
+          <p className="mt-1 text-sm text-stone-500">複製舊報價，改價再送</p>
         </div>
-        <button type="button" onClick={() => { clearSession(); nav({ to: "/auth" }); }} className="text-xs text-[#8a7b6a] hover:underline">
+        <button type="button" onClick={() => { clearSession(); nav({ to: "/auth" }); }} className="text-xs text-stone-500 hover:text-[var(--bdg-ink)]">
           登出
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-[#6b5c4d]">載入中…</p>}
+      {isLoading && <p className="text-sm text-stone-500">載入中…</p>}
 
       {!isLoading && quotes.length === 0 && (
-        <div className="rounded-2xl border border-[#e8dfd3] bg-white p-10 text-center">
-          <p className="text-[#6b5c4d]">還沒有報價單</p>
-          <Link to="/quotes/new" className="mt-4 inline-flex items-center gap-1 rounded-full bg-[#C45A3C] px-5 py-2 text-sm font-semibold text-white">
+        <div className="bdg-card p-10 text-center">
+          <p className="text-stone-500">還沒有報價單</p>
+          <Link to="/quotes/new" className="bdg-btn bdg-btn-primary mt-4">
             <Plus className="h-4 w-4" /> 建立第一張
           </Link>
         </div>
@@ -57,23 +57,23 @@ function QuotesPage() {
 
       <ul className="space-y-2">
         {quotes.map((q: any) => (
-          <li key={q.id} className="flex items-center gap-3 rounded-xl border border-[#e8dfd3] bg-white p-4">
+          <li key={q.id} className="bdg-card flex items-center gap-3 p-4">
             <Link to="/quotes/$id" params={{ id: q.id }} className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-[#1a1612]">{q.client_name || "未命名客戶"}</p>
-              <p className="text-xs text-[#6b5c4d]">
+              <p className="truncate font-medium">{q.client_name || "未命名客戶"}</p>
+              <p className="text-xs text-stone-500">
                 {q.title} · {formatMoney(Number(q.total))} · {new Date(q.created_at).toLocaleDateString("zh-TW")}
               </p>
             </Link>
-            <button type="button" onClick={() => dup.mutate(q.id)} className="rounded-lg p-2 text-[#6b5c4d] hover:bg-[#F5F0E8]" title="複製">
+            <button type="button" onClick={() => dup.mutate(q.id)} className="rounded p-2 text-stone-500 hover:bg-stone-100" title="複製">
               <Copy className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => confirm("確定刪除？") && del.mutate(q.id)} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50" title="刪除">
+            <button type="button" onClick={() => confirm("確定刪除？") && del.mutate(q.id)} className="rounded p-2 text-rose-500 hover:bg-rose-50" title="刪除">
               <Trash2 className="h-4 w-4" />
             </button>
           </li>
         ))}
       </ul>
-      {dup.isPending && <p className="mt-2 flex items-center gap-1 text-xs text-[#6b5c4d]"><Loader2 className="h-3 w-3 animate-spin" /> 複製中…</p>}
+      {dup.isPending && <p className="mt-2 flex items-center gap-1 text-xs text-stone-500"><Loader2 className="h-3 w-3 animate-spin" /> 複製中…</p>}
     </AppShell>
   );
 }

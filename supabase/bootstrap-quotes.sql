@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
   valid_until DATE,
   note TEXT,
   terms TEXT,
+  payment_schedule TEXT,
   cover_image_url TEXT,
   subtotal NUMERIC NOT NULL DEFAULT 0,
   tax_amount NUMERIC NOT NULL DEFAULT 0,

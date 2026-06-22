@@ -1,4 +1,5 @@
 import type { QuoteLine, QuoteLineType } from "@/lib/quotes.types";
+import { QUOTE_LIMITS, clampText } from "@/lib/quotes.types";
 
 export type CatalogCsvRow = {
   name: string;
@@ -173,10 +174,14 @@ export function parseCatalogCsv(text: string): { rows: CatalogCsvRow[]; errors: 
       raw[field] = row[header] ?? "";
     });
 
-    const name = (raw.name ?? "").trim();
-    if (!name) {
+    const nameRaw = (raw.name ?? "").trim();
+    if (!nameRaw) {
       errors.push(`第 ${lineNo} 行：項目名稱不可為空，已略過`);
       return;
+    }
+    const name = clampText(nameRaw, QUOTE_LIMITS.catalogName);
+    if (name.length < nameRaw.length) {
+      errors.push(`第 ${lineNo} 行：項目名稱超過 ${QUOTE_LIMITS.catalogName} 字，已截斷`);
     }
 
     rows.push({
@@ -217,20 +222,30 @@ export function parseQuoteLinesCsv(text: string): { rows: QuoteLineCsvRow[]; err
       else raw[field as keyof QuoteLineCsvRow] = val;
     });
 
-    const name = (raw.name ?? "").trim();
-    if (!name) {
+    const nameRaw = (raw.name ?? "").trim();
+    if (!nameRaw) {
       errors.push(`第 ${lineNo} 行：項目名稱不可為空，已略過`);
       return;
     }
+    const name = clampText(nameRaw, QUOTE_LIMITS.lineName);
+    if (name.length < nameRaw.length) {
+      errors.push(`第 ${lineNo} 行：項目名稱超過 ${QUOTE_LIMITS.lineName} 字，已截斷`);
+    }
 
     const line_type = parseLineType(raw.line_type_raw ?? "item");
+    const noteRaw = (raw.note ?? "").trim();
+    const note = noteRaw ? clampText(noteRaw, QUOTE_LIMITS.lineNote) : null;
+    if (noteRaw && note && note.length < noteRaw.length) {
+      errors.push(`第 ${lineNo} 行：備註超過 ${QUOTE_LIMITS.lineNote} 字，已截斷`);
+    }
+
     rows.push({
       line_type,
       name,
       unit: line_type === "group" ? "—" : (raw.unit ?? "式").trim() || "式",
       quantity: line_type === "group" ? 0 : Math.max(0, parseNumber(raw.quantity ?? "1", 1)),
       unit_price: line_type === "group" ? 0 : Math.max(0, parseNumber(raw.unit_price ?? "0")),
-      note: (raw.note ?? "").trim() || null,
+      note,
     });
   });
 

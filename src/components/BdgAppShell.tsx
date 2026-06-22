@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, History, Package, Settings, User } from "lucide-react";
+import { FileText, Package, Settings, User } from "lucide-react";
 import type { ReactNode } from "react";
 import { getProfile } from "@/lib/quotes.functions";
 
@@ -18,36 +18,32 @@ export function AppShell({ children }: { children: ReactNode }) {
   const brandLabel = profile?.company_name || profile?.display_name || "報得過";
 
   return (
-    <div className="bdg-theme min-h-screen bg-[#F5F0E8]">
-      <header className="sticky top-0 z-40 border-b border-[#e8dfd3] bg-[#F5F0E8]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/quotes" className="flex min-w-0 items-center gap-2 font-display text-lg font-bold tracking-tight text-[#1a1612]">
+    <div className="bdg-theme min-h-screen">
+      <header className="sticky top-0 z-40 border-b border-[var(--bdg-line)] bg-[var(--bdg-paper)]/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+          <Link to="/quotes" className="flex min-w-0 items-center gap-2.5">
             {profile?.logo_url ? (
-              <img src={profile.logo_url} alt="" className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+              <img src={profile.logo_url} alt="" className="h-8 w-8 shrink-0 rounded object-contain" />
             ) : (
-              <img src="/favicon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg" />
+              <img src="/favicon.svg" alt="" className="h-8 w-8 shrink-0 rounded" />
             )}
-            <span className="truncate">{brandLabel}</span>
+            <span className="truncate text-base font-semibold tracking-tight">{brandLabel}</span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
-            <Nav to="/quotes" label="報價" icon={<FileText className="h-4 w-4" />} active={isActive("/quotes")} />
-            <Nav to="/items" label="項目庫" icon={<Package className="h-4 w-4" />} active={isActive("/items")} />
-            <Nav to="/contacts" label="聯絡人" icon={<User className="h-4 w-4" />} active={isActive("/contacts")} />
-            <Nav to="/settings" label="設定" icon={<Settings className="h-4 w-4" />} active={isActive("/settings")} />
+          <nav className="hidden items-center gap-0.5 md:flex">
+            <Nav to="/quotes" label="報價" active={isActive("/quotes")} />
+            <Nav to="/items" label="項目庫" active={isActive("/items")} />
+            <Nav to="/contacts" label="聯絡人" active={isActive("/contacts")} />
+            <Nav to="/settings" label="設定" active={isActive("/settings")} />
           </nav>
-          <Link
-            to="/quotes/new"
-            className="rounded-full px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:brightness-105"
-            style={{ backgroundColor: "var(--bdg-brand, #C45A3C)" }}
-          >
+          <Link to="/quotes/new" className="bdg-btn bdg-btn-primary shrink-0">
             新建報價
           </Link>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:pb-10">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e8dfd3] bg-[#F5F0E8]/95 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-lg justify-around px-2">
-          <Bottom to="/quotes" label="報價" icon={<History className="h-5 w-5" />} active={isActive("/quotes") && !pathname.includes("/new")} />
+      <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:pb-10">{children}</main>
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--bdg-line)] bg-[var(--bdg-card)]/98 backdrop-blur-sm md:hidden">
+        <div className="mx-auto flex max-w-lg justify-around px-1">
+          <Bottom to="/quotes" label="報價" icon={<FileText className="h-5 w-5" />} active={isActive("/quotes") && !pathname.includes("/new")} />
           <Bottom to="/quotes/new" label="新建" icon={<FileText className="h-5 w-5" />} active={pathname.includes("/new")} primary />
           <Bottom to="/items" label="項目" icon={<Package className="h-5 w-5" />} active={isActive("/items")} />
           <Bottom to="/settings" label="設定" icon={<Settings className="h-5 w-5" />} active={isActive("/settings") || isActive("/contacts")} />
@@ -57,15 +53,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function Nav({ to, label, icon, active }: { to: string; label: string; icon: ReactNode; active: boolean }) {
+function Nav({ to, label, active }: { to: string; label: string; active: boolean }) {
   return (
     <Link
       to={to}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium ${
-        active ? "bg-white text-[#1a1612] shadow-sm" : "text-[#6b5c4d] hover:bg-white/60"
+      className={`rounded px-3 py-2 text-sm font-medium transition ${
+        active ? "bg-white text-[var(--bdg-ink)] shadow-sm" : "text-stone-500 hover:text-[var(--bdg-ink)]"
       }`}
     >
-      {icon} {label}
+      {label}
     </Link>
   );
 }
@@ -74,8 +70,8 @@ function Bottom({ to, label, icon, active, primary }: { to: string; label: strin
   return (
     <Link
       to={to}
-      className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-        primary || active ? "text-[#C45A3C]" : "text-[#6b5c4d]"
+      className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium ${
+        primary || active ? "text-[var(--bdg-brand)]" : "text-stone-500"
       }`}
     >
       {icon}

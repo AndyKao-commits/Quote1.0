@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GripVertical, MessageSquare, Plus, Trash2 } from "lucide-react";
+import { QUOTE_LIMITS, clampText } from "@/lib/quotes.types";
 import type { QuoteLine } from "@/lib/quotes.types";
 
 function newLine(type: QuoteLine["line_type"], sort: number): QuoteLine {
@@ -14,6 +15,15 @@ function newLine(type: QuoteLine["line_type"], sort: number): QuoteLine {
   };
 }
 
+function CharCount({ value, max }: { value: string; max: number }) {
+  const len = Array.from(value).length;
+  return (
+    <p className={`bdg-char-count ${len >= max ? "is-over" : ""}`}>
+      {len}/{max}
+    </p>
+  );
+}
+
 export function QuoteLineList({
   lines,
   onChange,
@@ -26,7 +36,14 @@ export function QuoteLineList({
 
   function update(i: number, patch: Partial<QuoteLine>) {
     const next = [...lines];
-    next[i] = { ...next[i], ...patch };
+    const merged = { ...next[i], ...patch };
+    if (patch.name !== undefined) {
+      merged.name = clampText(patch.name, QUOTE_LIMITS.lineName);
+    }
+    if (patch.note !== undefined && patch.note !== null) {
+      merged.note = patch.note ? clampText(patch.note, QUOTE_LIMITS.lineNote) : null;
+    }
+    next[i] = merged;
     onChange(next);
   }
 
@@ -59,16 +76,16 @@ export function QuoteLineList({
               if (dragIdx !== null) move(dragIdx, i);
               setDragIdx(null);
             }}
-            className={`rounded-xl border bg-white p-2 transition ${
-              dragIdx === i ? "border-[#C45A3C] opacity-60" : "border-[#e8dfd3]"
-            } ${isGroup ? "border-l-4 border-l-[#C45A3C] bg-[#FDFBF7]" : "ml-3 border-l-2 border-l-[#ece3d6]"}`}
+            className={`bdg-card p-3 transition ${
+              dragIdx === i ? "opacity-60 ring-1 ring-[var(--bdg-brand)]" : ""
+            } ${isGroup ? "border-l-[3px] border-l-[var(--bdg-brand)]" : "ml-2 sm:ml-4"}`}
           >
-            <div className="flex min-w-0 items-start gap-1">
+            <div className="flex min-w-0 items-start gap-2">
               <div
                 draggable
                 onDragStart={() => setDragIdx(i)}
                 onDragEnd={() => setDragIdx(null)}
-                className="mt-2 shrink-0 cursor-grab touch-none text-[#8a7b6a] active:cursor-grabbing"
+                className="mt-1 shrink-0 cursor-grab touch-none text-stone-400 active:cursor-grabbing"
                 aria-label="拖曳排序"
                 role="button"
                 tabIndex={0}
@@ -76,72 +93,80 @@ export function QuoteLineList({
                 <GripVertical className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
-                <div className="flex min-w-0 flex-wrap items-center gap-1">
-                  {isGroup && (
-                    <span className="shrink-0 rounded bg-[#C45A3C]/10 px-2 py-0.5 text-[10px] font-bold text-[#C45A3C]">
-                      大項目
+                <div>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium text-stone-500">
+                      {isGroup ? "工種" : "項目"}
                     </span>
-                  )}
-                  {!isGroup && (
-                    <span className="shrink-0 rounded bg-[#ece3d6] px-2 py-0.5 text-[10px] font-semibold text-[#6b5c4d]">
-                      小項目
-                    </span>
-                  )}
+                    <CharCount value={l.name} max={QUOTE_LIMITS.lineName} />
+                  </div>
                   <textarea
                     value={l.name}
-                    rows={2}
+                    rows={isGroup ? 1 : 2}
+                    maxLength={QUOTE_LIMITS.lineName}
                     onChange={(e) => update(i, { name: e.target.value })}
-                    placeholder={isGroup ? "工種名稱，例如：泥作工程" : "項目說明"}
-                    className="min-w-0 flex-1 resize-y rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm break-words outline-none focus:border-[#C45A3C]"
+                    placeholder={isGroup ? "例如：泥作工程" : "項目說明"}
+                    className="bdg-input min-h-[2.5rem] resize-y break-words"
                   />
                 </div>
                 {!isGroup && (
-                  <div className="grid grid-cols-3 gap-1 sm:grid-cols-4">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     <input
                       value={l.unit}
                       onChange={(e) => update(i, { unit: e.target.value })}
                       placeholder="單位"
-                      className="min-w-0 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm"
+                      className="bdg-input py-1.5 text-sm"
                     />
                     <input
                       type="number"
                       value={l.quantity}
                       onChange={(e) => update(i, { quantity: Number(e.target.value) })}
                       placeholder="數量"
-                      className="min-w-0 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm"
+                      className="bdg-input py-1.5 text-sm"
                     />
                     <input
                       type="number"
                       value={l.unit_price}
                       onChange={(e) => update(i, { unit_price: Number(e.target.value) })}
                       placeholder="單價"
-                      className="min-w-0 rounded-lg border border-[#ece3d6] px-2 py-1.5 text-sm"
+                      className="bdg-input py-1.5 text-sm"
                     />
-                    <div className="hidden text-right text-xs leading-8 text-[#6b5c4d] sm:block">
+                    <div className="hidden text-right text-xs leading-9 text-stone-500 sm:block">
                       小計 {(l.quantity * l.unit_price).toLocaleString()}
                     </div>
                   </div>
                 )}
                 {showNote && (
-                  <textarea
-                    value={l.note ?? ""}
-                    onChange={(e) => update(i, { note: e.target.value })}
-                    placeholder="此項目備註（會顯示在 PDF）"
-                    rows={2}
-                    className="w-full resize-y rounded-lg border border-[#ece3d6] bg-[#FDFBF7] px-2 py-1.5 text-xs break-words outline-none focus:border-[#C45A3C]"
-                  />
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-stone-500">備註（PDF 顯示）</span>
+                      <CharCount value={l.note ?? ""} max={QUOTE_LIMITS.lineNote} />
+                    </div>
+                    <textarea
+                      value={l.note ?? ""}
+                      maxLength={QUOTE_LIMITS.lineNote}
+                      onChange={(e) => update(i, { note: e.target.value })}
+                      placeholder="選填"
+                      rows={2}
+                      className="bdg-input resize-y bg-stone-50/80 text-xs break-words"
+                    />
+                  </div>
                 )}
               </div>
-              <div className="flex shrink-0 flex-col gap-1">
+              <div className="flex shrink-0 flex-col gap-0.5">
                 <button
                   type="button"
                   onClick={() => toggleNote(i)}
-                  className={`rounded-lg p-1.5 ${showNote ? "bg-[#C45A3C]/10 text-[#C45A3C]" : "text-[#8a7b6a] hover:bg-[#F5F0E8]"}`}
+                  className={`rounded p-1.5 ${showNote ? "bg-stone-100 text-[var(--bdg-brand)]" : "text-stone-400 hover:bg-stone-50"}`}
                   title="備註"
                 >
                   <MessageSquare className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={() => remove(i)} className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50">
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="rounded p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -150,23 +175,25 @@ export function QuoteLineList({
         );
       })}
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap gap-2 border-t border-[var(--bdg-line)] pt-3">
         <button
           type="button"
           onClick={() => onChange([...lines, newLine("group", lines.length)])}
-          className="inline-flex items-center gap-1 rounded-full border border-[#C45A3C] px-3 py-1.5 text-xs font-semibold text-[#C45A3C]"
+          className="bdg-btn bdg-btn-secondary"
         >
-          <Plus className="h-3.5 w-3.5" /> 新增大項目（工種）
+          <Plus className="h-3.5 w-3.5" /> 工種
         </button>
         <button
           type="button"
           onClick={() => onChange([...lines, newLine("item", lines.length)])}
-          className="inline-flex items-center gap-1 rounded-full bg-[#C45A3C] px-3 py-1.5 text-xs font-semibold text-white"
+          className="bdg-btn bdg-btn-primary"
         >
-          <Plus className="h-3.5 w-3.5" /> 新增小項目
+          <Plus className="h-3.5 w-3.5" /> 項目
         </button>
       </div>
-      <p className="text-[11px] text-[#8a7b6a]">拖曳左側 ⋮⋮ 可調整順序。大項目為工種標題，小項目計入金額。</p>
+      <p className="text-[11px] leading-relaxed text-stone-500">
+        項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。拖曳左側可調整順序。
+      </p>
     </div>
   );
 }

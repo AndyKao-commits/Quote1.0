@@ -17,6 +17,7 @@ import {
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
+import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
 
 export const Route = createFileRoute("/_app/quotes/$id")({
   head: () => ({ meta: [{ title: "編輯報價 — 報得過" }] }),
@@ -50,17 +51,31 @@ function QuoteEditorPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [paymentTouched, setPaymentTouched] = useState(false);
 
   useEffect(() => {
     if (data) {
-      setForm({ ...data, quote_lines: undefined });
-      setLines(
-        (data.quote_lines ?? []).map((l: any, i: number) => ({
-          ...l,
-          sort_order: i,
-          line_type: l.line_type ?? "item",
-        })),
-      );
+      const loadedLines = (data.quote_lines ?? []).map((l: any, i: number) => ({
+        ...l,
+        sort_order: i,
+        line_type: l.line_type ?? "item",
+      }));
+      const loadedTotals = calcQuoteTotals(loadedLines, {
+        tax_included: data.tax_included,
+        show_tax_breakdown: data.show_tax_breakdown,
+        tax_rate: Number(data.tax_rate ?? 0.05),
+      });
+      const hasCustomPayment = Boolean(data.payment_schedule?.trim());
+      setForm({
+        ...data,
+        quote_lines: undefined,
+        terms: data.terms?.trim() || DEFAULT_QUOTE_TERMS,
+        payment_schedule: hasCustomPayment
+          ? data.payment_schedule
+          : formatPaymentScheduleText(loadedTotals.total),
+      });
+      setLines(loadedLines);
+      setPaymentTouched(hasCustomPayment);
       if (data.share_token) setShareUrl(`${window.location.origin}/q/${data.share_token}`);
     }
   }, [data]);
@@ -77,17 +92,34 @@ function QuoteEditorPage() {
     [form, lines],
   );
 
+  useEffect(() => {
+    if (paymentTouched) return;
+    setForm((prev: any) => {
+      if (!prev) return prev;
+      const next = formatPaymentScheduleText(totals.total);
+      if (prev.payment_schedule === next) return prev;
+      return { ...prev, payment_schedule: next };
+    });
+  }, [totals.total, paymentTouched]);
+
   const quotePreview = form
-    ? { ...form, ...totals }
+    ? {
+        ...form,
+        ...totals,
+        terms: resolveQuoteTerms(form.terms),
+        payment_schedule: paymentTouched
+          ? form.payment_schedule
+          : formatPaymentScheduleText(totals.total),
+      }
     : null;
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      if (!form) return;
-      const { lines: saveLines, skipped } = prepareQuoteLinesForSave(lines);
+      if (!form) return null;
+      const { lines: saveLines, skipped, truncated } = prepareQuoteLinesForSave(lines);
       if (!saveLines.length) throw new Error("至少需要一筆有名稱的項目");
-      if (skipped > 0) setLines(saveLines);
-      return saveFn({
+      if (skipped > 0 || truncated > 0) setLines(saveLines);
+      await saveFn({
         data: {
           id,
           title: form.title,
@@ -107,11 +139,22 @@ function QuoteEditorPage() {
           tax_rate: Number(form.tax_rate ?? 0.05),
           valid_until: form.valid_until || null,
           note: form.note,
-          terms: form.terms,
+          terms: resolveQuoteTerms(form.terms),
+          payment_schedule: paymentTouched
+            ? form.payment_schedule
+            : formatPaymentScheduleText(totals.total),
           cover_image_url: form.cover_image_url,
           lines: saveLines,
         },
       });
+      return { skipped, truncated };
+    },
+    onSuccess: (res) => {
+      if (!res) return;
+      const parts: string[] = [];
+      if (res.skipped > 0) parts.push(`已略過 ${res.skipped} 筆空白列`);
+      if (res.truncated > 0) parts.push(`${res.truncated} 筆已截斷至字數上限（項目 100 字、備註 200 字）`);
+      if (parts.length) setImportMsg(parts.join("；"));
     },
     onError: (e) => {
       const msg = e instanceof Error ? e.message : "儲存失敗";
@@ -147,10 +190,13 @@ function QuoteEditorPage() {
   }
 
   async function doExport() {
-    setPreviewFull(false);
     setExporting(true);
     try {
-      await saveMut.mutateAsync();
+      try {
+        await saveMut.mutateAsync();
+      } catch {
+        // PDF 不依賴儲存成功
+      }
       await exportQuotePdf(`${form.client_name || "報價"}-${form.title}.pdf`);
     } catch (e) {
       alert(e instanceof Error ? e.message : "匯出失敗");
@@ -158,6 +204,11 @@ function QuoteEditorPage() {
       setExporting(false);
     }
   }
+
+  const termsValue = resolveQuoteTerms(form.terms);
+  const paymentValue = paymentTouched
+    ? (form.payment_schedule ?? "")
+    : formatPaymentScheduleText(totals.total);
 
   async function doShare() {
     await saveMut.mutateAsync();
@@ -183,69 +234,74 @@ function QuoteEditorPage() {
   }
 
   const editor = (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {(Object.keys(templateMeta) as QuoteTemplate[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setForm({ ...form, template: t })}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${form.template === t ? "bg-[#C45A3C] text-white" : "bg-white text-[#6b5c4d] border border-[#e8dfd3]"}`}
-          >
-            {templateMeta[t].label}
-          </button>
-        ))}
+    <div className="space-y-5">
+      <div>
+        <p className="bdg-section-title mb-2">模板</p>
+        <div className="flex flex-wrap gap-1.5">
+          {(Object.keys(templateMeta) as QuoteTemplate[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setForm({ ...form, template: t })}
+              className={`bdg-btn text-xs ${form.template === t ? "bdg-btn-primary" : "bdg-btn-secondary"}`}
+            >
+              {templateMeta[t].label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <Field label="報價標題" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-      <Field label="客戶名稱" value={form.client_name} onChange={(v) => setForm({ ...form, client_name: v })} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="公司（選填）" value={form.client_company ?? ""} onChange={(v) => setForm({ ...form, client_company: v })} />
-        <Field label="電話" value={form.client_phone ?? ""} onChange={(v) => setForm({ ...form, client_phone: v })} />
+      <div className="bdg-card space-y-3 p-4">
+        <p className="bdg-section-title">客戶</p>
+        <Field label="報價標題" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
+        <Field label="客戶名稱" value={form.client_name} onChange={(v) => setForm({ ...form, client_name: v })} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="公司（選填）" value={form.client_company ?? ""} onChange={(v) => setForm({ ...form, client_company: v })} />
+          <Field label="電話" value={form.client_phone ?? ""} onChange={(v) => setForm({ ...form, client_phone: v })} />
+        </div>
+        <Field label="地址" value={form.client_address ?? ""} onChange={(v) => setForm({ ...form, client_address: v })} />
+        {form.template === "studio" && (
+          <Field label="封面圖 URL" value={form.cover_image_url ?? ""} onChange={(v) => setForm({ ...form, cover_image_url: v })} />
+        )}
       </div>
-      <Field label="封面圖 URL（工作室模板）" value={form.cover_image_url ?? ""} onChange={(v) => setForm({ ...form, cover_image_url: v })} />
 
-      <div className="rounded-xl border border-[#e8dfd3] bg-white p-3">
-        <p className="mb-2 text-xs font-semibold text-[#6b5c4d]">稅務設定</p>
-        <div className="space-y-2 text-sm">
+      <div className="bdg-card p-4">
+        <p className="bdg-section-title mb-3">稅務</p>
+        <div className="space-y-2 text-sm text-stone-700">
           <Toggle checked={form.show_seller_tax_id} onChange={(v) => setForm({ ...form, show_seller_tax_id: v })} label="顯示賣方統編" />
           {form.show_seller_tax_id && (
-            <input value={form.seller_tax_id ?? ""} onChange={(e) => setForm({ ...form, seller_tax_id: e.target.value })} placeholder="賣方統編" className={inp} />
+            <input value={form.seller_tax_id ?? ""} onChange={(e) => setForm({ ...form, seller_tax_id: e.target.value })} placeholder="賣方統編" className="bdg-input" />
           )}
           <Toggle checked={form.show_buyer_tax_id} onChange={(v) => setForm({ ...form, show_buyer_tax_id: v })} label="顯示買方統編" />
           {form.show_buyer_tax_id && (
-            <input value={form.client_tax_id ?? ""} onChange={(e) => setForm({ ...form, client_tax_id: e.target.value })} placeholder="買方統編" className={inp} />
+            <input value={form.client_tax_id ?? ""} onChange={(e) => setForm({ ...form, client_tax_id: e.target.value })} placeholder="買方統編" className="bdg-input" />
           )}
           <Toggle checked={form.tax_included} onChange={(v) => setForm({ ...form, tax_included: v })} label="本報價含稅" />
           <Toggle checked={form.show_tax_breakdown} onChange={(v) => setForm({ ...form, show_tax_breakdown: v })} label="顯示稅額明細" />
         </div>
       </div>
 
-      <div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-[#6b5c4d]">項目</p>
+      <div className="bdg-card p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="bdg-section-title">明細</p>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => downloadCsv("報價明細範本.csv", quoteLinesToCsv())}
-              className="text-xs font-semibold text-[#C45A3C] hover:underline"
-            >
+            <button type="button" onClick={() => downloadCsv("報價明細範本.csv", quoteLinesToCsv())} className="text-xs font-medium text-[var(--bdg-brand)] hover:underline">
               下載範本
             </button>
             <CsvImportButton label="匯入 CSV" onFile={handleQuoteLinesCsv} />
           </div>
         </div>
         {importMsg && (
-          <p className="mb-2 rounded-lg border border-[#C45A3C]/30 bg-[#C45A3C]/10 px-3 py-2 text-xs font-medium text-[#8B4513]">
+          <p className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             {importMsg}
           </p>
         )}
-        <div className="relative mb-2">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8a7b6a]" />
-          <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder="關鍵字搜尋項目庫…" className={`${inp} pl-9`} />
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <input value={kw} onChange={(e) => setKw(e.target.value)} placeholder="搜尋項目庫…" className="bdg-input pl-9" />
         </div>
         {filteredCatalog.length > 0 && (
-          <div className="mb-2 overflow-hidden rounded-xl border border-[#e8dfd3] bg-white">
+          <div className="mb-3 overflow-hidden rounded border border-[var(--bdg-line)] bg-white">
             {filteredCatalog.map((c: any) => (
               <button
                 key={c.id}
@@ -264,10 +320,10 @@ function QuoteEditorPage() {
                   ]);
                   setKw("");
                 }}
-                className="flex w-full justify-between border-b border-[#f0e6d8] px-3 py-2 text-left text-sm last:border-0 hover:bg-[#F5F0E8]"
+                className="flex w-full justify-between border-b border-[var(--bdg-line)] px-3 py-2.5 text-left text-sm last:border-0 hover:bg-stone-50"
               >
-                <span>{c.name}</span>
-                <span className="text-[#6b5c4d]">NT${Number(c.unit_price).toLocaleString()}/{c.unit}</span>
+                <span className="truncate pr-2">{c.name}</span>
+                <span className="shrink-0 text-stone-500">NT${Number(c.unit_price).toLocaleString()}/{c.unit}</span>
               </button>
             ))}
           </div>
@@ -275,60 +331,87 @@ function QuoteEditorPage() {
         <QuoteLineList lines={lines} onChange={setLines} />
       </div>
 
-      <Field label="備註" value={form.note ?? ""} onChange={(v) => setForm({ ...form, note: v })} multiline />
-      <Field label="條款" value={form.terms ?? ""} onChange={(v) => setForm({ ...form, terms: v })} multiline />
-      <Field label="有效期限" value={form.valid_until ?? ""} onChange={(v) => setForm({ ...form, valid_until: v })} type="date" />
+      <div className="bdg-card space-y-3 p-4">
+        <p className="bdg-section-title">其他</p>
+        <Field label="備註" value={form.note ?? ""} onChange={(v) => setForm({ ...form, note: v })} multiline />
+        <Field
+          label="條款"
+          value={termsValue}
+          onChange={(v) => setForm({ ...form, terms: v })}
+          multiline
+          rows={6}
+        />
+        <Field
+          label="付款明細"
+          value={paymentValue}
+          onChange={(v) => {
+            setPaymentTouched(true);
+            setForm({ ...form, payment_schedule: v });
+          }}
+          multiline
+          rows={5}
+          hint="依總價自動產生；手動修改後不再隨總價更新"
+        />
+        <Field label="有效期限" value={form.valid_until ?? ""} onChange={(v) => setForm({ ...form, valid_until: v })} type="date" />
+      </div>
     </div>
   );
 
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => nav({ to: "/quotes" })} className="text-sm text-[#6b5c4d] hover:underline">← 返回</button>
+      <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-[var(--bdg-line)] pb-4">
+        <button type="button" onClick={() => nav({ to: "/quotes" })} className="text-sm text-stone-500 hover:text-[var(--bdg-ink)]">
+          ← 返回
+        </button>
         <div className="flex-1" />
-        <button type="button" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="inline-flex items-center gap-1 rounded-full border border-[#e8dfd3] bg-white px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="bdg-btn bdg-btn-secondary">
           {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 儲存
         </button>
-        <button type="button" onClick={() => setPreviewFull(true)} className="inline-flex items-center gap-1 rounded-full border border-[#e8dfd3] bg-white px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={() => setPreviewFull(true)} className="bdg-btn bdg-btn-secondary">
           <Eye className="h-4 w-4" /> 預覽
         </button>
-        <button type="button" onClick={doExport} disabled={exporting} className="inline-flex items-center gap-1 rounded-full bg-[#1a1612] px-4 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={doExport} disabled={exporting} className="bdg-btn bdg-btn-secondary">
           {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
         </button>
-        <button type="button" onClick={doShare} className="inline-flex items-center gap-1 rounded-full bg-[#06C755] px-4 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={doShare} className="bdg-btn bg-[#06C755] text-white hover:brightness-105">
           <Share2 className="h-4 w-4" /> LINE
         </button>
       </div>
 
-      {shareUrl && <p className="mb-3 truncate rounded-lg bg-white px-3 py-2 text-xs text-[#6b5c4d]">分享連結：{shareUrl}</p>}
+      {shareUrl && <p className="mb-3 truncate rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">分享連結：{shareUrl}</p>}
 
       <div className="mb-3 flex gap-2 md:hidden">
-        <button type="button" onClick={() => setTab("edit")} className={`flex-1 rounded-lg py-2 text-sm font-semibold ${tab === "edit" ? "bg-[#C45A3C] text-white" : "bg-white"}`}>編輯</button>
-        <button type="button" onClick={() => setTab("preview")} className={`flex-1 rounded-lg py-2 text-sm font-semibold ${tab === "preview" ? "bg-[#C45A3C] text-white" : "bg-white"}`}>預覽</button>
+        <button type="button" onClick={() => setTab("edit")} className={`flex-1 bdg-btn text-sm ${tab === "edit" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>編輯</button>
+        <button type="button" onClick={() => setTab("preview")} className={`flex-1 bdg-btn text-sm ${tab === "preview" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>預覽</button>
       </div>
 
-      {/* PDF 匯出專用離屏節點：不可 display:none / visibility:hidden，否則 PDF 會空白 */}
+      {/* 手機編輯模式時預覽隱藏，PDF 改擷取此離屏節點（與預覽相同排版） */}
       <div
+        id="quote-document-fallback"
         aria-hidden
-        className="pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
+        className="quote-preview-root pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
       >
-        <QuoteDocument quote={quotePreview} lines={lines} profile={profile} exportTarget />
+        <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
       </div>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-        <div className={`min-w-0 overflow-hidden rounded-2xl border border-[#e8dfd3] bg-[#FDFBF7] p-4 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <div className={`min-w-0 overflow-x-auto rounded-2xl border border-[#e8dfd3] bg-[#ece3d6] p-2 ${tab === "edit" ? "hidden lg:block" : ""}`}>
-          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
+        <div className={`quote-preview-root -mx-4 overflow-auto bg-stone-200/70 md:mx-0 md:rounded md:border md:border-[var(--bdg-line)] ${tab === "edit" ? "hidden lg:block" : ""}`}>
+          <div className="inline-block p-1">
+            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+          </div>
         </div>
       </div>
 
       {previewFull && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/50 p-4">
-          <div className="mx-auto flex w-full max-w-3xl justify-end pb-2">
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/50 p-2">
+          <div className="flex shrink-0 justify-end pb-1">
             <button type="button" onClick={() => setPreviewFull(false)} className="rounded-full bg-white p-2"><X className="h-5 w-5" /></button>
           </div>
-          <div className="mx-auto max-h-[85vh] w-full max-w-3xl overflow-auto rounded-lg">
-            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+          <div className="quote-preview-root is-fullscreen min-h-0 flex-1 overflow-auto bg-stone-200/80 p-1">
+            <div className="inline-block">
+              <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+            </div>
           </div>
           <div className="mx-auto mt-3 flex gap-2">
             <button type="button" onClick={doExport} className="rounded-full bg-white px-5 py-2 text-sm font-semibold">下載 PDF</button>
@@ -340,14 +423,15 @@ function QuoteEditorPage() {
   );
 }
 
-function Field({ label, value, onChange, multiline, type = "text" }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean; type?: string }) {
+function Field({ label, value, onChange, multiline, type = "text", hint, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean; type?: string; hint?: string; rows?: number }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block text-xs font-semibold text-[#6b5c4d]">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-stone-500">{label}</span>
+      {hint && <span className="mb-1 block text-[11px] text-stone-400">{hint}</span>}
       {multiline ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className={inp} />
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className="bdg-input resize-y break-words" />
       ) : (
-        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className={inp} />
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="bdg-input break-words" />
       )}
     </label>
   );
@@ -362,4 +446,3 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-const inp = "w-full min-w-0 rounded-xl border border-[#ece3d6] bg-white px-3 py-2 text-sm break-words outline-none focus:border-[#C45A3C]";

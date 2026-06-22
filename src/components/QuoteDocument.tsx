@@ -1,253 +1,597 @@
 import type { Profile, Quote, QuoteLine, QuoteTemplate } from "@/lib/quotes.types";
-import { formatMoney } from "@/lib/quotes.types";
+import {
+  amountToChineseUpper,
+  buildGroupSummaryRows,
+  buildLineLabels,
+  buildPaymentSchedule,
+  buildTableRows,
+  DETAIL_ROWS_PER_PAGE,
+  formatQuoteDate,
+  formatTermsList,
+  paginateQuoteDocument,
+  resolveQuoteTerms,
+  type DocumentPage,
+} from "@/lib/quote-document.utils";
+
+function formatAmount(n: number) {
+  return Number(n).toLocaleString("zh-TW");
+}
+
+const BORDER = "#222";
 
 export function QuoteDocument({
   quote,
   lines,
   profile,
   preview = false,
-  exportTarget = false,
 }: {
   quote: Partial<Quote> & { template: QuoteTemplate; title: string; client_name: string };
   lines: QuoteLine[];
   profile?: Partial<Profile> | null;
   preview?: boolean;
-  /** 僅 PDF 匯出用的預覽節點，避免重複 id */
-  exportTarget?: boolean;
 }) {
-  const brand = profile?.brand_color || "#C45A3C";
-  const company = profile?.company_name || profile?.display_name || "報得過";
-  const tpl = quote.template;
+  const labels = buildLineLabels(lines);
+  const pages: DocumentPage[] = preview
+    ? paginateQuoteDocument(lines)
+    : [{ kind: "summary" }, { kind: "detail", lines, lineStart: 0, isFirst: true, isLast: true }];
 
-  const wrapper =
-    "quote-doc mx-auto box-border overflow-hidden bg-white text-[#1a1612] shadow-sm " +
-    (preview ? "w-full max-w-[210mm] min-h-[297mm] p-6 md:p-10" : "w-[210mm] min-h-[297mm] p-10");
+  if (preview) {
+    return (
+      <div className={preview ? "space-y-1.5" : undefined}>
+        {pages.map((page, pi) => (
+          <QuotePage
+            key={pi}
+            quote={quote}
+            profile={profile}
+            allLines={lines}
+            page={page}
+            labels={labels}
+            preview={preview}
+            pageIndex={pi}
+            totalPages={pages.length}
+          />
+        ))}
+      </div>
+    );
+  }
 
-  const body = (
+  return (
     <>
-      <LinesTable lines={lines} brand={brand} rounded={tpl === "studio"} formal={tpl === "formal"} />
-      <TotalsBlock quote={quote} brand={brand} />
-      <FooterBlock quote={quote} profile={profile} />
+      {pages.map((page, pi) => (
+        <QuotePage
+          key={pi}
+          quote={quote}
+          profile={profile}
+          allLines={lines}
+          page={page}
+          labels={labels}
+          preview={false}
+          pageIndex={pi}
+          totalPages={pages.length}
+        />
+      ))}
     </>
   );
-
-  const docProps = exportTarget ? { id: "quote-document" as const } : {};
-
-  if (tpl === "studio") {
-    return (
-      <div {...docProps} className={wrapper} style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
-        <div className="mb-6 flex items-start justify-between gap-4 break-words">
-          <div className="min-w-0 flex-1">
-            {profile?.logo_url ? (
-              <img src={profile.logo_url} alt="" className="mb-3 h-14 max-w-full object-contain" />
-            ) : (
-              <div className="mb-3 text-2xl font-bold break-words" style={{ color: brand }}>
-                {company}
-              </div>
-            )}
-            <h1 className="text-2xl font-bold tracking-tight break-words">{quote.title || "報價單"}</h1>
-            <p className="mt-2 text-sm text-[#6b5c4d] break-words">給 {quote.client_name || "—"}</p>
-          </div>
-          {quote.cover_image_url && (
-            <img src={quote.cover_image_url} alt="" className="h-20 w-20 shrink-0 rounded-2xl object-cover" />
-          )}
-        </div>
-        <ClientBlock quote={quote} />
-        {body}
-      </div>
-    );
-  }
-
-  if (tpl === "formal") {
-    return (
-      <div {...docProps} className={wrapper} style={{ fontFamily: "'Noto Serif TC', 'Noto Serif', serif" }}>
-        <div className="border-b-2 border-[#1a1612] pb-4 text-center">
-          <p className="text-xs tracking-[0.35em] text-[#6b5c4d] break-words">{company}</p>
-          <h1 className="mt-3 text-3xl font-medium tracking-[0.2em]">報 價 單</h1>
-        </div>
-        <div className="mt-6 grid grid-cols-2 gap-4 text-sm break-words">
-          <Party label="報價方" name={company} taxId={quote.show_seller_tax_id ? quote.seller_tax_id : null} profile={profile} />
-          <Party label="客戶" name={quote.client_name} company={quote.client_company} taxId={quote.show_buyer_tax_id ? quote.client_tax_id : null} quote={quote} />
-        </div>
-        {body}
-      </div>
-    );
-  }
-
-  return (
-    <div {...docProps} className={wrapper} style={{ fontFamily: "'Noto Sans TC', sans-serif" }}>
-      <div className="flex items-end justify-between gap-2 border-b-2 pb-3 break-words" style={{ borderColor: brand }}>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#6b5c4d]">{company}</p>
-          <h1 className="mt-1 text-xl font-bold break-words">{quote.title || "報價單"}</h1>
-        </div>
-        <div className="shrink-0 text-right text-sm text-[#6b5c4d]">
-          {quote.valid_until && <p>有效至 {quote.valid_until}</p>}
-        </div>
-      </div>
-      <ClientBlock quote={quote} compact />
-      {body}
-    </div>
-  );
 }
 
-function Party({
-  label,
-  name,
-  company,
-  taxId,
-  profile,
+function QuotePage({
   quote,
+  profile,
+  allLines,
+  page,
+  labels,
+  preview,
+  pageIndex,
+  totalPages,
 }: {
-  label: string;
-  name?: string | null;
-  company?: string | null;
-  taxId?: string | null;
+  quote: Partial<Quote> & { template: QuoteTemplate; title: string; client_name: string };
   profile?: Partial<Profile> | null;
-  quote?: Partial<Quote>;
+  allLines: QuoteLine[];
+  page: DocumentPage;
+  labels: string[];
+  preview: boolean;
+  pageIndex: number;
+  totalPages: number;
 }) {
+  const company = profile?.company_name || profile?.display_name || "報得過";
+  const tpl = quote.template;
+  const fontFamily =
+    tpl === "formal"
+      ? "'Noto Serif TC', 'Noto Serif', serif"
+      : "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
+
+  const isSummary = page.kind === "summary";
+
+  const pageClass =
+    `quote-page quote-page-flex box-border bg-white text-black ` +
+    (isSummary ? "quote-page-summary " : "quote-page-detail px-[10mm] pt-[7mm] pb-[5mm] ") +
+    (preview ? "shadow-sm ring-1 ring-black/10" : "");
+
+  const subtotal = quote.subtotal ?? 0;
+  const tax = quote.tax_amount ?? 0;
+  const total = quote.total ?? 0;
+  const showTaxRows = quote.show_tax_breakdown || quote.tax_included;
+  const taxRate = Number(quote.tax_rate ?? 0.05);
+
   return (
-    <div className="min-w-0 break-words">
-      <p className="text-xs font-semibold text-[#6b5c4d]">{label}</p>
-      <p className="mt-1 font-medium">{name}</p>
-      {company && <p className="text-[#6b5c4d]">{company}</p>}
-      {taxId && <p className="mt-1">統編 {taxId}</p>}
-      {profile?.phone && label === "報價方" && <p className="mt-1">{profile.phone}</p>}
-      {quote?.client_phone && label === "客戶" && <p className="mt-1">{quote.client_phone}</p>}
+    <div
+      data-quote-page
+      data-page-kind={isSummary ? "summary" : "detail"}
+      className={pageClass}
+      style={{
+        fontFamily,
+        fontSize: isSummary ? "10.5px" : "10px",
+        lineHeight: isSummary ? 1.55 : 1.4,
+      }}
+    >
+      <ProHeader
+        quote={quote}
+        profile={profile}
+        company={company}
+        template={tpl}
+        summary={isSummary}
+      />
+
+      <div className={`quote-page-body min-h-0 flex-1 ${isSummary ? "quote-summary-body" : ""}`}>
+        {isSummary ? (
+          <SummaryTable
+            lines={allLines}
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            showTaxRows={showTaxRows}
+            taxIncluded={quote.tax_included}
+            taxRate={taxRate}
+          />
+        ) : (
+          <LinesTable
+            allLines={allLines}
+            pageLines={page.lines}
+            labels={labels}
+            lineStart={page.lineStart}
+          />
+        )}
+
+        {isSummary && (
+          <SummaryFooter
+            quote={quote}
+            profile={profile}
+            company={company}
+            total={total}
+            taxIncluded={quote.tax_included}
+          />
+        )}
+      </div>
+
+      <p
+        className={`quote-page-footer shrink-0 text-center text-[#666] ${
+          isSummary ? "pt-4 text-[9px]" : "pt-1 text-[9px]"
+        }`}
+      >
+        第 {pageIndex + 1} / {totalPages} 頁
+      </p>
     </div>
   );
 }
 
-function ClientBlock({ quote, compact }: { quote: Partial<Quote>; compact?: boolean }) {
+function ProHeader({
+  quote,
+  profile,
+  company,
+  template,
+  summary = false,
+}: {
+  quote: Partial<Quote> & { title: string; client_name: string };
+  profile?: Partial<Profile> | null;
+  company: string;
+  template: QuoteTemplate;
+  summary?: boolean;
+}) {
+  const dateStr = formatQuoteDate(quote);
+  const contentTitle = quote.title || "工程施工報價單";
+
   return (
-    <div className={`grid gap-1 text-sm break-words ${compact ? "mt-3" : "mt-5"} text-[#3d342b]`}>
-      <p>
-        <span className="text-[#6b5c4d]">客戶 </span>
-        <span className="font-semibold">{quote.client_name}</span>
-        {quote.client_company && ` · ${quote.client_company}`}
-      </p>
-      {quote.client_phone && <p>電話 {quote.client_phone}</p>}
-      {quote.client_address && <p>地址 {quote.client_address}</p>}
-      {quote.show_buyer_tax_id && quote.client_tax_id && <p>統編 {quote.client_tax_id}</p>}
-    </div>
+    <header className={`shrink-0 break-words ${summary ? "mb-4" : "mb-2"}`}>
+      <div className="text-center">
+        {profile?.logo_url ? (
+          <img
+            src={profile.logo_url}
+            alt=""
+            className={`mx-auto object-contain ${summary ? "mb-1 h-12" : "mb-0.5 h-10"}`}
+          />
+        ) : null}
+        <p
+          className={`font-semibold tracking-wide text-[#222] ${
+            template === "studio" ? (summary ? "text-base" : "text-sm") : summary ? "text-xs" : "text-[11px]"
+          }`}
+        >
+          {company}
+        </p>
+      </div>
+
+      <div
+        className={`grid grid-cols-[1fr_auto] gap-x-6 ${
+          summary ? "mt-3 gap-y-1 text-[10.5px] leading-relaxed" : "mt-1.5 gap-y-0.5 text-[10px] leading-snug"
+        }`}
+      >
+        <p>
+          <span className="text-[#444]">內容：</span>
+          {contentTitle}
+        </p>
+        {!summary && dateStr && <p className="text-right whitespace-nowrap">{dateStr}</p>}
+        <p className="col-span-2">
+          <span className="text-[#444]">業主：</span>
+          {quote.client_name || "—"}
+          {quote.client_company ? `（${quote.client_company}）` : ""}
+        </p>
+        {summary ? (
+          <>
+            <p>
+              <span className="text-[#444]">案址：</span>
+              {quote.client_address || "—"}
+            </p>
+            {dateStr && <p className="text-right whitespace-nowrap">{dateStr}</p>}
+          </>
+        ) : (
+          <p className="col-span-2">
+            <span className="text-[#444]">案址：</span>
+            {quote.client_address || "—"}
+          </p>
+        )}
+        {(quote.client_phone || quote.show_buyer_tax_id) && !summary && (
+          <p className="col-span-2 text-[#444]">
+            {quote.client_phone && <span>電話：{quote.client_phone}　</span>}
+            {quote.show_buyer_tax_id && quote.client_tax_id && <span>統編：{quote.client_tax_id}</span>}
+          </p>
+        )}
+      </div>
+
+      {template === "studio" && quote.cover_image_url && !summary && (
+        <div className="mt-1 flex justify-end">
+          <img src={quote.cover_image_url} alt="" className="h-12 w-12 object-cover" />
+        </div>
+      )}
+    </header>
+  );
+}
+
+function cellCls(extra = "") {
+  return `border border-black px-1 py-[3px] align-middle break-words ${extra}`.trim();
+}
+
+function summaryCellCls(extra = "") {
+  return `border border-black px-2 py-[6px] align-middle break-words ${extra}`.trim();
+}
+
+function TableColGroup() {
+  return (
+    <colgroup>
+      <col style={{ width: "5%" }} />
+      <col style={{ width: "30%" }} />
+      <col style={{ width: "7%" }} />
+      <col style={{ width: "7%" }} />
+      <col style={{ width: "13%" }} />
+      <col style={{ width: "13%" }} />
+      <col style={{ width: "25%" }} />
+    </colgroup>
+  );
+}
+
+function TableHead({ summary = false }: { summary?: boolean }) {
+  const border = { borderColor: BORDER };
+  const cls = summary ? summaryCellCls : cellCls;
+  return (
+    <thead>
+      <tr className="bg-[#f5f5f5]">
+        {["序號", "名稱", "單位", "數量", "單價", "總價", "備註"].map((h, idx) => (
+          <th
+            key={h}
+            className={cls(
+              `font-bold text-[#111] ${idx === 1 ? "text-left" : idx >= 4 ? "text-right" : "text-center"}`,
+            )}
+            style={border}
+          >
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
+
+function SummaryTable({
+  lines,
+  subtotal,
+  tax,
+  total,
+  showTaxRows,
+  taxIncluded,
+  taxRate,
+}: {
+  lines: QuoteLine[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  showTaxRows: boolean;
+  taxIncluded?: boolean;
+  taxRate: number;
+}) {
+  const summaryRows = buildGroupSummaryRows(lines);
+  const border = { borderColor: BORDER };
+
+  return (
+    <table className="quote-summary-table w-full border-collapse" style={{ tableLayout: "fixed" }}>
+      <TableColGroup />
+      <TableHead summary />
+      <tbody>
+        {summaryRows.map((row) => (
+          <tr key={row.key}>
+            <td className={summaryCellCls("text-center")} style={border}>
+              {row.index}
+            </td>
+            <td className={summaryCellCls("text-left")} style={border}>
+              {row.name}
+            </td>
+            <td className={summaryCellCls("text-center")} style={border}>
+              {row.unit}
+            </td>
+            <td className={summaryCellCls("text-center")} style={border}>
+              {row.quantity}
+            </td>
+            <td className={summaryCellCls("text-right")} style={border}>
+              {formatAmount(row.unitPrice)}
+            </td>
+            <td className={summaryCellCls("text-right")} style={border}>
+              {formatAmount(row.total)}
+            </td>
+            <td className={summaryCellCls("text-left")} style={border}>
+              {row.note}
+            </td>
+          </tr>
+        ))}
+
+        <TotalsRows
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          showTaxRows={showTaxRows}
+          taxIncluded={taxIncluded}
+          taxRate={taxRate}
+          summary
+        />
+      </tbody>
+    </table>
+  );
+}
+
+function TotalsRows({
+  subtotal,
+  tax,
+  total,
+  showTaxRows,
+  taxIncluded,
+  taxRate,
+  summary = false,
+}: {
+  subtotal: number;
+  tax: number;
+  total: number;
+  showTaxRows: boolean;
+  taxIncluded?: boolean;
+  taxRate: number;
+  summary?: boolean;
+}) {
+  const border = { borderColor: BORDER };
+  const cls = summary ? summaryCellCls : cellCls;
+  const taxLabel = `營業稅${taxIncluded ? "（含稅）" : ` ${Math.round(taxRate * 100)}%`}`;
+
+  return (
+    <>
+      <tr>
+        <td colSpan={5} className={cls("text-right font-medium")} style={border}>
+          合計
+        </td>
+        <td className={cls("text-right font-medium")} style={border}>
+          ${formatAmount(subtotal)}
+        </td>
+        <td className={cls()} style={border} />
+      </tr>
+      {showTaxRows && (
+        <tr>
+          <td colSpan={5} className={cls("text-right")} style={border}>
+            {taxLabel}
+          </td>
+          <td className={cls("text-right")} style={border}>
+            ${formatAmount(tax)}
+          </td>
+          <td className={cls()} style={border} />
+        </tr>
+      )}
+      <tr className="bg-[#f5f5f5]">
+        <td colSpan={5} className={cls("text-right font-bold")} style={border}>
+          總價
+        </td>
+        <td className={cls("text-right font-bold")} style={border}>
+          ${formatAmount(total)}
+        </td>
+        <td className={cls()} style={border} />
+      </tr>
+      <tr>
+        <td colSpan={2} className={cls("font-medium")} style={border}>
+          總價
+        </td>
+        <td colSpan={5} className={cls("text-left font-medium")} style={border}>
+          {amountToChineseUpper(total)}
+        </td>
+      </tr>
+    </>
   );
 }
 
 function LinesTable({
-  lines,
-  brand,
-  rounded,
-  formal,
+  allLines,
+  pageLines,
+  labels,
+  lineStart,
 }: {
-  lines: QuoteLine[];
-  brand: string;
-  rounded?: boolean;
-  formal?: boolean;
+  allLines: QuoteLine[];
+  pageLines: QuoteLine[];
+  labels: string[];
+  lineStart: number;
 }) {
-  const headers = ["項目", "單位", "數量", "單價", "小計", "備註"];
+  const rows = buildTableRows(pageLines, allLines, lineStart, labels);
+  const border = { borderColor: BORDER };
+  const padCount = Math.max(0, DETAIL_ROWS_PER_PAGE - rows.length);
+
   return (
-    <div className="mt-5 w-full overflow-hidden">
-      <table className="w-full table-fixed border-collapse text-xs sm:text-sm" style={{ tableLayout: "fixed" }}>
-        <colgroup>
-          <col style={{ width: "32%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "20%" }} />
-        </colgroup>
-        <thead>
-          <tr style={{ backgroundColor: formal ? "#f5f0e8" : `${brand}12` }}>
-            {headers.map((h, idx) => (
-              <th
-                key={h}
-                className={`border border-[#e8dfd3] px-1.5 py-2 font-semibold break-words ${idx > 0 ? "text-right" : "text-left"} ${rounded && idx === 0 ? "rounded-tl-lg" : ""} ${rounded && idx === headers.length - 1 ? "rounded-tr-lg" : ""}`}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((l, i) => {
-            const isGroup = (l.line_type ?? "item") === "group";
-            if (isGroup) {
-              return (
-                <tr key={i} style={{ backgroundColor: `${brand}08` }}>
-                  <td colSpan={6} className="border border-[#e8dfd3] px-2 py-2 font-bold break-words text-[#1a1612]">
-                    {l.name}
-                  </td>
-                </tr>
-              );
-            }
-            const sub = Number(l.quantity) * Number(l.unit_price);
+    <table className="quote-detail-table h-full w-full border-collapse" style={{ tableLayout: "fixed" }}>
+      <TableColGroup />
+      <TableHead />
+      <tbody>
+        {rows.map((row) => {
+          if (row.type === "group") {
             return (
-              <tr key={i}>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 break-words align-top">{l.name}</td>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 text-right break-words align-top">{l.unit}</td>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 text-right align-top">{l.quantity}</td>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 text-right break-words align-top">{formatMoney(l.unit_price)}</td>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 text-right font-medium align-top">{formatMoney(sub)}</td>
-                <td className="border border-[#e8dfd3] px-1.5 py-2 text-left text-[11px] break-words align-top text-[#6b5c4d]">
-                  {l.note || "—"}
+              <tr key={row.key} className="bg-[#f0f0f0]">
+                <td className={cellCls("text-center font-bold")} style={border}>
+                  {row.label}
+                </td>
+                <td className={cellCls("text-left font-bold")} style={border}>
+                  {row.line.name}
+                </td>
+                <td className={cellCls()} style={border} />
+                <td className={cellCls()} style={border} />
+                <td className={cellCls()} style={border} />
+                <td className={cellCls()} style={border} />
+                <td className={cellCls("text-left")} style={border}>
+                  {row.line.note || ""}
                 </td>
               </tr>
             );
-          })}
-        </tbody>
-      </table>
-    </div>
+          }
+          const l = row.line;
+          const lineTotal = Number(l.quantity) * Number(l.unit_price);
+          return (
+            <tr key={row.key}>
+              <td className={cellCls("text-center")} style={border}>
+                {row.label}
+              </td>
+              <td className={cellCls("text-left")} style={border}>
+                {l.name}
+              </td>
+              <td className={cellCls("text-center")} style={border}>
+                {l.unit}
+              </td>
+              <td className={cellCls("text-center")} style={border}>
+                {l.quantity}
+              </td>
+              <td className={cellCls("text-right")} style={border}>
+                {formatAmount(l.unit_price)}
+              </td>
+              <td className={cellCls("text-right")} style={border}>
+                {formatAmount(lineTotal)}
+              </td>
+              <td className={cellCls("text-left")} style={border}>
+                {l.note || ""}
+              </td>
+            </tr>
+          );
+        })}
+        {Array.from({ length: padCount }, (_, i) => (
+          <tr key={`pad-${i}`} className="quote-pad-row">
+            {Array.from({ length: 7 }, (__, j) => (
+              <td key={j} className={cellCls()} style={border}>
+                {"\u00a0"}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
-function TotalsBlock({ quote, brand }: { quote: Partial<Quote>; brand: string }) {
+function SummaryFooter({
+  quote,
+  profile,
+  company,
+  total,
+  taxIncluded,
+}: {
+  quote: Partial<Quote>;
+  profile?: Partial<Profile> | null;
+  company: string;
+  total: number;
+  taxIncluded?: boolean;
+}) {
+  const termLines = formatTermsList(resolveQuoteTerms(quote.terms));
+  const paymentLines = buildPaymentSchedule(total, quote.payment_schedule);
+  const hasNote = Boolean(quote.note?.trim());
+  const paymentTitle = taxIncluded ? "付款明細" : "付款明細（未稅）";
+
   return (
-    <div className="mt-5 flex justify-end break-words">
-      <div className="min-w-[200px] max-w-full space-y-1 text-sm">
-        {quote.show_tax_breakdown && (
-          <>
-            <div className="flex justify-between gap-4">
-              <span className="text-[#6b5c4d]">小計</span>
-              <span>{formatMoney(quote.subtotal ?? 0)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-[#6b5c4d]">營業稅</span>
-              <span>{formatMoney(quote.tax_amount ?? 0)}</span>
-            </div>
-          </>
-        )}
-        <div className="flex justify-between gap-4 border-t border-[#e8dfd3] pt-2 text-base font-bold" style={{ color: brand }}>
-          <span>總計</span>
-          <span>{formatMoney(quote.total ?? 0)}</span>
+    <div className="quote-summary-footer mt-5 space-y-4 break-words text-[10px] leading-[1.65]">
+      {hasNote && (
+        <div>
+          <p className="mb-1 font-bold">備註</p>
+          <p className="whitespace-pre-wrap">{quote.note}</p>
         </div>
-        {!quote.tax_included && !quote.show_tax_breakdown && (
-          <p className="text-right text-xs text-[#6b5c4d]">未含稅，稅另計</p>
-        )}
-        {quote.tax_included && !quote.show_tax_breakdown && (
-          <p className="text-right text-xs text-[#6b5c4d]">含稅</p>
+      )}
+
+      <ul className="space-y-1.5">
+        {termLines.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
+
+      {paymentLines.length > 0 && (
+        <div
+          className="space-y-1.5 border border-black bg-[#f7f7f7] px-3 py-2.5"
+          style={{ borderColor: BORDER }}
+        >
+          <p className="font-bold">{paymentTitle}</p>
+          {paymentLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[#333]">
+        承蒙惠顧，下列工項經貴府同意施作，請於下方簽名確認。
+      </p>
+
+      <div className="space-y-3">
+        <SignBox left="業主代表：" right="（以下簡稱甲方）" summary />
+        <SignBox
+          left={`設計業務：${company}${profile?.phone ? `　${profile.phone}` : ""}`}
+          right="（以下簡稱乙方）"
+          summary
+        />
+        {quote.show_seller_tax_id && quote.seller_tax_id && (
+          <p className="text-[9px] text-[#666]">乙方統編：{quote.seller_tax_id}</p>
         )}
       </div>
     </div>
   );
 }
 
-function FooterBlock({ quote, profile }: { quote: Partial<Quote>; profile?: Partial<Profile> | null }) {
+function SignBox({
+  left,
+  right,
+  summary = false,
+}: {
+  left: string;
+  right: string;
+  summary?: boolean;
+}) {
   return (
-    <div className="mt-8 space-y-3 border-t border-[#e8dfd3] pt-4 text-xs leading-relaxed break-words text-[#6b5c4d]">
-      {quote.note && (
-        <div>
-          <p className="font-semibold text-[#3d342b]">備註</p>
-          <p className="whitespace-pre-wrap break-words">{quote.note}</p>
-        </div>
-      )}
-      {quote.terms && (
-        <div>
-          <p className="font-semibold text-[#3d342b]">條款</p>
-          <p className="whitespace-pre-wrap break-words">{quote.terms}</p>
-        </div>
-      )}
-      {quote.show_seller_tax_id && quote.seller_tax_id && <p>賣方統編 {quote.seller_tax_id}</p>}
-      {profile?.phone && <p>聯絡 {profile.phone}</p>}
+    <div
+      className={`flex items-end justify-between border border-black ${
+        summary ? "min-h-[2.75rem] px-3 py-2" : "min-h-[2rem] px-2 py-1.5"
+      }`}
+      style={{ borderColor: BORDER }}
+    >
+      <span className="pr-2">{left}</span>
+      <span className="shrink-0 text-[#444]">{right}</span>
     </div>
   );
 }
