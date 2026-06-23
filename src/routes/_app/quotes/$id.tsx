@@ -52,6 +52,15 @@ function QuoteEditorPage() {
   const [lines, setLines] = useState<QuoteLine[]>([]);
   const [kw, setKw] = useState("");
   const [previewFull, setPreviewFull] = useState(false);
+
+  useEffect(() => {
+    if (!previewFull) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [previewFull]);
   const [exporting, setExporting] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -491,7 +500,9 @@ function QuoteEditorPage() {
 
       <div className="quote-editor-layout grid min-w-0 items-stretch gap-5 lg:grid-cols-2">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <div className={`quote-editor-preview-col min-w-0 ${tab === "edit" ? "hidden lg:block" : "block"}`}>
+        <div
+          className={`quote-editor-preview-col min-w-0 ${tab === "edit" ? "hidden lg:block" : "block"} ${previewFull ? "hidden" : ""}`}
+        >
           <div className="quote-editor-sticky">
             <QuotePreviewPane className="quote-editor-pan flex w-full">
               <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
@@ -501,16 +512,27 @@ function QuoteEditorPage() {
       </div>
 
       {previewFull && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/50 p-2">
-          <div className="flex shrink-0 justify-end pb-1">
-            <button type="button" onClick={() => setPreviewFull(false)} className="rounded-full bg-white p-2"><X className="h-5 w-5" /></button>
+        <div className="quote-preview-modal fixed inset-0 z-50 flex flex-col bg-stone-900/97 p-2">
+          <div className="flex shrink-0 items-center justify-end pb-1">
+            <button
+              type="button"
+              onClick={() => setPreviewFull(false)}
+              className="rounded-full bg-white p-2 shadow-sm"
+              aria-label="關閉預覽"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <QuotePreviewPane fullscreen className="min-h-0 flex-1">
+          <QuotePreviewPane fullscreen className="flex min-h-0 w-full flex-1 flex-col">
             <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
           </QuotePreviewPane>
-          <div className="mx-auto mt-3 flex gap-2">
-            <button type="button" onClick={doExport} className="rounded-full bg-white px-5 py-2 text-sm font-semibold">下載 PDF</button>
-            <button type="button" onClick={doShare} className="rounded-full bg-[#06C755] px-5 py-2 text-sm font-semibold text-white">LINE 分享</button>
+          <div className="mx-auto mt-2 flex shrink-0 gap-2 pb-1">
+            <button type="button" onClick={doExport} className="rounded-full bg-white px-5 py-2 text-sm font-semibold shadow-sm">
+              下載 PDF
+            </button>
+            <button type="button" onClick={doShare} className="rounded-full bg-[#06C755] px-5 py-2 text-sm font-semibold text-white shadow-sm">
+              LINE 分享
+            </button>
           </div>
         </div>
       )}

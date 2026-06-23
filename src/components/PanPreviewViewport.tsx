@@ -1,8 +1,13 @@
 import type { ReactNode, PointerEvent as ReactPointerEvent, Ref } from "react";
-import { forwardRef, useCallback, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { Move } from "lucide-react";
 
-/** 可拖曳平移＋捲動的預覽視窗（電腦拖移、手機滑動） */
+export type PanContentSize = {
+  width: number;
+  height: number;
+};
+
+/** 可拖曳平移＋捲動的預覽視窗（滑鼠拖移、手指滑動皆透過 scroll 平移） */
 export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
   {
     children,
@@ -10,14 +15,14 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
     hint = "拖曳或滑動瀏覽完整報價",
     actions,
     pager,
-    enablePan = true,
+    contentSize,
   }: {
     children: ReactNode;
     className?: string;
     hint?: string;
     actions?: ReactNode;
     pager?: ReactNode;
-    enablePan?: boolean;
+    contentSize?: PanContentSize;
   },
   ref: Ref<HTMLDivElement>,
 ) {
@@ -35,21 +40,26 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
     [ref],
   );
 
+  const panBy = useCallback((dx: number, dy: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft -= dx;
+    el.scrollTop -= dy;
+  }, []);
+
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!enablePan || e.button !== 0) return;
+    if (e.button !== 0) return;
     dragging.current = true;
     setIsDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
-  }, [enablePan]);
+  }, []);
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!enablePan || !dragging.current || !scrollerRef.current) return;
-    const el = scrollerRef.current;
-    el.scrollLeft -= e.clientX - lastPos.current.x;
-    el.scrollTop -= e.clientY - lastPos.current.y;
+    if (!dragging.current) return;
+    panBy(e.clientX - lastPos.current.x, e.clientY - lastPos.current.y);
     lastPos.current = { x: e.clientX, y: e.clientY };
-  }, [enablePan]);
+  }, [panBy]);
 
   const endDrag = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
@@ -61,6 +71,42 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
       /* already released */
     }
   }, []);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      dragging.current = true;
+      setIsDragging(true);
+      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragging.current || e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      panBy(t.clientX - lastPos.current.x, t.clientY - lastPos.current.y);
+      lastPos.current = { x: t.clientX, y: t.clientY };
+    };
+
+    const endTouch = () => {
+      dragging.current = false;
+      setIsDragging(false);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", endTouch);
+    el.addEventListener("touchcancel", endTouch);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", endTouch);
+      el.removeEventListener("touchcancel", endTouch);
+    };
+  }, [panBy]);
 
   return (
     <div className={`pan-viewport ${className}`}>
@@ -74,14 +120,23 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
       </div>
       <div
         ref={setScrollerRef}
-        className={`pan-scroller ${isDragging ? "is-dragging" : ""} ${enablePan ? "" : "pan-scroller--static"}`}
-        onPointerDown={enablePan ? onPointerDown : undefined}
-        onPointerMove={enablePan ? onPointerMove : undefined}
-        onPointerUp={enablePan ? endDrag : undefined}
-        onPointerCancel={enablePan ? endDrag : undefined}
-        onPointerLeave={enablePan ? endDrag : undefined}
+        className={`pan-scroller ${isDragging ? "is-dragging" : ""}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={endDrag}
       >
-        <div className="pan-content">{children}</div>
+        <div
+          className="pan-content"
+          style={
+            contentSize
+              ? { width: contentSize.width, height: contentSize.height }
+              : undefined
+          }
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

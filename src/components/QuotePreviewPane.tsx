@@ -4,10 +4,11 @@ import { Minus, Plus } from "lucide-react";
 import { PanPreviewViewport } from "@/components/PanPreviewViewport";
 
 const PAGE_W = 794;
-const MIN_SCALE = 0.45;
+const MIN_SCALE = 0.2;
 const MAX_SCALE = 1.5;
 const SCALE_STEP = 0.1;
 const PAGE_SCROLL_PAD = 12;
+const PAN_MARGIN = 28;
 
 function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
@@ -50,7 +51,7 @@ function QuotePagePager({
   );
 }
 
-/** 預覽區：桌面版 sticky（貼 header 下緣跟著頁面捲）+ 拖曳瀏覽 + 縮放 + 頁碼跳轉 */
+/** 預覽區：桌面版 sticky + 拖曳/滑動瀏覽 + 縮放 + 頁碼跳轉 */
 export function QuotePreviewPane({
   children,
   className = "",
@@ -61,29 +62,34 @@ export function QuotePreviewPane({
   fullscreen?: boolean;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const fitScaleRef = useRef(1);
   const scrollLockRef = useRef(false);
+  const lastCenterKeyRef = useRef("");
+  const didMobileFitRef = useRef(false);
   const [scale, setScale] = useState(1);
   const [fitWidth, setFitWidth] = useState(false);
   const [contentH, setContentH] = useState(1123);
   const [contentW, setContentW] = useState(PAGE_W);
   const [pageCount, setPageCount] = useState(0);
   const [activePage, setActivePage] = useState(0);
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
-    const measureEl = measureRef.current;
+    const scroller = scrollerRef.current;
     const contentEl = contentRef.current;
-    if (!measureEl || !contentEl) return;
+    if (!contentEl) return;
 
     const update = () => {
-      const pad = fullscreen ? 32 : 24;
-      const avail = measureEl.clientWidth - pad;
+      const pad = fullscreen ? 28 : 20;
+      const vw = scroller?.clientWidth ?? 0;
+      const vh = scroller?.clientHeight ?? 0;
+      const avail = Math.max(0, vw - pad);
       const w = contentEl.offsetWidth || PAGE_W;
       const h = contentEl.offsetHeight || contentEl.scrollHeight;
       setContentW(w);
       setContentH(h);
+      setViewport({ w: vw, h: vh });
       if (avail > 0) {
         fitScaleRef.current = clampScale(avail / w);
       }
@@ -94,11 +100,26 @@ export function QuotePreviewPane({
     };
 
     const ro = new ResizeObserver(update);
-    ro.observe(measureEl);
+    if (scroller) ro.observe(scroller);
     ro.observe(contentEl);
     update();
     return () => ro.disconnect();
   }, [children, fullscreen, fitWidth]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    setFitWidth(true);
+    setScale(fitScaleRef.current);
+  }, [fullscreen, children]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    if (!fullscreen && mq.matches && !didMobileFitRef.current) {
+      didMobileFitRef.current = true;
+      setFitWidth(true);
+      setScale(fitScaleRef.current);
+    }
+  }, [fullscreen]);
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -138,6 +159,25 @@ export function QuotePreviewPane({
     updateActive();
     return () => scroller.removeEventListener("scroll", onScroll);
   }, [pageCount, children, scale, contentW, contentH]);
+
+  const scaledW = contentW * scale;
+  const scaledH = contentH * scale;
+  const canvasW = Math.ceil(Math.max(scaledW + PAN_MARGIN * 2, viewport.w + 1));
+  const canvasH = Math.ceil(Math.max(scaledH + PAN_MARGIN * 2, viewport.h + 1));
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || !viewport.w || !viewport.h) return;
+
+    const key = `${scale}|${canvasW}|${canvasH}|${viewport.w}|${viewport.h}`;
+    if (lastCenterKeyRef.current === key) return;
+    lastCenterKeyRef.current = key;
+
+    requestAnimationFrame(() => {
+      scroller.scrollLeft = Math.max(0, (canvasW - viewport.w) / 2);
+      scroller.scrollTop = Math.max(0, (canvasH - viewport.h) / 2);
+    });
+  }, [scale, canvasW, canvasH, viewport.w, viewport.h]);
 
   const scrollToPage = useCallback((index: number) => {
     const scroller = scrollerRef.current;
@@ -194,8 +234,6 @@ export function QuotePreviewPane({
     setManualScale((s) => s + delta);
   }, [setManualScale]);
 
-  const scaledW = contentW * scale;
-  const scaledH = contentH * scale;
   const scaleLabel = `${Math.round(scale * 100)}%`;
 
   const zoomActions = (
@@ -212,7 +250,7 @@ export function QuotePreviewPane({
       <button
         type="button"
         onClick={fitToWidth}
-        className={`quote-preview-zoom-fit hidden sm:inline-flex ${fitWidth ? "is-active" : ""}`}
+        className={`quote-preview-zoom-fit ${fitWidth ? "is-active" : ""}`}
         title="適應欄寬"
       >
         適應
@@ -224,27 +262,22 @@ export function QuotePreviewPane({
     <PanPreviewViewport
       ref={scrollerRef}
       className={`${className} ${fullscreen ? "quote-editor-pan--fullscreen" : "quote-editor-pan"}`}
-      hint={pageCount > 1 ? "拖曳瀏覽 · 或點上方頁碼跳轉" : "拖曳或滑動瀏覽完整報價"}
+      hint={pageCount > 1 ? "拖曳或滑動瀏覽 · 點頁碼" : "拖曳或滑動瀏覽報價"}
+      contentSize={{ width: canvasW, height: canvasH }}
       actions={zoomActions}
       pager={
         <QuotePagePager pageCount={pageCount} activePage={activePage} onSelect={scrollToPage} />
       }
     >
-      <div
-        ref={measureRef}
-        className="quote-preview-measure w-full min-w-0"
-        onWheel={onWheel}
-      >
-        <div
-          className="quote-preview-scaled mx-auto"
-          style={{ width: scaledW, height: scaledH }}
-        >
+      <div className="quote-preview-canvas" style={{ padding: PAN_MARGIN }} onWheel={onWheel}>
+        <div className="quote-preview-scaled" style={{ width: scaledW, height: scaledH }}>
           <div
             ref={contentRef}
-            className="quote-preview-root quote-preview-pane-interactive inline-block origin-top-left"
+            className="quote-preview-root quote-preview-pane-interactive"
             style={{
               width: contentW > PAGE_W ? contentW : PAGE_W,
               transform: `scale(${scale})`,
+              transformOrigin: "0 0",
             }}
           >
             {children}
