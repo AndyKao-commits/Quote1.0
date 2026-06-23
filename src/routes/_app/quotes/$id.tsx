@@ -492,8 +492,7 @@ function QuoteEditorPage() {
       <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
         <QuotePreviewPane
-          pageScroll
-          className={`quote-editor-pan md:mx-0 ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
+          className={`quote-editor-pan md:mx-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-5.5rem)] ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
         >
           <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
         </QuotePreviewPane>

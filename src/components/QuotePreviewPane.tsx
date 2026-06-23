@@ -7,8 +7,7 @@ const PAGE_W = 794;
 const MIN_SCALE = 0.45;
 const MAX_SCALE = 1.5;
 const SCALE_STEP = 0.1;
-/** 頂部 sticky header + 預覽工具列預留空間 */
-const PREVIEW_SCROLL_OFFSET = 96;
+const PAGE_SCROLL_PAD = 12;
 
 function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
@@ -51,17 +50,15 @@ function QuotePagePager({
   );
 }
 
-/** 預覽區：原尺寸拖曳瀏覽 + 可放大縮小 */
+/** 預覽區：sticky 內拖曳瀏覽 + 縮放 + 頁碼跳轉 */
 export function QuotePreviewPane({
   children,
   className = "",
   fullscreen = false,
-  pageScroll = false,
 }: {
   children: ReactNode;
   className?: string;
   fullscreen?: boolean;
-  pageScroll?: boolean;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -106,63 +103,46 @@ export function QuotePreviewPane({
   useEffect(() => {
     const scroller = scrollerRef.current;
     const contentEl = contentRef.current;
-    const measureEl = measureRef.current;
-    if (!contentEl || pageCount <= 1) return;
+    if (!scroller || !contentEl || pageCount <= 1) return;
 
     const pages = Array.from(contentEl.querySelectorAll<HTMLElement>("[data-quote-page]"));
     if (!pages.length) return;
 
-    if (pageScroll) {
-      const updateActive = () => {
-        if (scrollLockRef.current) return;
-        let best = 0;
-        let bestScore = -Infinity;
-        const anchor = PREVIEW_SCROLL_OFFSET + 32;
-        pages.forEach((p, i) => {
-          const rect = p.getBoundingClientRect();
-          const visible = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, anchor);
-          if (visible > bestScore) {
-            bestScore = visible;
-            best = i;
-          }
-        });
-        if (bestScore > 0) setActivePage(best);
-      };
+    const updateActive = () => {
+      if (scrollLockRef.current) return;
+      const sRect = scroller.getBoundingClientRect();
+      const anchorX = sRect.left + PAGE_SCROLL_PAD;
+      const anchorY = sRect.top + PAGE_SCROLL_PAD;
 
-      const onScroll = () => requestAnimationFrame(updateActive);
-      window.addEventListener("scroll", onScroll, { passive: true });
-      measureEl?.addEventListener("scroll", onScroll, { passive: true });
-      updateActive();
-      return () => {
-        window.removeEventListener("scroll", onScroll);
-        measureEl?.removeEventListener("scroll", onScroll);
-      };
-    }
+      let best = 0;
+      let bestScore = -Infinity;
+      pages.forEach((p, i) => {
+        const r = p.getBoundingClientRect();
+        const overlapW = Math.min(r.right, sRect.right) - Math.max(r.left, sRect.left);
+        const overlapH = Math.min(r.bottom, sRect.bottom) - Math.max(r.top, sRect.top);
+        if (overlapW <= 0 || overlapH <= 0) return;
+        const area = overlapW * overlapH;
+        const dist = Math.hypot(r.left - anchorX, r.top - anchorY);
+        const score = area - dist * 0.15;
+        if (score > bestScore) {
+          bestScore = score;
+          best = i;
+        }
+      });
 
-    if (!scroller) return;
+      if (bestScore > -Infinity) setActivePage(best);
+    };
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (scrollLockRef.current) return;
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (!visible.length) return;
-        const index = pages.indexOf(visible[0].target as HTMLElement);
-        if (index >= 0) setActivePage(index);
-      },
-      { root: scroller, threshold: [0.35, 0.5, 0.65] },
-    );
-
-    pages.forEach((p) => io.observe(p));
-    return () => io.disconnect();
-  }, [pageCount, children, scale, contentW, contentH, pageScroll]);
+    const onScroll = () => requestAnimationFrame(updateActive);
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    updateActive();
+    return () => scroller.removeEventListener("scroll", onScroll);
+  }, [pageCount, children, scale, contentW, contentH]);
 
   const scrollToPage = useCallback((index: number) => {
     const scroller = scrollerRef.current;
-    const measureEl = measureRef.current;
     const contentEl = contentRef.current;
-    if (!contentEl) return;
+    if (!scroller || !contentEl) return;
 
     const page = contentEl.querySelectorAll<HTMLElement>("[data-quote-page]")[index];
     if (!page) return;
@@ -170,43 +150,19 @@ export function QuotePreviewPane({
     scrollLockRef.current = true;
     setActivePage(index);
 
-    if (pageScroll) {
-      const pageRect = page.getBoundingClientRect();
-      const targetY = window.scrollY + pageRect.top - PREVIEW_SCROLL_OFFSET;
-      window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
-
-      if (measureEl) {
-        const mRect = measureEl.getBoundingClientRect();
-        const left = measureEl.scrollLeft + (pageRect.left - mRect.left) - 12;
-        measureEl.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
-      }
-
-      window.setTimeout(() => {
-        scrollLockRef.current = false;
-      }, 700);
-      return;
-    }
-
-    if (!scroller) {
-      scrollLockRef.current = false;
-      return;
-    }
-
-    const scrollerRect = scroller.getBoundingClientRect();
     const pageRect = page.getBoundingClientRect();
-    const offsetX = pageRect.left - scrollerRect.left + scroller.scrollLeft;
-    const offsetY = pageRect.top - scrollerRect.top + scroller.scrollTop;
+    const scrollerRect = scroller.getBoundingClientRect();
 
     scroller.scrollTo({
-      left: offsetX - (scroller.clientWidth - pageRect.width) / 2,
-      top: offsetY - 12,
+      left: scroller.scrollLeft + (pageRect.left - scrollerRect.left) - PAGE_SCROLL_PAD,
+      top: scroller.scrollTop + (pageRect.top - scrollerRect.top) - PAGE_SCROLL_PAD,
       behavior: "smooth",
     });
 
     window.setTimeout(() => {
       scrollLockRef.current = false;
-    }, 700);
-  }, [pageScroll]);
+    }, 500);
+  }, []);
 
   const setManualScale = useCallback((next: number | ((prev: number) => number)) => {
     setFitWidth(false);
@@ -267,9 +223,8 @@ export function QuotePreviewPane({
   return (
     <PanPreviewViewport
       ref={scrollerRef}
-      enablePan={!pageScroll}
-      className={`${className} ${fullscreen ? "quote-editor-pan--fullscreen" : "quote-editor-pan"} ${pageScroll ? "quote-editor-pan--page-scroll" : ""}`}
-      hint={pageScroll ? (pageCount > 1 ? "點上方頁碼跳轉檢視" : "隨頁面捲動瀏覽預覽") : pageCount > 1 ? "拖曳瀏覽 · 或點上方頁碼跳轉" : "拖曳或滑動瀏覽完整報價"}
+      className={`${className} ${fullscreen ? "quote-editor-pan--fullscreen" : "quote-editor-pan"}`}
+      hint={pageCount > 1 ? "拖曳瀏覽 · 或點上方頁碼跳轉" : "拖曳或滑動瀏覽完整報價"}
       actions={zoomActions}
       pager={
         <QuotePagePager pageCount={pageCount} activePage={activePage} onSelect={scrollToPage} />
