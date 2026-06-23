@@ -50,7 +50,7 @@ function QuotePagePager({
   );
 }
 
-/** 預覽區：sticky 內拖曳瀏覽 + 縮放 + 頁碼跳轉 */
+/** 預覽區：桌面版 sticky（貼 header 下緣跟著頁面捲）+ 拖曳瀏覽 + 縮放 + 頁碼跳轉 */
 export function QuotePreviewPane({
   children,
   className = "",

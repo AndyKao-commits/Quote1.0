@@ -15,6 +15,7 @@ import {
 } from "@/lib/quotes.functions";
 import type { CatalogPackageLine } from "@/lib/quotes.types";
 import { catalogRowsToCsv, downloadCsv, parseCatalogCsv } from "@/lib/csv-import";
+import { DEMO_CATALOG_SUMMARY } from "@/lib/demo-catalog";
 import { QUOTE_LIMITS, clampText } from "@/lib/quotes.types";
 
 export const Route = createFileRoute("/_app/items")({
@@ -251,7 +252,9 @@ function ItemsPage() {
         <div className="bdg-card mt-6 border-dashed p-8 text-center">
           <Sparkles className="mx-auto h-7 w-7 text-[var(--bdg-brand)]" />
           <p className="mt-3 font-medium">項目庫還是空的</p>
-          <p className="mt-1 text-sm text-stone-500">一鍵載入 12 項常見工程示範，或匯入 CSV</p>
+          <p className="mt-1 text-sm text-stone-500">
+            一鍵載入 {DEMO_CATALOG_SUMMARY.packages} 組工種套餐＋{DEMO_CATALOG_SUMMARY.singles} 項單品示範，或匯入 CSV
+          </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             <CsvImportButton label="匯入 CSV" busy={importCsv.isPending} onFile={handleCatalogCsv} />
             {seedButton}

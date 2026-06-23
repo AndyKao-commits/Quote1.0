@@ -10,6 +10,20 @@ import {
   recordRateLimitFailure,
   shareLookupBucket,
 } from "@/lib/rate-limit.server";
+import { DEMO_CATALOG_ITEMS } from "@/lib/demo-catalog";
+
+export { DEMO_CATALOG_ITEMS };
+
+const CATALOG_PACKAGES_MIGRATION_HINT =
+  "請至 Supabase Dashboard → SQL Editor，執行專案內 supabase/add-catalog-packages.sql，完成後重新整理再試。";
+
+function throwCatalogDbError(error: { message?: string }) {
+  const msg = error.message ?? "資料庫錯誤";
+  if (msg.includes("item_type") || msg.includes("package_lines")) {
+    throw new Error(`項目庫尚未啟用套餐功能。${CATALOG_PACKAGES_MIGRATION_HINT}`);
+  }
+  throw new Error(msg);
+}
 
 const lineSchema = z.object({
   id: z.string().optional(),
@@ -59,21 +73,6 @@ function extendShareExpiry(current: string | null | undefined) {
   const base = current && new Date(current) > new Date() ? new Date(current) : new Date();
   return new Date(base.getTime() + SHARE_VALID_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
-
-export const DEMO_CATALOG_ITEMS = [
-  { name: "拆除工程", unit: "式", unit_price: 15000, category: "拆除", keywords: ["拆除", "敲除", "清運"] },
-  { name: "泥作工程", unit: "式", unit_price: 45000, category: "泥作", keywords: ["泥作", "粉刷", "地坪"] },
-  { name: "防水工程", unit: "式", unit_price: 28000, category: "防水", keywords: ["防水", "浴室", "露台"] },
-  { name: "水電配管", unit: "式", unit_price: 35000, category: "水電", keywords: ["水電", "配管", "插座"] },
-  { name: "油漆粉刷", unit: "式", unit_price: 22000, category: "油漆", keywords: ["油漆", "粉刷", "批土"] },
-  { name: "木作櫃體", unit: "尺", unit_price: 3500, category: "木作", keywords: ["木作", "櫃體", "系統櫃"] },
-  { name: "鋁窗更換", unit: "才", unit_price: 2800, category: "鋁窗", keywords: ["鋁窗", "窗戶", "氣密窗"] },
-  { name: "地坪工程", unit: "坪", unit_price: 4500, category: "地坪", keywords: ["地坪", "SPC", "超耐磨"] },
-  { name: "衛浴設備", unit: "式", unit_price: 18000, category: "衛浴", keywords: ["衛浴", "馬桶", "面盆"] },
-  { name: "廚房工程", unit: "式", unit_price: 55000, category: "廚房", keywords: ["廚房", "櫥櫃", "檯面"] },
-  { name: "設計監工", unit: "式", unit_price: 60000, category: "設計", keywords: ["設計", "監工", "圖面"] },
-  { name: "清潔收工", unit: "式", unit_price: 8000, category: "其他", keywords: ["清潔", "收工", "細清"] },
-] as const;
 
 export const getProfile = createServerFn({ method: "GET" })
   .middleware([requireQuoteAuth])
@@ -159,11 +158,11 @@ export const saveCatalogItem = createServerFn({ method: "POST" })
     };
     if (data.id) {
       const { error } = await supabase.from("catalog_items").update(row).eq("id", data.id).eq("user_id", userId);
-      if (error) throw new Error(error.message);
+      if (error) throwCatalogDbError(error);
       return { id: data.id };
     }
     const { data: inserted, error } = await supabase.from("catalog_items").insert(row).select("id").single();
-    if (error) throw new Error(error.message);
+    if (error) throwCatalogDbError(error);
     return { id: inserted.id };
   });
 
@@ -586,9 +585,18 @@ export const seedDemoCatalog = createServerFn({ method: "POST" })
       return { ok: true, added: 0, message: "示範項目已全部在項目庫中" };
     }
 
+    const packages = toInsert.filter((it) => it.item_type === "package").length;
+    const singles = toInsert.filter((it) => it.item_type === "single").length;
+    const detail =
+      packages && singles
+        ? `（${packages} 組套餐、${singles} 項單品）`
+        : packages
+          ? `（${packages} 組套餐）`
+          : "";
+
     const { error } = await supabase.from("catalog_items").insert(toInsert);
-    if (error) throw new Error(error.message);
-    return { ok: true, added: toInsert.length, message: `已載入 ${toInsert.length} 項示範項目` };
+    if (error) throwCatalogDbError(error);
+    return { ok: true, added: toInsert.length, message: `已載入 ${toInsert.length} 項示範項目${detail}` };
   });
 
 const catalogImportRow = z.object({

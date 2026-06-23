@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS public.catalog_items (
   category TEXT,
   keywords TEXT[] NOT NULL DEFAULT '{}',
   sort_order INT NOT NULL DEFAULT 0,
+  item_type TEXT NOT NULL DEFAULT 'single',
+  package_lines JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -159,3 +161,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 既有資料庫：補上項目庫套餐欄位（新庫已在 CREATE TABLE 內含）
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS item_type TEXT NOT NULL DEFAULT 'single';
+ALTER TABLE public.catalog_items
+  ADD COLUMN IF NOT EXISTS package_lines JSONB;
