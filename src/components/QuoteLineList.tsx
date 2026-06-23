@@ -15,6 +15,28 @@ function newLine(type: QuoteLine["line_type"], sort: number): QuoteLine {
   };
 }
 
+function reindex(lines: QuoteLine[]) {
+  return lines.map((l, i) => ({ ...l, sort_order: i }));
+}
+
+/** 工種列：在此工種區塊最末（下一個工種之前）插入新工種 */
+function insertGroupAfterSection(lines: QuoteLine[], groupIndex: number) {
+  let insertAt = groupIndex + 1;
+  while (insertAt < lines.length && lines[insertAt].line_type !== "group") {
+    insertAt++;
+  }
+  const next = [...lines];
+  next.splice(insertAt, 0, newLine("group", insertAt));
+  return reindex(next);
+}
+
+/** 項目列：緊接在當前列之後插入新項目 */
+function insertItemAfter(lines: QuoteLine[], index: number) {
+  const next = [...lines];
+  next.splice(index + 1, 0, newLine("item", index + 1));
+  return reindex(next);
+}
+
 function CharCount({ value, max }: { value: string; max: number }) {
   const len = Array.from(value).length;
   return (
@@ -84,7 +106,7 @@ export function QuoteLineList({
               setDragIdx(null);
               setDropIdx(null);
             }}
-            className={`bdg-card p-3 transition ${
+            className={`bdg-card relative p-3 pb-10 transition ${
               dragIdx === i
                 ? "scale-[0.99] opacity-90 ring-2 ring-[var(--bdg-brand)] shadow-md"
                 : dropIdx === i && dragIdx !== null && dragIdx !== i
@@ -187,6 +209,17 @@ export function QuoteLineList({
                 </button>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() =>
+                onChange(isGroup ? insertGroupAfterSection(lines, i) : insertItemAfter(lines, i))
+              }
+              className="quote-line-add-corner"
+              title={isGroup ? "在此工種區塊後新增工種" : "在下方新增項目"}
+              aria-label={isGroup ? "新增工種" : "新增項目"}
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
         );
       })}
@@ -208,7 +241,7 @@ export function QuoteLineList({
         </button>
       </div>
       <p className="bdg-meta leading-relaxed">
-        項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。拖曳左側可調整順序。
+        項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。拖曳左側可調整順序；卡片右下角 ＋ 可快速新增。
       </p>
     </div>
   );
