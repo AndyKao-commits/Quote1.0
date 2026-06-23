@@ -489,13 +489,13 @@ function QuoteEditorPage() {
         <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
       </div>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <QuotePreviewPane
-          className={`quote-editor-pan md:mx-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-5.5rem)] ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
-        >
-          <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
-        </QuotePreviewPane>
+        <div className={`min-w-0 ${tab === "edit" ? "hidden lg:block" : ""}`}>
+          <QuotePreviewPane className="quote-editor-pan quote-editor-sticky flex w-full">
+            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+          </QuotePreviewPane>
+        </div>
       </div>
 
       {previewFull && (
