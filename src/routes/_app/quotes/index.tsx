@@ -6,7 +6,6 @@ import { AppShell } from "@/components/BdgAppShell";
 import { listQuotes, duplicateQuote, deleteQuote, createSampleQuote } from "@/lib/quotes.functions";
 import { formatMoney } from "@/lib/quotes.types";
 import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
-import { clearSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_app/quotes/")({
   head: () => ({ meta: [{ title: "報價紀錄 — 報得過" }] }),
@@ -42,14 +41,9 @@ function QuotesPage() {
 
   return (
     <AppShell>
-      <div className="mb-5 flex items-end justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">報價紀錄</h1>
-          <p className="mt-1 text-sm text-stone-500">複製舊報價，改價再送</p>
-        </div>
-        <button type="button" onClick={() => { clearSession(); nav({ to: "/auth" }); }} className="text-xs text-stone-500 hover:text-[var(--bdg-ink)]">
-          登出
-        </button>
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold tracking-tight">報價紀錄</h1>
+        <p className="mt-1 text-sm text-stone-500">複製舊報價，改價再送</p>
       </div>
 
       {isLoading && <p className="text-sm text-stone-500">載入中…</p>}

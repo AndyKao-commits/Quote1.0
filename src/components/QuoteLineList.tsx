@@ -32,6 +32,7 @@ export function QuoteLineList({
   onChange: (lines: QuoteLine[]) => void;
 }) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dropIdx, setDropIdx] = useState<number | null>(null);
   const [noteOpen, setNoteOpen] = useState<Record<number, boolean>>({});
 
   function update(i: number, patch: Partial<QuoteLine>) {
@@ -71,21 +72,38 @@ export function QuoteLineList({
         return (
           <div
             key={`${i}-${l.id ?? "new"}`}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (dragIdx !== null) setDropIdx(i);
+            }}
+            onDragLeave={() => {
+              if (dropIdx === i) setDropIdx(null);
+            }}
             onDrop={() => {
               if (dragIdx !== null) move(dragIdx, i);
               setDragIdx(null);
+              setDropIdx(null);
             }}
             className={`bdg-card p-3 transition ${
-              dragIdx === i ? "opacity-60 ring-1 ring-[var(--bdg-brand)]" : ""
-            } ${isGroup ? "border-l-[3px] border-l-[var(--bdg-brand)]" : "ml-2 sm:ml-4"}`}
+              dragIdx === i
+                ? "scale-[0.99] opacity-90 ring-2 ring-[var(--bdg-brand)] shadow-md"
+                : dropIdx === i && dragIdx !== null && dragIdx !== i
+                  ? "ring-2 ring-[var(--bdg-brand)]/40 bg-[#fff7f3]/60"
+                  : ""
+            } ${isGroup ? "border-l-4 border-l-[var(--bdg-brand)]" : "ml-2 sm:ml-4"}`}
           >
             <div className="flex min-w-0 items-start gap-2">
               <div
                 draggable
-                onDragStart={() => setDragIdx(i)}
-                onDragEnd={() => setDragIdx(null)}
-                className="mt-1 shrink-0 cursor-grab touch-none text-stone-400 active:cursor-grabbing"
+                onDragStart={() => {
+                  setDragIdx(i);
+                  setDropIdx(null);
+                }}
+                onDragEnd={() => {
+                  setDragIdx(null);
+                  setDropIdx(null);
+                }}
+                className="quote-line-drag mt-0.5 shrink-0"
                 aria-label="拖曳排序"
                 role="button"
                 tabIndex={0}
@@ -95,9 +113,7 @@ export function QuoteLineList({
               <div className="min-w-0 flex-1 space-y-2">
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-stone-500">
-                      {isGroup ? "工種" : "項目"}
-                    </span>
+                    <span className="bdg-label mb-0">{isGroup ? "工種" : "項目"}</span>
                     <CharCount value={l.name} max={QUOTE_LIMITS.lineName} />
                   </div>
                   <textarea
@@ -106,7 +122,7 @@ export function QuoteLineList({
                     maxLength={QUOTE_LIMITS.lineName}
                     onChange={(e) => update(i, { name: e.target.value })}
                     placeholder={isGroup ? "例如：泥作工程" : "項目說明"}
-                    className="bdg-input min-h-[2.5rem] resize-y break-words"
+                      className="bdg-input min-h-[2.75rem] resize-y break-words"
                   />
                 </div>
                 {!isGroup && (
@@ -115,23 +131,23 @@ export function QuoteLineList({
                       value={l.unit}
                       onChange={(e) => update(i, { unit: e.target.value })}
                       placeholder="單位"
-                      className="bdg-input py-1.5 text-sm"
+                      className="bdg-input py-2"
                     />
                     <input
                       type="number"
                       value={l.quantity}
                       onChange={(e) => update(i, { quantity: Number(e.target.value) })}
                       placeholder="數量"
-                      className="bdg-input py-1.5 text-sm"
+                      className="bdg-input py-2"
                     />
                     <input
                       type="number"
                       value={l.unit_price}
                       onChange={(e) => update(i, { unit_price: Number(e.target.value) })}
                       placeholder="單價"
-                      className="bdg-input py-1.5 text-sm"
+                      className="bdg-input py-2"
                     />
-                    <div className="hidden text-right text-xs leading-9 text-stone-500 sm:block">
+                    <div className="bdg-meta hidden text-right leading-10 sm:block">
                       小計 {(l.quantity * l.unit_price).toLocaleString()}
                     </div>
                   </div>
@@ -139,7 +155,7 @@ export function QuoteLineList({
                 {showNote && (
                   <div>
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-stone-500">備註（PDF 顯示）</span>
+                      <span className="bdg-label mb-0">備註（PDF 顯示）</span>
                       <CharCount value={l.note ?? ""} max={QUOTE_LIMITS.lineNote} />
                     </div>
                     <textarea
@@ -148,7 +164,7 @@ export function QuoteLineList({
                       onChange={(e) => update(i, { note: e.target.value })}
                       placeholder="選填"
                       rows={2}
-                      className="bdg-input resize-y bg-stone-50/80 text-xs break-words"
+                      className="bdg-input resize-y bg-stone-50/80 break-words"
                     />
                   </div>
                 )}
@@ -191,7 +207,7 @@ export function QuoteLineList({
           <Plus className="h-3.5 w-3.5" /> 項目
         </button>
       </div>
-      <p className="text-[11px] leading-relaxed text-stone-500">
+      <p className="bdg-meta leading-relaxed">
         項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。拖曳左側可調整順序。
       </p>
     </div>

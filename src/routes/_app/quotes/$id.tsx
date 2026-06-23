@@ -173,12 +173,17 @@ function QuoteEditorPage() {
     const q = kw.trim().toLowerCase();
     if (!q) return [];
     return (catalog as any[])
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          (c.keywords ?? []).some((k: string) => k.toLowerCase().includes(q)) ||
-          (c.category ?? "").toLowerCase().includes(q),
-      )
+      .filter((c) => {
+        const hay = [
+          c.name,
+          c.category ?? "",
+          ...(c.keywords ?? []),
+          ...(c.package_lines ?? []).map((l: { name: string }) => l.name),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      })
       .slice(0, 5);
   }, [catalog, kw]);
 
@@ -285,7 +290,7 @@ function QuoteEditorPage() {
     <div className="space-y-5">
       <div className="bdg-card p-4">
         <p className="bdg-section-title mb-2">學習範例</p>
-        <p className="mb-3 text-xs text-stone-500">載入完整範例報價，觀察欄位與 PDF 排版（可再修改後儲存）。</p>
+        <p className="bdg-meta mb-3">載入完整範例報價，觀察欄位與 PDF 排版（可再修改後儲存）。</p>
         <div className="flex flex-wrap gap-2">
           {SAMPLE_QUOTES.map((s) => (
             <button
@@ -352,22 +357,49 @@ function QuoteEditorPage() {
                 key={c.id}
                 type="button"
                 onClick={() => {
-                  setLines([
-                    ...lines,
-                    {
-                      sort_order: lines.length,
-                      line_type: "item" as const,
+                  if (c.item_type === "package" && Array.isArray(c.package_lines) && c.package_lines.length > 0) {
+                    const base = lines.length;
+                    const next = [...lines];
+                    next.push({
+                      sort_order: base,
+                      line_type: "group" as const,
                       name: c.name,
-                      unit: c.unit,
-                      quantity: 1,
-                      unit_price: Number(c.unit_price),
-                    },
-                  ]);
+                      unit: "—",
+                      quantity: 0,
+                      unit_price: 0,
+                    });
+                    c.package_lines.forEach((pl: { name: string; unit: string; quantity: number; unit_price: number }, i: number) => {
+                      next.push({
+                        sort_order: base + 1 + i,
+                        line_type: "item" as const,
+                        name: pl.name,
+                        unit: pl.unit,
+                        quantity: Number(pl.quantity) || 1,
+                        unit_price: Number(pl.unit_price),
+                      });
+                    });
+                    setLines(next);
+                  } else {
+                    setLines([
+                      ...lines,
+                      {
+                        sort_order: lines.length,
+                        line_type: "item" as const,
+                        name: c.name,
+                        unit: c.unit,
+                        quantity: 1,
+                        unit_price: Number(c.unit_price),
+                      },
+                    ]);
+                  }
                   setKw("");
                 }}
                 className="flex w-full justify-between border-b border-[var(--bdg-line)] px-3 py-2.5 text-left text-sm last:border-0 hover:bg-stone-50"
               >
-                <span className="truncate pr-2">{c.name}</span>
+                <span className="truncate pr-2">
+                  {c.name}
+                  {c.item_type === "package" ? "（套餐）" : ""}
+                </span>
                 <span className="shrink-0 text-stone-500">NT${Number(c.unit_price).toLocaleString()}/{c.unit}</span>
               </button>
             ))}
@@ -460,7 +492,8 @@ function QuoteEditorPage() {
       <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:items-start">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
         <QuotePreviewPane
-          className={`quote-editor-pan md:mx-0 lg:sticky lg:top-20 ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
+          pageScroll
+          className={`quote-editor-pan md:mx-0 ${tab === "edit" ? "hidden lg:flex" : "flex"}`}
         >
           <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
         </QuotePreviewPane>
@@ -486,9 +519,9 @@ function QuoteEditorPage() {
 
 function Field({ label, value, onChange, multiline, type = "text", hint, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean; type?: string; hint?: string; rows?: number }) {
   return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-xs font-medium text-stone-500">{label}</span>
-      {hint && <span className="mb-1 block text-[11px] text-stone-400">{hint}</span>}
+    <label className="block text-base">
+      <span className="bdg-label">{label}</span>
+      {hint && <span className="bdg-hint mb-1 block">{hint}</span>}
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className="bdg-input resize-y break-words" />
       ) : (

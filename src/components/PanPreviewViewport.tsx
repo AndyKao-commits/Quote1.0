@@ -1,26 +1,42 @@
-import type { ReactNode, PointerEvent as ReactPointerEvent } from "react";
-import { useCallback, useRef, useState } from "react";
+import type { ReactNode, PointerEvent as ReactPointerEvent, Ref } from "react";
+import { forwardRef, useCallback, useRef, useState } from "react";
 import { Move } from "lucide-react";
 
 /** 可拖曳平移＋捲動的預覽視窗（電腦拖移、手機滑動） */
-export function PanPreviewViewport({
-  children,
-  className = "",
-  hint = "拖曳或滑動瀏覽完整報價",
-  actions,
-}: {
-  children: ReactNode;
-  className?: string;
-  hint?: string;
-  actions?: ReactNode;
-}) {
+export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
+  {
+    children,
+    className = "",
+    hint = "拖曳或滑動瀏覽完整報價",
+    actions,
+    pager,
+    enablePan = true,
+  }: {
+    children: ReactNode;
+    className?: string;
+    hint?: string;
+    actions?: ReactNode;
+    pager?: ReactNode;
+    enablePan?: boolean;
+  },
+  ref: Ref<HTMLDivElement>,
+) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
+  const setScrollerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      scrollerRef.current = el;
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref],
+  );
+
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (!enablePan || e.button !== 0) return;
     dragging.current = true;
     setIsDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
@@ -48,6 +64,7 @@ export function PanPreviewViewport({
 
   return (
     <div className={`pan-viewport ${className}`}>
+      {pager ? <div className="pan-pager">{pager}</div> : null}
       <div className={`pan-hint ${actions ? "pan-hint--with-actions" : ""}`}>
         <div className="pan-hint-center">
           <Move className="h-3.5 w-3.5 shrink-0" />
@@ -56,16 +73,16 @@ export function PanPreviewViewport({
         {actions ? <div className="pan-hint-actions">{actions}</div> : null}
       </div>
       <div
-        ref={scrollerRef}
-        className={`pan-scroller ${isDragging ? "is-dragging" : ""}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onPointerLeave={endDrag}
+        ref={setScrollerRef}
+        className={`pan-scroller ${isDragging ? "is-dragging" : ""} ${enablePan ? "" : "pan-scroller--static"}`}
+        onPointerDown={enablePan ? onPointerDown : undefined}
+        onPointerMove={enablePan ? onPointerMove : undefined}
+        onPointerUp={enablePan ? endDrag : undefined}
+        onPointerCancel={enablePan ? endDrag : undefined}
+        onPointerLeave={enablePan ? endDrag : undefined}
       >
         <div className="pan-content">{children}</div>
       </div>
     </div>
   );
-}
+});

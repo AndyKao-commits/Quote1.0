@@ -120,27 +120,42 @@ export const listCatalogItems = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+const catalogPackageLineSchema = z.object({
+  name: z.string().min(1).max(QUOTE_LIMITS.lineName),
+  unit: z.string(),
+  quantity: z.number().min(0),
+  unit_price: z.number().min(0),
+});
+
 export const saveCatalogItem = createServerFn({ method: "POST" })
   .middleware([requireQuoteAuth])
   .inputValidator(
     z.object({
       id: z.string().optional(),
       name: z.string().min(1).max(QUOTE_LIMITS.catalogName),
-      unit: z.string(),
-      unit_price: z.number(),
+      unit: z.string().optional(),
+      unit_price: z.number().optional(),
       category: z.string().nullable().optional(),
       keywords: z.array(z.string()).optional(),
+      item_type: z.enum(["single", "package"]).default("single"),
+      package_lines: z.array(catalogPackageLineSchema).optional(),
     }),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context as { supabase: any; userId: string };
+    const isPackage = data.item_type === "package";
+    if (isPackage && (!data.package_lines || data.package_lines.length === 0)) {
+      throw new Error("套餐至少需要一筆項目");
+    }
     const row = {
       user_id: userId,
       name: data.name,
-      unit: data.unit,
-      unit_price: data.unit_price,
+      unit: isPackage ? "式" : (data.unit ?? "式"),
+      unit_price: isPackage ? 0 : (data.unit_price ?? 0),
       category: data.category ?? null,
       keywords: data.keywords ?? [],
+      item_type: data.item_type,
+      package_lines: isPackage ? data.package_lines : null,
     };
     if (data.id) {
       const { error } = await supabase.from("catalog_items").update(row).eq("id", data.id).eq("user_id", userId);
@@ -160,6 +175,16 @@ export const deleteCatalogItem = createServerFn({ method: "POST" })
     const { error } = await supabase.from("catalog_items").delete().eq("id", data.id).eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const bulkDeleteCatalogItems = createServerFn({ method: "POST" })
+  .middleware([requireQuoteAuth])
+  .inputValidator(z.object({ ids: z.array(z.string()).min(1).max(200) }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context as { supabase: any; userId: string };
+    const { error } = await supabase.from("catalog_items").delete().eq("user_id", userId).in("id", data.ids);
+    if (error) throw new Error(error.message);
+    return { ok: true, deleted: data.ids.length };
   });
 
 export const listQuotes = createServerFn({ method: "GET" })

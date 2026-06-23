@@ -37,7 +37,7 @@ export function QuoteDocument({
 
   if (preview) {
     return (
-      <div className={preview ? "space-y-1.5" : undefined}>
+      <div className="quote-preview-pages">
         {pages.map((page, pi) => (
           <QuotePage
             key={pi}

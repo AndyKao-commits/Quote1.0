@@ -32,6 +32,13 @@ export interface Profile {
   seller_tax_id: string | null;
 }
 
+export interface CatalogPackageLine {
+  name: string;
+  unit: string;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface CatalogItem {
   id: string;
   user_id: string;
@@ -41,6 +48,8 @@ export interface CatalogItem {
   category: string | null;
   keywords: string[];
   sort_order: number;
+  item_type?: "single" | "package";
+  package_lines?: CatalogPackageLine[] | null;
 }
 
 export type QuoteLineType = "group" | "item";

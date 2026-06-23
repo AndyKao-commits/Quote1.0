@@ -16,22 +16,61 @@ function roundScale(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function QuotePagePager({
+  pageCount,
+  activePage,
+  onSelect,
+}: {
+  pageCount: number;
+  activePage: number;
+  onSelect: (index: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+
+  return (
+    <div className="quote-preview-pager">
+      <span className="quote-preview-pager-label">頁面</span>
+      <div className="quote-preview-pager-list" role="tablist" aria-label="報價頁面">
+        {Array.from({ length: pageCount }, (_, i) => (
+          <button
+            key={i}
+            type="button"
+            role="tab"
+            onClick={() => onSelect(i)}
+            className={`quote-preview-pager-btn ${activePage === i ? "is-active" : ""}`}
+            aria-label={`第 ${i + 1} 頁`}
+            aria-selected={activePage === i}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** 預覽區：原尺寸拖曳瀏覽 + 可放大縮小 */
 export function QuotePreviewPane({
   children,
   className = "",
   fullscreen = false,
+  pageScroll = false,
 }: {
   children: ReactNode;
   className?: string;
   fullscreen?: boolean;
+  pageScroll?: boolean;
 }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const fitScaleRef = useRef(1);
   const [scale, setScale] = useState(1);
   const [fitWidth, setFitWidth] = useState(false);
   const [contentH, setContentH] = useState(1123);
+  const [contentW, setContentW] = useState(PAGE_W);
+  const [pageCount, setPageCount] = useState(0);
+  const [activePage, setActivePage] = useState(0);
 
   useEffect(() => {
     const measureEl = measureRef.current;
@@ -41,10 +80,14 @@ export function QuotePreviewPane({
     const update = () => {
       const pad = fullscreen ? 32 : 24;
       const avail = measureEl.clientWidth - pad;
+      const w = contentEl.offsetWidth || PAGE_W;
+      const h = contentEl.offsetHeight || contentEl.scrollHeight;
+      setContentW(w);
+      setContentH(h);
       if (avail > 0) {
-        fitScaleRef.current = clampScale(avail / PAGE_W);
+        fitScaleRef.current = clampScale(avail / w);
       }
-      setContentH(contentEl.offsetHeight || contentEl.scrollHeight);
+      setPageCount(contentEl.querySelectorAll("[data-quote-page]").length);
       if (fitWidth) {
         setScale(fitScaleRef.current);
       }
@@ -56,6 +99,66 @@ export function QuotePreviewPane({
     update();
     return () => ro.disconnect();
   }, [children, fullscreen, fitWidth]);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const contentEl = contentRef.current;
+    if (!contentEl || pageCount <= 1) return;
+
+    const pages = Array.from(contentEl.querySelectorAll<HTMLElement>("[data-quote-page]"));
+    if (!pages.length) return;
+
+    const root = pageScroll ? null : scroller;
+    if (!pageScroll && !scroller) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (!visible.length) return;
+        const index = pages.indexOf(visible[0].target as HTMLElement);
+        if (index >= 0) setActivePage(index);
+      },
+      {
+        root,
+        threshold: [0.35, 0.5, 0.65],
+        rootMargin: pageScroll ? "-20% 0px -55% 0px" : "0px",
+      },
+    );
+
+    pages.forEach((p) => io.observe(p));
+    return () => io.disconnect();
+  }, [pageCount, children, scale, contentW, contentH, pageScroll]);
+
+  const scrollToPage = useCallback((index: number) => {
+    const scroller = scrollerRef.current;
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    const page = contentEl.querySelectorAll<HTMLElement>("[data-quote-page]")[index];
+    if (!page) return;
+
+    setActivePage(index);
+
+    if (pageScroll) {
+      page.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    if (!scroller) return;
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const pageRect = page.getBoundingClientRect();
+    const offsetX = pageRect.left - scrollerRect.left + scroller.scrollLeft;
+    const offsetY = pageRect.top - scrollerRect.top + scroller.scrollTop;
+
+    scroller.scrollTo({
+      left: offsetX - (scroller.clientWidth - pageRect.width) / 2,
+      top: offsetY - 12,
+      behavior: "smooth",
+    });
+  }, [pageScroll]);
 
   const setManualScale = useCallback((next: number | ((prev: number) => number)) => {
     setFitWidth(false);
@@ -87,7 +190,7 @@ export function QuotePreviewPane({
     setManualScale((s) => s + delta);
   }, [setManualScale]);
 
-  const scaledW = PAGE_W * scale;
+  const scaledW = contentW * scale;
   const scaledH = contentH * scale;
   const scaleLabel = `${Math.round(scale * 100)}%`;
 
@@ -115,9 +218,14 @@ export function QuotePreviewPane({
 
   return (
     <PanPreviewViewport
-      className={`${className} ${fullscreen ? "quote-editor-pan--fullscreen" : "quote-editor-pan"}`}
-      hint="拖曳或滑動瀏覽完整報價"
+      ref={scrollerRef}
+      enablePan={!pageScroll}
+      className={`${className} ${fullscreen ? "quote-editor-pan--fullscreen" : "quote-editor-pan"} ${pageScroll ? "quote-editor-pan--page-scroll" : ""}`}
+      hint={pageScroll ? (pageCount > 1 ? "點上方頁碼跳轉檢視" : "隨頁面捲動瀏覽預覽") : pageCount > 1 ? "拖曳瀏覽 · 或點上方頁碼跳轉" : "拖曳或滑動瀏覽完整報價"}
       actions={zoomActions}
+      pager={
+        <QuotePagePager pageCount={pageCount} activePage={activePage} onSelect={scrollToPage} />
+      }
     >
       <div
         ref={measureRef}
@@ -130,9 +238,9 @@ export function QuotePreviewPane({
         >
           <div
             ref={contentRef}
-            className="quote-preview-root inline-block origin-top-left"
+            className="quote-preview-root quote-preview-pane-interactive inline-block origin-top-left"
             style={{
-              width: PAGE_W,
+              width: contentW > PAGE_W ? contentW : PAGE_W,
               transform: `scale(${scale})`,
             }}
           >
