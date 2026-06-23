@@ -762,6 +762,9 @@
     padding: 0;
     overflow: visible;
   }
+  .quote-preview-pane-interactive [data-quote-page] {
+    scroll-margin-top: 6rem;
+  }
   .quote-editor-pan--page-scroll {
     min-height: auto;
   }

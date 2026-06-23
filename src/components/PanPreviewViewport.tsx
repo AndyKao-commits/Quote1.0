@@ -41,15 +41,15 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
     setIsDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
+  }, [enablePan]);
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current || !scrollerRef.current) return;
+    if (!enablePan || !dragging.current || !scrollerRef.current) return;
     const el = scrollerRef.current;
     el.scrollLeft -= e.clientX - lastPos.current.x;
     el.scrollTop -= e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-  }, []);
+  }, [enablePan]);
 
   const endDrag = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;

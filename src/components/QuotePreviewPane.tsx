@@ -7,6 +7,8 @@ const PAGE_W = 794;
 const MIN_SCALE = 0.45;
 const MAX_SCALE = 1.5;
 const SCALE_STEP = 0.1;
+/** 頂部 sticky header + 預覽工具列預留空間 */
+const PREVIEW_SCROLL_OFFSET = 96;
 
 function clampScale(value: number) {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
@@ -65,6 +67,7 @@ export function QuotePreviewPane({
   const measureRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const fitScaleRef = useRef(1);
+  const scrollLockRef = useRef(false);
   const [scale, setScale] = useState(1);
   const [fitWidth, setFitWidth] = useState(false);
   const [contentH, setContentH] = useState(1123);
@@ -103,16 +106,44 @@ export function QuotePreviewPane({
   useEffect(() => {
     const scroller = scrollerRef.current;
     const contentEl = contentRef.current;
+    const measureEl = measureRef.current;
     if (!contentEl || pageCount <= 1) return;
 
     const pages = Array.from(contentEl.querySelectorAll<HTMLElement>("[data-quote-page]"));
     if (!pages.length) return;
 
-    const root = pageScroll ? null : scroller;
-    if (!pageScroll && !scroller) return;
+    if (pageScroll) {
+      const updateActive = () => {
+        if (scrollLockRef.current) return;
+        let best = 0;
+        let bestScore = -Infinity;
+        const anchor = PREVIEW_SCROLL_OFFSET + 32;
+        pages.forEach((p, i) => {
+          const rect = p.getBoundingClientRect();
+          const visible = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, anchor);
+          if (visible > bestScore) {
+            bestScore = visible;
+            best = i;
+          }
+        });
+        if (bestScore > 0) setActivePage(best);
+      };
+
+      const onScroll = () => requestAnimationFrame(updateActive);
+      window.addEventListener("scroll", onScroll, { passive: true });
+      measureEl?.addEventListener("scroll", onScroll, { passive: true });
+      updateActive();
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+        measureEl?.removeEventListener("scroll", onScroll);
+      };
+    }
+
+    if (!scroller) return;
 
     const io = new IntersectionObserver(
       (entries) => {
+        if (scrollLockRef.current) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
@@ -120,11 +151,7 @@ export function QuotePreviewPane({
         const index = pages.indexOf(visible[0].target as HTMLElement);
         if (index >= 0) setActivePage(index);
       },
-      {
-        root,
-        threshold: [0.35, 0.5, 0.65],
-        rootMargin: pageScroll ? "-20% 0px -55% 0px" : "0px",
-      },
+      { root: scroller, threshold: [0.35, 0.5, 0.65] },
     );
 
     pages.forEach((p) => io.observe(p));
@@ -133,20 +160,37 @@ export function QuotePreviewPane({
 
   const scrollToPage = useCallback((index: number) => {
     const scroller = scrollerRef.current;
+    const measureEl = measureRef.current;
     const contentEl = contentRef.current;
     if (!contentEl) return;
 
     const page = contentEl.querySelectorAll<HTMLElement>("[data-quote-page]")[index];
     if (!page) return;
 
+    scrollLockRef.current = true;
     setActivePage(index);
 
     if (pageScroll) {
-      page.scrollIntoView({ behavior: "smooth", block: "start" });
+      const pageRect = page.getBoundingClientRect();
+      const targetY = window.scrollY + pageRect.top - PREVIEW_SCROLL_OFFSET;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+
+      if (measureEl) {
+        const mRect = measureEl.getBoundingClientRect();
+        const left = measureEl.scrollLeft + (pageRect.left - mRect.left) - 12;
+        measureEl.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+      }
+
+      window.setTimeout(() => {
+        scrollLockRef.current = false;
+      }, 700);
       return;
     }
 
-    if (!scroller) return;
+    if (!scroller) {
+      scrollLockRef.current = false;
+      return;
+    }
 
     const scrollerRect = scroller.getBoundingClientRect();
     const pageRect = page.getBoundingClientRect();
@@ -158,6 +202,10 @@ export function QuotePreviewPane({
       top: offsetY - 12,
       behavior: "smooth",
     });
+
+    window.setTimeout(() => {
+      scrollLockRef.current = false;
+    }, 700);
   }, [pageScroll]);
 
   const setManualScale = useCallback((next: number | ((prev: number) => number)) => {
