@@ -8,7 +8,7 @@ import { clearSession } from "@/lib/session";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const nav = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({ select: (s) => s.location.pathname }) ?? "";
   const isActive = (p: string) => pathname.startsWith(p);
   const profileFn = useServerFn(getProfile);
   const { data: profile } = useQuery({

@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
 import { listQuotes, duplicateQuote, deleteQuote, createSampleQuote } from "@/lib/quotes.functions";
 import { formatMoney } from "@/lib/quotes.types";
 import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
+import { clearSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_app/quotes/")({
   head: () => ({ meta: [{ title: "報價紀錄 — 報得過" }] }),
@@ -19,10 +21,21 @@ function QuotesPage() {
   const dupFn = useServerFn(duplicateQuote);
   const delFn = useServerFn(deleteQuote);
   const sampleFn = useServerFn(createSampleQuote);
-  const { data: quotes = [], isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["quotes"],
     queryFn: () => listFn({}) as Promise<any[]>,
+    retry: 1,
   });
+  const quotes = Array.isArray(data) ? data.filter((q) => q && typeof q.id === "string") : [];
+
+  useEffect(() => {
+    if (!isError || !error) return;
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.includes("登入") || msg.includes("過期")) {
+      clearSession();
+      nav({ to: "/auth" });
+    }
+  }, [isError, error, nav]);
 
   const dup = useMutation({
     mutationFn: (id: string) => dupFn({ data: { id } }),
@@ -48,7 +61,31 @@ function QuotesPage() {
 
       {isLoading && <p className="text-sm text-stone-500">載入中…</p>}
 
-      {!isLoading && quotes.length === 0 && (
+      {isError && !isLoading && (
+        <div className="bdg-card p-6 text-center">
+          <p className="text-sm text-stone-700">無法載入報價紀錄</p>
+          <p className="mt-1 text-xs text-stone-500">
+            {error instanceof Error ? error.message : "請稍後再試"}
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <button type="button" onClick={() => refetch()} className="bdg-btn bdg-btn-primary text-sm">
+              重試
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearSession();
+                nav({ to: "/auth" });
+              }}
+              className="bdg-btn bdg-btn-secondary text-sm"
+            >
+              重新登入
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !isError && quotes.length === 0 && (
         <div className="bdg-card p-10 text-center">
           <p className="text-stone-500">還沒有報價單</p>
           <p className="mt-2 text-xs text-stone-400">可先開啟範例報價學習，或直接建立空白報價</p>
@@ -71,6 +108,7 @@ function QuotesPage() {
         </div>
       )}
 
+      {!isError && (
       <ul className="space-y-2">
         {quotes.map((q: any) => (
           <li key={q.id} className="bdg-card flex items-center gap-3 p-4">
@@ -89,6 +127,7 @@ function QuotesPage() {
           </li>
         ))}
       </ul>
+      )}
       {dup.isPending && <p className="mt-2 flex items-center gap-1 text-xs text-stone-500"><Loader2 className="h-3 w-3 animate-spin" /> 複製中…</p>}
     </AppShell>
   );
