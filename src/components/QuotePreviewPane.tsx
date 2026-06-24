@@ -18,6 +18,32 @@ function roundScale(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function measurePreviewContent(contentEl: HTMLElement) {
+  const pages = contentEl.querySelectorAll<HTMLElement>("[data-quote-page]");
+  const pagesWrap = contentEl.querySelector<HTMLElement>(".quote-preview-pages");
+  const pageCount = pages.length;
+
+  let w = contentEl.offsetWidth || PAGE_W;
+  let h = contentEl.scrollHeight || contentEl.offsetHeight || 1123;
+
+  if (pagesWrap) {
+    w = Math.max(w, pagesWrap.scrollWidth, pagesWrap.offsetWidth);
+    h = Math.max(h, pagesWrap.scrollHeight, pagesWrap.offsetHeight);
+  }
+
+  if (pageCount > 0) {
+    let stacked = 0;
+    pages.forEach((page) => {
+      stacked += page.offsetHeight;
+    });
+    // flex/grid gap between pages (~6px / 12px)
+    stacked += Math.max(0, pageCount - 1) * 6;
+    h = Math.max(h, stacked);
+  }
+
+  return { w, h, pageCount };
+}
+
 function QuotePagePager({
   pageCount,
   activePage,
@@ -85,32 +111,41 @@ export function QuotePreviewPane({
       const vw = scroller?.clientWidth ?? 0;
       const vh = scroller?.clientHeight ?? 0;
       const avail = Math.max(0, vw - pad);
-      const w = contentEl.offsetWidth || PAGE_W;
-      const h = contentEl.offsetHeight || contentEl.scrollHeight;
+      const { w, h, pageCount: count } = measurePreviewContent(contentEl);
       setContentW(w);
       setContentH(h);
       setViewport({ w: vw, h: vh });
+      setPageCount(count);
       if (avail > 0) {
         fitScaleRef.current = clampScale(avail / w);
       }
-      setPageCount(contentEl.querySelectorAll("[data-quote-page]").length);
       if (fitWidth) {
         setScale(fitScaleRef.current);
       }
     };
 
-    const ro = new ResizeObserver(update);
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(update);
+    });
     if (scroller) ro.observe(scroller);
     ro.observe(contentEl);
+    const pagesWrap = contentEl.querySelector(".quote-preview-pages");
+    if (pagesWrap) ro.observe(pagesWrap);
+    contentEl.querySelectorAll("[data-quote-page]").forEach((page) => ro.observe(page));
     update();
-    return () => ro.disconnect();
+    const t = window.setTimeout(update, 0);
+    return () => {
+      window.clearTimeout(t);
+      ro.disconnect();
+    };
   }, [children, fullscreen, fitWidth]);
 
   useEffect(() => {
     if (!fullscreen) return;
     setFitWidth(true);
     setScale(fitScaleRef.current);
-  }, [fullscreen, children]);
+    lastCenterKeyRef.current = "";
+  }, [fullscreen]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -174,8 +209,14 @@ export function QuotePreviewPane({
     lastCenterKeyRef.current = key;
 
     requestAnimationFrame(() => {
-      scroller.scrollLeft = Math.max(0, (canvasW - viewport.w) / 2);
-      scroller.scrollTop = Math.max(0, (canvasH - viewport.h) / 2);
+      const docFitsW = scaledW + PAN_MARGIN * 2 <= viewport.w;
+      const docFitsH = scaledH + PAN_MARGIN * 2 <= viewport.h;
+      scroller.scrollLeft = docFitsW
+        ? Math.max(0, (canvasW - viewport.w) / 2)
+        : PAN_MARGIN;
+      scroller.scrollTop = docFitsH
+        ? Math.max(0, (canvasH - viewport.h) / 2)
+        : PAN_MARGIN;
     });
   }, [scale, canvasW, canvasH, viewport.w, viewport.h]);
 
@@ -276,6 +317,7 @@ export function QuotePreviewPane({
             className="quote-preview-root quote-preview-pane-interactive"
             style={{
               width: contentW > PAGE_W ? contentW : PAGE_W,
+              height: contentH,
               transform: `scale(${scale})`,
               transformOrigin: "0 0",
             }}

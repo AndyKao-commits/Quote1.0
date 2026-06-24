@@ -7,7 +7,21 @@ export type PanContentSize = {
   height: number;
 };
 
-/** 可拖曳平移＋捲動的預覽視窗（滑鼠拖移、手指滑動皆透過 scroll 平移） */
+function useTouchPan() {
+  const [touchPan, setTouchPan] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const update = () => {
+      setTouchPan(mq.matches || navigator.maxTouchPoints > 0);
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return touchPan;
+}
+
+/** 可拖曳平移＋捲動的預覽視窗（桌面拖移、手機原生滑動） */
 export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
   {
     children,
@@ -30,6 +44,7 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
   const dragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const touchPan = useTouchPan();
 
   const setScrollerRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -48,18 +63,18 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
   }, []);
 
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (touchPan || e.button !== 0) return;
     dragging.current = true;
     setIsDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
-  }, []);
+  }, [touchPan]);
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
+    if (touchPan || !dragging.current) return;
     panBy(e.clientX - lastPos.current.x, e.clientY - lastPos.current.y);
     lastPos.current = { x: e.clientX, y: e.clientY };
-  }, [panBy]);
+  }, [panBy, touchPan]);
 
   const endDrag = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
@@ -71,42 +86,6 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
       /* already released */
     }
   }, []);
-
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      dragging.current = true;
-      setIsDragging(true);
-      lastPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!dragging.current || e.touches.length !== 1) return;
-      e.preventDefault();
-      const t = e.touches[0];
-      panBy(t.clientX - lastPos.current.x, t.clientY - lastPos.current.y);
-      lastPos.current = { x: t.clientX, y: t.clientY };
-    };
-
-    const endTouch = () => {
-      dragging.current = false;
-      setIsDragging(false);
-    };
-
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", endTouch);
-    el.addEventListener("touchcancel", endTouch);
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", endTouch);
-      el.removeEventListener("touchcancel", endTouch);
-    };
-  }, [panBy]);
 
   return (
     <div className={`pan-viewport ${className}`}>
@@ -120,12 +99,12 @@ export const PanPreviewViewport = forwardRef(function PanPreviewViewport(
       </div>
       <div
         ref={setScrollerRef}
-        className={`pan-scroller ${isDragging ? "is-dragging" : ""}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onPointerLeave={endDrag}
+        className={`pan-scroller ${touchPan ? "pan-scroller--native" : ""} ${isDragging ? "is-dragging" : ""}`}
+        onPointerDown={touchPan ? undefined : onPointerDown}
+        onPointerMove={touchPan ? undefined : onPointerMove}
+        onPointerUp={touchPan ? undefined : endDrag}
+        onPointerCancel={touchPan ? undefined : endDrag}
+        onPointerLeave={touchPan ? undefined : endDrag}
       >
         <div
           className="pan-content"

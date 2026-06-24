@@ -165,6 +165,43 @@ export function formatShareExpiry(iso: string | null | undefined) {
   });
 }
 
-export function lineShareText(quote: Quote, url: string) {
-  return `【報得過】${quote.client_name || "報價單"}\n總計 ${formatMoney(quote.total)}\n${url}`;
+function quoteSubjectLabel(title: string) {
+  const t = title.trim() || "工程報價";
+  return t.replace(/報價單$/u, "").trim() || t;
+}
+
+function shareValidityLine(quote: Partial<Quote>) {
+  if (quote.share_expires_at) {
+    const d = formatShareExpiry(quote.share_expires_at);
+    return d ? `連結有效至 ${d}` : null;
+  }
+  if (quote.valid_until) {
+    const d = formatShareExpiry(quote.valid_until);
+    return d ? `報價有效至 ${d}` : null;
+  }
+  return null;
+}
+
+/** LINE／分享用完整文案（客戶導向、可直接貼上；不顯示金額以保留議價空間） */
+export function lineShareText(
+  quote: Partial<Quote> & { title: string; client_name: string },
+  url: string,
+) {
+  const client = quote.client_name?.trim();
+  const subject = quoteSubjectLabel(quote.title || "");
+  const validity = shareValidityLine(quote);
+
+  const lines: string[] = [];
+  lines.push(client ? `${client}您好，` : "您好，");
+  lines.push("");
+  lines.push(`附上「${subject}」報價單供您參考。`);
+  if (validity) lines.push(validity + "。");
+
+  lines.push("");
+  lines.push("請點連結查看明細：");
+  lines.push(url);
+  lines.push("");
+  lines.push("若有疑問歡迎隨時聯繫，謝謝！");
+
+  return lines.join("\n");
 }

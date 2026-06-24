@@ -195,7 +195,7 @@ function ProHeader({
         ) : null}
         <p
           className={`font-semibold tracking-wide text-[#222] ${
-            summary ? "text-xs" : "text-[11px]"
+            summary ? "text-sm" : "text-[14px]"
           }`}
         >
           {company}

@@ -17,7 +17,9 @@ import {
   calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, formatShareExpiry, type QuoteLine,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
-import { shareViaLine } from "@/lib/line-share";
+import { shareLinkViaLine } from "@/lib/line-share";
+import { copyToClipboard } from "@/lib/clipboard";
+import { toast } from "sonner";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
 import { getSampleQuote, SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
@@ -237,8 +239,17 @@ function QuoteEditorPage() {
       share_token: res.token,
       share_expires_at: res.share_expires_at,
     }));
-    const text = lineShareText({ ...quotePreview, client_name: form.client_name }, url);
-    await shareViaLine(text);
+    const text = lineShareText(
+      {
+        ...quotePreview,
+        client_name: form.client_name,
+        title: form.title,
+        valid_until: form.valid_until,
+        share_expires_at: res.share_expires_at,
+      },
+      url,
+    );
+    await shareLinkViaLine(url, text);
   }
 
   async function doRevokeShare() {
@@ -251,6 +262,13 @@ function QuoteEditorPage() {
   async function doRenewShare() {
     const res = await renewShareFn({ data: { id } });
     setForm((prev: any) => ({ ...prev, share_expires_at: res.share_expires_at }));
+  }
+
+  async function copyShareUrl() {
+    if (!shareUrl) return;
+    const copied = await copyToClipboard(shareUrl);
+    if (copied) toast.success("連結已複製");
+    else toast.error("請長按下方連結手動複製");
   }
 
   function handleQuoteLinesCsv(text: string) {
@@ -474,6 +492,9 @@ function QuoteEditorPage() {
           </p>
           <p className="mt-1 break-all text-stone-600">{shareUrl}</p>
           <div className="mt-2 flex flex-wrap gap-2">
+            <button type="button" onClick={copyShareUrl} className="bdg-btn bdg-btn-secondary py-1 text-xs">
+              複製連結
+            </button>
             <button type="button" onClick={doRenewShare} className="bdg-btn bdg-btn-secondary py-1 text-xs">
               延長 90 天
             </button>

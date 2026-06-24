@@ -8,6 +8,7 @@ import { QuoteDocument } from "@/components/QuoteDocument";
 import { QuotePreviewPane } from "@/components/QuotePreviewPane";
 import { getQuoteByShareToken } from "@/lib/quotes.functions";
 import { exportQuotePdf } from "@/lib/quote-pdf";
+import { copyToClipboard } from "@/lib/clipboard";
 import { shareViaLine } from "@/lib/line-share";
 import { formatMoney, formatShareExpiry, lineShareText } from "@/lib/quotes.types";
 
@@ -46,12 +47,12 @@ function SharePage() {
   const pdfName = `${data.quote.client_name || "報價"}-${data.quote.title || "報價單"}.pdf`;
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(url);
+    const copied = await copyToClipboard(url);
+    if (copied) {
       toast.success("連結已複製");
-    } catch {
-      toast.error("無法複製連結");
+      return;
     }
+    toast.error("無法自動複製，請長按下方網址手動複製");
   }
 
   async function doExport() {
@@ -94,6 +95,15 @@ function SharePage() {
               <Copy className="h-4 w-4" /> 複製連結
             </button>
           </div>
+          <input
+            type="text"
+            readOnly
+            value={url}
+            aria-label="分享連結"
+            onFocus={(e) => e.currentTarget.select()}
+            onClick={(e) => e.currentTarget.select()}
+            className="mt-2 w-full rounded border border-[var(--bdg-line)] bg-white px-2 py-1.5 text-xs text-stone-600"
+          />
         </div>
       </div>
 
