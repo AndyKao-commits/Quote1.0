@@ -36,12 +36,30 @@ function measurePreviewContent(contentEl: HTMLElement) {
     pages.forEach((page) => {
       stacked += page.offsetHeight;
     });
-    // flex/grid gap between pages (~6px / 12px)
     stacked += Math.max(0, pageCount - 1) * 6;
     h = Math.max(h, stacked);
   }
 
   return { w, h, pageCount };
+}
+
+function measurePageFitScale(
+  contentEl: HTMLElement,
+  availW: number,
+  availH: number,
+  pageIndex = 0,
+) {
+  const pages = contentEl.querySelectorAll<HTMLElement>("[data-quote-page]");
+  if (!pages.length || availW <= 0) {
+    return clampScale(availW / PAGE_W);
+  }
+  const page = pages[Math.min(pageIndex, pages.length - 1)];
+  const pw = page.offsetWidth || PAGE_W;
+  const ph = page.offsetHeight || 1123;
+  const pad = PAN_MARGIN * 2;
+  const fitW = (availW - pad) / pw;
+  const fitH = availH > 0 ? (availH - pad) / ph : fitW;
+  return clampScale(Math.min(fitW, fitH));
 }
 
 function QuotePagePager({
@@ -117,7 +135,7 @@ export function QuotePreviewPane({
       setViewport({ w: vw, h: vh });
       setPageCount(count);
       if (avail > 0) {
-        fitScaleRef.current = clampScale(avail / w);
+        fitScaleRef.current = measurePageFitScale(contentEl, avail, Math.max(0, vh - pad), activePage);
       }
       if (fitWidth) {
         setScale(fitScaleRef.current);
@@ -138,7 +156,7 @@ export function QuotePreviewPane({
       window.clearTimeout(t);
       ro.disconnect();
     };
-  }, [children, fullscreen, fitWidth]);
+  }, [children, fullscreen, fitWidth, activePage]);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -264,9 +282,18 @@ export function QuotePreviewPane({
   }, []);
 
   const fitToWidth = useCallback(() => {
+    const scroller = scrollerRef.current;
+    const contentEl = contentRef.current;
+    if (contentEl && scroller) {
+      const pad = fullscreen ? 28 : 20;
+      const avail = Math.max(0, scroller.clientWidth - pad);
+      const availH = Math.max(0, scroller.clientHeight - pad);
+      fitScaleRef.current = measurePageFitScale(contentEl, avail, availH, activePage);
+    }
     setFitWidth(true);
     setScale(fitScaleRef.current);
-  }, []);
+    scrollToPage(activePage);
+  }, [activePage, fullscreen, scrollToPage]);
 
   const onWheel = useCallback((e: WheelEvent<HTMLDivElement>) => {
     if (!e.ctrlKey && !e.metaKey) return;
@@ -292,7 +319,7 @@ export function QuotePreviewPane({
         type="button"
         onClick={fitToWidth}
         className={`quote-preview-zoom-fit ${fitWidth ? "is-active" : ""}`}
-        title="適應欄寬"
+        title="適應單頁"
       >
         適應
       </button>

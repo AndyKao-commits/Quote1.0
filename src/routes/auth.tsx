@@ -3,7 +3,15 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { signIn, signUp } from "@/lib/auth.functions";
-import { setSession, getAccessToken } from "@/lib/session";
+import {
+  setSession,
+  getRememberLogin,
+  setRememberLogin,
+  getRememberedEmail,
+  setRememberedEmail,
+  ensureValidSession,
+} from "@/lib/session";
+import { refreshSession } from "@/lib/auth.functions";
 import { PasswordInput } from "@/components/PasswordInput";
 
 export const Route = createFileRoute("/auth")({
@@ -18,8 +26,9 @@ function AuthPage() {
   const signInFn = useServerFn(signIn);
   const signUpFn = useServerFn(signUp);
   const [mode, setMode] = useState<Mode>("signin");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => getRememberedEmail());
   const [pw, setPw] = useState("");
+  const [remember, setRemember] = useState(() => getRememberLogin());
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,7 +36,16 @@ function AuthPage() {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (getAccessToken()) nav({ to: "/quotes" });
+    let cancelled = false;
+    (async () => {
+      const ok = await ensureValidSession(async (refreshToken) =>
+        refreshSession({ data: { refresh_token: refreshToken } }),
+      );
+      if (!cancelled && ok) nav({ to: "/quotes" });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [nav]);
 
   async function submit(e: React.FormEvent) {
@@ -43,11 +61,16 @@ function AuthPage() {
           return;
         }
         if ("access_token" in res) {
+          setRememberLogin(remember);
+          if (remember) setRememberedEmail(email);
           setSession(res.access_token, res.refresh_token!);
           nav({ to: "/quotes/new" });
         }
       } else {
         const res = await signInFn({ data: { email, password: pw } });
+        setRememberLogin(remember);
+        if (remember) setRememberedEmail(email);
+        else setRememberedEmail("");
         setSession(res.access_token, res.refresh_token);
         nav({ to: "/quotes" });
       }
@@ -86,6 +109,17 @@ function AuthPage() {
             )}
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={inp} />
             <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="密碼（至少 6 碼）" />
+            {mode === "signin" && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[#6b5c4d]">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="rounded border-[#d9cfc0] text-[#C45A3C] focus:ring-[#C45A3C]"
+                />
+                記住登入狀態（下次自動登入）
+              </label>
+            )}
             {err && <p className="text-sm text-rose-600">{err}</p>}
             {msg && <p className="text-sm text-[#C45A3C]">{msg}</p>}
             <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#C45A3C] py-3 text-sm font-bold text-white disabled:opacity-60">

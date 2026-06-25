@@ -1,10 +1,14 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { getAccessToken } from "@/lib/session";
+import { refreshSession } from "@/lib/auth.functions";
+import { ensureValidSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_app")({
   ssr: false,
-  beforeLoad: () => {
-    if (!getAccessToken()) throw redirect({ to: "/auth" });
+  beforeLoad: async () => {
+    const ok = await ensureValidSession(async (refreshToken) =>
+      refreshSession({ data: { refresh_token: refreshToken } }),
+    );
+    if (!ok) throw redirect({ to: "/auth" });
   },
   component: () => <Outlet />,
 });

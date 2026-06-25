@@ -36,6 +36,19 @@ function insertItemAfter(lines: QuoteLine[], index: number) {
   return reindex(next);
 }
 
+function getGroupBlockEnd(lines: QuoteLine[], groupIndex: number) {
+  let end = groupIndex + 1;
+  while (end < lines.length && lines[end].line_type !== "group") end++;
+  return end;
+}
+
+function getDragBlock(lines: QuoteLine[], from: number) {
+  if (lines[from]?.line_type === "group") {
+    return { start: from, end: getGroupBlockEnd(lines, from) };
+  }
+  return { start: from, end: from + 1 };
+}
+
 function insertIndexAtY(refs: (HTMLDivElement | null)[], clientY: number, count: number) {
   for (let i = 0; i < count; i++) {
     const el = refs[i];
@@ -133,12 +146,14 @@ export function QuoteLineList({
     const to = dropIdxRef.current;
     const current = linesRef.current;
     if (from !== null && to !== null && from !== to) {
+      const { start, end } = getDragBlock(current, from);
+      const blockLen = end - start;
       let insertAt = to;
-      if (from < insertAt) insertAt -= 1;
-      if (insertAt >= 0 && insertAt < current.length && insertAt !== from) {
+      if (from < insertAt) insertAt -= blockLen;
+      if (insertAt >= 0 && insertAt <= current.length - blockLen && insertAt !== start) {
         const next = [...current];
-        const [item] = next.splice(from, 1);
-        next.splice(insertAt, 0, item);
+        const block = next.splice(start, blockLen);
+        next.splice(insertAt, 0, ...block);
         onChange(reindex(next));
       }
     }
@@ -265,28 +280,28 @@ export function QuoteLineList({
                     />
                   </div>
                   {!isGroup && (
-                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    <div className="quote-line-fields">
                       <input
                         value={l.unit}
                         onChange={(e) => update(i, { unit: e.target.value })}
                         placeholder="單位"
-                        className="bdg-input py-2"
+                        className="bdg-input quote-line-field-unit py-2"
                       />
                       <input
                         type="number"
                         value={l.quantity}
                         onChange={(e) => update(i, { quantity: Number(e.target.value) })}
                         placeholder="數量"
-                        className="bdg-input py-2"
+                        className="bdg-input quote-line-field-qty py-2"
                       />
                       <input
                         type="number"
                         value={l.unit_price}
                         onChange={(e) => update(i, { unit_price: Number(e.target.value) })}
                         placeholder="單價"
-                        className="bdg-input py-2"
+                        className="bdg-input quote-line-field-price py-2"
                       />
-                      <div className="bdg-meta hidden text-right leading-10 sm:block">
+                      <div className="quote-line-subtotal bdg-meta">
                         小計 {(l.quantity * l.unit_price).toLocaleString()}
                       </div>
                     </div>

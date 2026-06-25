@@ -465,6 +465,13 @@ function ItemsPage() {
                           </p>
                         ))}
                         <p className="text-sm font-medium text-stone-600">合計 NT${pkgTotal.toLocaleString()}</p>
+                        {(it.category || (it.keywords ?? []).length > 0) && (
+                          <p className="bdg-meta">
+                            {it.category}
+                            {it.category && (it.keywords ?? []).length > 0 ? " · " : ""}
+                            {(it.keywords ?? []).join("、")}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <p className="bdg-meta">

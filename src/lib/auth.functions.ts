@@ -75,3 +75,17 @@ export const signUp = createServerFn({ method: "POST" })
     }
     return { needs_confirm: true as const };
   });
+
+export const refreshSession = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ refresh_token: z.string().min(1) }))
+  .handler(async ({ data }) => {
+    const admin = getSupabaseAdmin();
+    const { data: session, error } = await admin.auth.refreshSession({
+      refresh_token: data.refresh_token,
+    });
+    if (error || !session.session) throw new Error("登入已過期，請重新登入");
+    return {
+      access_token: session.session.access_token,
+      refresh_token: session.session.refresh_token,
+    };
+  });
