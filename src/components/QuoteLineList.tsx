@@ -9,8 +9,8 @@ function newLine(type: QuoteLine["line_type"], sort: number): QuoteLine {
     sort_order: sort,
     line_type: type,
     name: type === "group" ? "工種項目" : "",
-    unit: type === "group" ? "—" : "式",
-    quantity: type === "group" ? 0 : 1,
+    unit: type === "group" ? "—" : "",
+    quantity: type === "group" ? 0 : 0,
     unit_price: 0,
     note: null,
   };
@@ -289,16 +289,22 @@ export function QuoteLineList({
                       />
                       <input
                         type="number"
-                        value={l.quantity}
-                        onChange={(e) => update(i, { quantity: Number(e.target.value) })}
+                        inputMode="decimal"
+                        value={l.quantity === 0 ? "" : l.quantity}
+                        onChange={(e) =>
+                          update(i, { quantity: e.target.value === "" ? 0 : Number(e.target.value) })
+                        }
                         placeholder="數量"
                         className="bdg-input quote-line-field-qty py-2"
                       />
                       <input
                         type="number"
-                        value={l.unit_price}
-                        onChange={(e) => update(i, { unit_price: Number(e.target.value) })}
-                        placeholder="單價"
+                        inputMode="decimal"
+                        value={l.unit_price === 0 ? "" : l.unit_price}
+                        onChange={(e) =>
+                          update(i, { unit_price: e.target.value === "" ? 0 : Number(e.target.value) })
+                        }
+                        placeholder="金額"
                         className="bdg-input quote-line-field-price py-2"
                       />
                       <div className="quote-line-subtotal bdg-meta">

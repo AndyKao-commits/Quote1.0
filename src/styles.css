@@ -259,6 +259,10 @@
     border-color: color-mix(in srgb, var(--bdg-brand) 55%, var(--bdg-line));
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--bdg-brand) 12%, transparent);
   }
+  .bdg-input::placeholder {
+    color: #a8a29e;
+    opacity: 1;
+  }
   .bdg-btn {
     display: inline-flex;
     align-items: center;
