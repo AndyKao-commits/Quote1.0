@@ -5,6 +5,7 @@ import { PRICE_ADJUST_LIMITS } from "@/lib/quotes.types";
 
 const MIN = PRICE_ADJUST_LIMITS.min;
 const MAX = PRICE_ADJUST_LIMITS.max;
+const ZERO_POS = ((0 - MIN) / (MAX - MIN)) * 100;
 
 function formatPct(pct: number) {
   if (pct > 0) return `+${pct}%`;
@@ -47,19 +48,28 @@ export function QuotePriceAdjustBar({
           </button>
         </div>
       </div>
-      <Slider
-        min={MIN}
-        max={MAX}
-        step={1}
-        value={[value]}
-        disabled={disabled}
-        onValueChange={([pct]) => onChange(pct)}
-        className="py-2 [&_.bg-primary]:bg-[var(--bdg-brand)] [&_.border-primary\\/50]:border-[var(--bdg-brand)]"
-      />
-      <div className="mt-1 flex justify-between text-[11px] text-stone-400">
-        <span>{MIN}%</span>
-        <span>0%</span>
-        <span>+{MAX}%</span>
+      <div className="relative">
+        <div
+          className="pointer-events-none absolute top-[calc(50%-2px)] z-10 h-3 w-px -translate-x-1/2 bg-stone-300"
+          style={{ left: `${ZERO_POS}%` }}
+          aria-hidden
+        />
+        <Slider
+          min={MIN}
+          max={MAX}
+          step={1}
+          value={[value]}
+          disabled={disabled}
+          onValueChange={([pct]) => onChange(pct)}
+          className="py-2 [&_.bg-primary]:bg-[var(--bdg-brand)] [&_.border-primary\\/50]:border-[var(--bdg-brand)]"
+        />
+        <div className="relative mt-1 h-4 text-[11px] leading-none text-stone-400">
+          <span className="absolute left-0">{MIN}%</span>
+          <span className="absolute -translate-x-1/2" style={{ left: `${ZERO_POS}%` }}>
+            0%
+          </span>
+          <span className="absolute right-0">+{MAX}%</span>
+        </div>
       </div>
       <p className="bdg-meta mt-2">拖曳即時調整所有項目單價；按「復原」或拖回 0% 可還原</p>
     </div>
