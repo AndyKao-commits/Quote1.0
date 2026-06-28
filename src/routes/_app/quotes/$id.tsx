@@ -14,7 +14,12 @@ import {
   getQuote, saveQuote, publishShare, revokeShare, renewShare, listCatalogItems, getProfile,
 } from "@/lib/quotes.functions";
 import {
-  calcQuoteTotals, prepareQuoteLinesForSave, lineShareText, formatShareExpiry, type QuoteLine,
+  applyPricePercentAdjustment,
+  calcQuoteTotals,
+  prepareQuoteLinesForSave,
+  lineShareText,
+  formatShareExpiry,
+  type QuoteLine,
 } from "@/lib/quotes.types";
 import { exportQuotePdf } from "@/lib/quote-pdf";
 import { shareLinkViaLine } from "@/lib/line-share";
@@ -68,6 +73,7 @@ function QuoteEditorPage() {
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [paymentTouched, setPaymentTouched] = useState(false);
+  const [priceAdjustPct, setPriceAdjustPct] = useState("");
 
   useEffect(() => {
     if (data) {
@@ -285,6 +291,24 @@ function QuoteEditorPage() {
     setImportMsg(errors.length ? `${base}（${errors.length} 行已略過）` : base);
   }
 
+  function applyPriceAdjust() {
+    const pct = Number(priceAdjustPct);
+    if (!Number.isFinite(pct) || pct === 0) {
+      setImportMsg("請輸入有效的調整 % 數（不可為 0）");
+      return;
+    }
+    const itemCount = lines.filter((l) => (l.line_type ?? "item") !== "group").length;
+    if (!itemCount) {
+      setImportMsg("沒有可調整的項目");
+      return;
+    }
+    const label = pct > 0 ? `加價 +${pct}%` : `減價 ${pct}%`;
+    if (!confirm(`確定將全部 ${itemCount} 筆項目單價${label}？`)) return;
+    setLines(applyPricePercentAdjustment(lines, pct));
+    setPriceAdjustPct("");
+    setImportMsg(`已將全部項目單價${label}`);
+  }
+
   function loadSample(sampleId: SampleQuoteId) {
     const sample = getSampleQuote(sampleId);
     if (!sample) return;
@@ -432,6 +456,34 @@ function QuoteEditorPage() {
             ))}
           </div>
         )}
+        <div className="mb-3 rounded border border-[var(--bdg-line)] bg-stone-50/60 p-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="min-w-[10rem] flex-1 text-sm">
+              <span className="bdg-label">全部價格調整</span>
+              <div className="mt-1 flex items-center gap-1.5">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={priceAdjustPct}
+                  onChange={(e) => setPriceAdjustPct(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyPriceAdjust();
+                    }
+                  }}
+                  placeholder="例如 10"
+                  className="bdg-input flex-1"
+                />
+                <span className="shrink-0 text-stone-500">%</span>
+              </div>
+            </label>
+            <button type="button" onClick={applyPriceAdjust} className="bdg-btn bdg-btn-secondary shrink-0">
+              套用
+            </button>
+          </div>
+          <p className="bdg-meta mt-2">統包再報價時可一次調整所有項目單價（正數加價、負數減價）</p>
+        </div>
         <QuoteLineList lines={lines} onChange={setLines} />
       </div>
 

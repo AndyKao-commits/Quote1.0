@@ -128,6 +128,16 @@ export function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+/** 依 % 數調整所有項目單價（工種列不變；正數加價、負數減價） */
+export function applyPricePercentAdjustment(lines: QuoteLine[], percent: number): QuoteLine[] {
+  const factor = 1 + percent / 100;
+  if (!Number.isFinite(factor) || factor <= 0) return lines;
+  return lines.map((l) => {
+    if ((l.line_type ?? "item") === "group") return l;
+    return { ...l, unit_price: round2(Number(l.unit_price || 0) * factor) };
+  });
+}
+
 /** Drop blank rows and enforce name / note length limits before save. */
 export function prepareQuoteLinesForSave(lines: QuoteLine[]) {
   const kept = lines.filter((l) => l.name.trim());
