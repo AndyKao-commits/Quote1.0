@@ -41,8 +41,18 @@ function SettingsPage() {
       <p className="mt-1 text-sm text-[#6b5c4d]">Logo、預設條款與稅務習慣</p>
 
       <div className="mt-6 space-y-4 rounded-2xl border border-[#e8dfd3] bg-white p-5">
-        <Field label="顯示名稱" value={form.display_name ?? ""} onChange={(v) => setForm({ ...form, display_name: v })} />
-        <Field label="公司／工作室名稱" value={form.company_name ?? ""} onChange={(v) => setForm({ ...form, company_name: v })} />
+        <Field
+          label="顯示名稱"
+          hint="顯示在報價單簽名區「設計業務」欄"
+          value={form.display_name ?? ""}
+          onChange={(v) => setForm({ ...form, display_name: v })}
+        />
+        <Field
+          label="公司／工作室名稱"
+          hint="顯示在報價單最上方（Logo 下方）"
+          value={form.company_name ?? ""}
+          onChange={(v) => setForm({ ...form, company_name: v })}
+        />
         <Field label="電話" value={form.phone ?? ""} onChange={(v) => setForm({ ...form, phone: v })} />
         <Field label="Logo 圖片 URL" value={form.logo_url ?? ""} onChange={(v) => setForm({ ...form, logo_url: v })} />
         {form.logo_url?.trim() && (
@@ -67,10 +77,23 @@ function SettingsPage() {
   );
 }
 
-function Field({ label, value, onChange, multiline }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
+function Field({
+  label,
+  value,
+  onChange,
+  multiline,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+  hint?: string;
+}) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block text-xs font-semibold text-[#6b5c4d]">{label}</span>
+      {hint && <span className="mb-1 block text-[11px] text-[#9a8f82]">{hint}</span>}
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={inp} />
       ) : (

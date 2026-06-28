@@ -74,6 +74,17 @@ export function QuoteDocument({
   );
 }
 
+function resolveProfileBranding(profile?: Partial<Profile> | null) {
+  const companyName = profile?.company_name?.trim() || "";
+  const displayName = profile?.display_name?.trim() || "";
+  return {
+    /** 報價單最上方：公司／工作室名稱 */
+    heading: companyName || displayName || "報得過",
+    /** 簽名區「設計業務」：顯示名稱（個人） */
+    salesRep: displayName || companyName || "報得過",
+  };
+}
+
 function QuotePage({
   quote,
   profile,
@@ -93,7 +104,7 @@ function QuotePage({
   pageIndex: number;
   totalPages: number;
 }) {
-  const company = profile?.company_name || profile?.display_name || "報得過";
+  const { heading, salesRep } = resolveProfileBranding(profile);
   const fontFamily = "'Noto Sans TC', 'Microsoft JhengHei', sans-serif";
 
   const isSummary = page.kind === "summary";
@@ -123,7 +134,7 @@ function QuotePage({
       <ProHeader
         quote={quote}
         profile={profile}
-        company={company}
+        company={heading}
         summary={isSummary}
       />
 
@@ -151,7 +162,7 @@ function QuotePage({
           <SummaryFooter
             quote={quote}
             profile={profile}
-            company={company}
+            salesRep={salesRep}
             total={total}
             taxIncluded={quote.tax_included}
           />
@@ -500,13 +511,13 @@ function LinesTable({
 function SummaryFooter({
   quote,
   profile,
-  company,
+  salesRep,
   total,
   taxIncluded,
 }: {
   quote: Partial<Quote>;
   profile?: Partial<Profile> | null;
-  company: string;
+  salesRep: string;
   total: number;
   taxIncluded?: boolean;
 }) {
@@ -549,7 +560,7 @@ function SummaryFooter({
       <div className="space-y-3">
         <SignBox left="業主代表：" right="（以下簡稱甲方）" summary />
         <SignBox
-          left={`設計業務：${company}${profile?.phone ? `　${profile.phone}` : ""}`}
+          left={`設計業務：${salesRep}${profile?.phone ? `　${profile.phone}` : ""}`}
           right="（以下簡稱乙方）"
           summary
         />
