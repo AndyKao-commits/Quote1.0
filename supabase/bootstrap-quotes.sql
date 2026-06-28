@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
   note TEXT,
   terms TEXT,
   payment_schedule TEXT,
+  price_adjust_pct NUMERIC NOT NULL DEFAULT 0,
   cover_image_url TEXT,
   subtotal NUMERIC NOT NULL DEFAULT 0,
   tax_amount NUMERIC NOT NULL DEFAULT 0,

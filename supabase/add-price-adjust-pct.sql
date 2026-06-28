@@ -1,0 +1,2 @@
+ALTER TABLE public.quotes
+  ADD COLUMN IF NOT EXISTS price_adjust_pct NUMERIC NOT NULL DEFAULT 0;

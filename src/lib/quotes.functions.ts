@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireQuoteAuth } from "@/lib/quote-auth-middleware";
-import { calcQuoteTotals, DEFAULT_QUOTE_TEMPLATE, type QuoteLine, QUOTE_LIMITS } from "@/lib/quotes.types";
+import { calcQuoteTotals, DEFAULT_QUOTE_TEMPLATE, clampPriceAdjustPct, type QuoteLine, QUOTE_LIMITS } from "@/lib/quotes.types";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText } from "@/lib/quote-document.utils";
 import { getSampleQuote, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 import {
@@ -55,6 +55,7 @@ const quoteInput = z.object({
   note: z.string().nullable().optional(),
   terms: z.string().nullable().optional(),
   payment_schedule: z.string().nullable().optional(),
+  price_adjust_pct: z.number().optional(),
   cover_image_url: z.string().nullable().optional(),
   lines: z.array(lineSchema),
 });
@@ -410,16 +411,31 @@ export const saveQuote = createServerFn({ method: "POST" })
       payment_schedule: data.payment_schedule ?? null,
     };
 
+    const quoteRowFull = {
+      ...quoteRowWithPayment,
+      price_adjust_pct: clampPriceAdjustPct(data.price_adjust_pct ?? 0),
+    };
+
     let quoteId = data.id;
     if (quoteId) {
-      let { error } = await supabase.from("quotes").update(quoteRowWithPayment).eq("id", quoteId).eq("user_id", userId);
+      let { error } = await supabase.from("quotes").update(quoteRowFull).eq("id", quoteId).eq("user_id", userId);
+      if (error?.message?.includes("price_adjust_pct")) {
+        ({ error } = await supabase.from("quotes").update(quoteRowWithPayment).eq("id", quoteId).eq("user_id", userId));
+      }
       if (error?.message?.includes("payment_schedule")) {
         ({ error } = await supabase.from("quotes").update(quoteRowBase).eq("id", quoteId).eq("user_id", userId));
       }
       if (error) throw new Error(error.message);
       await supabase.from("quote_lines").delete().eq("quote_id", quoteId);
     } else {
-      let { data: inserted, error } = await supabase.from("quotes").insert(quoteRowWithPayment).select("id").single();
+      let { data: inserted, error } = await supabase.from("quotes").insert(quoteRowFull).select("id").single();
+      if (error?.message?.includes("price_adjust_pct")) {
+        ({ data: inserted, error } = await supabase
+          .from("quotes")
+          .insert(quoteRowWithPayment)
+          .select("id")
+          .single());
+      }
       if (error?.message?.includes("payment_schedule")) {
         ({ data: inserted, error } = await supabase
           .from("quotes")

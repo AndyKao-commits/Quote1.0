@@ -17,6 +17,7 @@ import {
 import {
   applyPricePercentAdjustment,
   calcQuoteTotals,
+  clampPriceAdjustPct,
   cloneQuoteLines,
   prepareQuoteLinesForSave,
   unapplyPricePercentAdjustment,
@@ -100,9 +101,12 @@ function QuoteEditorPage() {
           ? data.payment_schedule
           : formatPaymentScheduleText(loadedTotals.total),
       });
+      const savedPct = clampPriceAdjustPct(Number(data.price_adjust_pct ?? 0));
       setLines(loadedLines);
-      baseLinesRef.current = cloneQuoteLines(loadedLines);
-      setPriceAdjustPct(0);
+      baseLinesRef.current = savedPct
+        ? unapplyPricePercentAdjustment(loadedLines, savedPct)
+        : cloneQuoteLines(loadedLines);
+      setPriceAdjustPct(savedPct);
       setPaymentTouched(hasCustomPayment);
       if (data.share_token) setShareUrl(`${window.location.origin}/q/${data.share_token}`);
     }
@@ -147,9 +151,11 @@ function QuoteEditorPage() {
       const { lines: saveLines, skipped, truncated } = prepareQuoteLinesForSave(lines);
       if (!saveLines.length) throw new Error("至少需要一筆有名稱的項目");
       if (skipped > 0 || truncated > 0) {
-        baseLinesRef.current = cloneQuoteLines(saveLines);
+        baseLinesRef.current =
+          priceAdjustPct === 0
+            ? cloneQuoteLines(saveLines)
+            : unapplyPricePercentAdjustment(saveLines, priceAdjustPct);
         setLines(saveLines);
-        setPriceAdjustPct(0);
       }
       await saveFn({
         data: {
@@ -174,6 +180,7 @@ function QuoteEditorPage() {
             ? form.payment_schedule
             : formatPaymentScheduleText(totals.total),
           cover_image_url: form.cover_image_url,
+          price_adjust_pct: priceAdjustPct,
           lines: saveLines,
         },
       });
@@ -295,8 +302,9 @@ function QuoteEditorPage() {
   }
 
   function handlePriceAdjustChange(pct: number) {
-    setPriceAdjustPct(pct);
-    setLines(applyPricePercentAdjustment(baseLinesRef.current, pct));
+    const next = clampPriceAdjustPct(pct);
+    setPriceAdjustPct(next);
+    setLines(applyPricePercentAdjustment(baseLinesRef.current, next));
   }
 
   function resetPriceAdjust() {

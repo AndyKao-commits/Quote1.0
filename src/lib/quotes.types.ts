@@ -4,6 +4,15 @@ export const QUOTE_LIMITS = {
   catalogName: 100,
 } as const;
 
+export const PRICE_ADJUST_LIMITS = { min: -50, max: 100 } as const;
+
+export function clampPriceAdjustPct(pct: number) {
+  return Math.min(
+    PRICE_ADJUST_LIMITS.max,
+    Math.max(PRICE_ADJUST_LIMITS.min, Math.round(Number(pct) || 0)),
+  );
+}
+
 export function clampText(s: string, max: number) {
   const chars = Array.from(s);
   if (chars.length <= max) return s;
@@ -88,6 +97,7 @@ export interface Quote {
   note: string | null;
   terms: string | null;
   payment_schedule: string | null;
+  price_adjust_pct?: number;
   cover_image_url: string | null;
   subtotal: number;
   tax_amount: number;

@@ -1,8 +1,10 @@
 import { RotateCcw } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 
-const MIN = -50;
-const MAX = 100;
+import { PRICE_ADJUST_LIMITS } from "@/lib/quotes.types";
+
+const MIN = PRICE_ADJUST_LIMITS.min;
+const MAX = PRICE_ADJUST_LIMITS.max;
 
 function formatPct(pct: number) {
   if (pct > 0) return `+${pct}%`;
