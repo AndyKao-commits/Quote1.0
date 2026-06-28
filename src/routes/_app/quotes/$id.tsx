@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download, Eye, Loader2, Save, Search, Share2, X,
 } from "lucide-react";
 import { QuoteLineList } from "@/components/QuoteLineList";
+import { QuotePriceAdjustBar } from "@/components/QuotePriceAdjustBar";
 import { CsvImportButton } from "@/components/CsvImportButton";
 import { AppShell } from "@/components/BdgAppShell";
 import { QuoteDocument } from "@/components/QuoteDocument";
@@ -16,7 +17,9 @@ import {
 import {
   applyPricePercentAdjustment,
   calcQuoteTotals,
+  cloneQuoteLines,
   prepareQuoteLinesForSave,
+  unapplyPricePercentAdjustment,
   lineShareText,
   formatShareExpiry,
   type QuoteLine,
@@ -57,6 +60,7 @@ function QuoteEditorPage() {
 
   const [form, setForm] = useState<any>(null);
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  const baseLinesRef = useRef<QuoteLine[]>([]);
   const [kw, setKw] = useState("");
   const [previewFull, setPreviewFull] = useState(false);
 
@@ -73,7 +77,7 @@ function QuoteEditorPage() {
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [paymentTouched, setPaymentTouched] = useState(false);
-  const [priceAdjustPct, setPriceAdjustPct] = useState("");
+  const [priceAdjustPct, setPriceAdjustPct] = useState(0);
 
   useEffect(() => {
     if (data) {
@@ -97,6 +101,8 @@ function QuoteEditorPage() {
           : formatPaymentScheduleText(loadedTotals.total),
       });
       setLines(loadedLines);
+      baseLinesRef.current = cloneQuoteLines(loadedLines);
+      setPriceAdjustPct(0);
       setPaymentTouched(hasCustomPayment);
       if (data.share_token) setShareUrl(`${window.location.origin}/q/${data.share_token}`);
     }
@@ -140,7 +146,11 @@ function QuoteEditorPage() {
       if (!form) return null;
       const { lines: saveLines, skipped, truncated } = prepareQuoteLinesForSave(lines);
       if (!saveLines.length) throw new Error("至少需要一筆有名稱的項目");
-      if (skipped > 0 || truncated > 0) setLines(saveLines);
+      if (skipped > 0 || truncated > 0) {
+        baseLinesRef.current = cloneQuoteLines(saveLines);
+        setLines(saveLines);
+        setPriceAdjustPct(0);
+      }
       await saveFn({
         data: {
           id,
@@ -277,36 +287,51 @@ function QuoteEditorPage() {
     else toast.error("請長按下方連結手動複製");
   }
 
+  function setAllLines(nextBase: QuoteLine[], resetAdjust = true) {
+    baseLinesRef.current = cloneQuoteLines(nextBase);
+    const pct = resetAdjust ? 0 : priceAdjustPct;
+    if (resetAdjust) setPriceAdjustPct(0);
+    setLines(applyPricePercentAdjustment(baseLinesRef.current, pct));
+  }
+
+  function handlePriceAdjustChange(pct: number) {
+    setPriceAdjustPct(pct);
+    setLines(applyPricePercentAdjustment(baseLinesRef.current, pct));
+  }
+
+  function resetPriceAdjust() {
+    setPriceAdjustPct(0);
+    setLines(cloneQuoteLines(baseLinesRef.current));
+  }
+
+  function handleLinesChange(next: QuoteLine[]) {
+    baseLinesRef.current =
+      priceAdjustPct === 0
+        ? cloneQuoteLines(next)
+        : unapplyPricePercentAdjustment(next, priceAdjustPct);
+    setLines(next);
+  }
+
+  function appendToBase(extra: QuoteLine[]) {
+    const start = baseLinesRef.current.length;
+    const withOrder = extra.map((l, i) => ({ ...l, sort_order: start + i }));
+    const merged = [...baseLinesRef.current, ...withOrder].map((l, i) => ({ ...l, sort_order: i }));
+    baseLinesRef.current = merged;
+    setLines(applyPricePercentAdjustment(merged, priceAdjustPct));
+  }
+
   function handleQuoteLinesCsv(text: string) {
     const { rows, errors } = parseQuoteLinesCsv(text);
     if (!rows.length) {
       setImportMsg(errors[0] ?? "CSV 沒有有效資料");
       return;
     }
-    const existing = lines.filter((l) => l.name.trim());
+    const existing = baseLinesRef.current.filter((l) => l.name.trim());
     const imported = quoteLineCsvToQuoteLines(rows, existing.length);
     const merged = [...existing, ...imported].map((l, i) => ({ ...l, sort_order: i }));
-    setLines(merged);
+    setAllLines(merged);
     const base = `已匯入 ${imported.length} 行明細`;
     setImportMsg(errors.length ? `${base}（${errors.length} 行已略過）` : base);
-  }
-
-  function applyPriceAdjust() {
-    const pct = Number(priceAdjustPct);
-    if (!Number.isFinite(pct) || pct === 0) {
-      setImportMsg("請輸入有效的調整 % 數（不可為 0）");
-      return;
-    }
-    const itemCount = lines.filter((l) => (l.line_type ?? "item") !== "group").length;
-    if (!itemCount) {
-      setImportMsg("沒有可調整的項目");
-      return;
-    }
-    const label = pct > 0 ? `加價 +${pct}%` : `減價 ${pct}%`;
-    if (!confirm(`確定將全部 ${itemCount} 筆項目單價${label}？`)) return;
-    setLines(applyPricePercentAdjustment(lines, pct));
-    setPriceAdjustPct("");
-    setImportMsg(`已將全部項目單價${label}`);
   }
 
   function loadSample(sampleId: SampleQuoteId) {
@@ -332,7 +357,7 @@ function QuoteEditorPage() {
       terms: DEFAULT_QUOTE_TERMS,
       payment_schedule: payment,
     });
-    setLines(sample.lines.map((l, i) => ({ ...l, sort_order: i })));
+    setAllLines(sample.lines.map((l, i) => ({ ...l, sort_order: i })));
     setPaymentTouched(false);
     setImportMsg(`已載入${sample.tabLabel}，記得按儲存`);
   }
@@ -409,19 +434,19 @@ function QuoteEditorPage() {
                 type="button"
                 onClick={() => {
                   if (c.item_type === "package" && Array.isArray(c.package_lines) && c.package_lines.length > 0) {
-                    const base = lines.length;
-                    const next = [...lines];
-                    next.push({
-                      sort_order: base,
-                      line_type: "group" as const,
-                      name: c.name,
-                      unit: "—",
-                      quantity: 0,
-                      unit_price: 0,
-                    });
-                    c.package_lines.forEach((pl: { name: string; unit: string; quantity: number; unit_price: number }, i: number) => {
-                      next.push({
-                        sort_order: base + 1 + i,
+                    const extra: QuoteLine[] = [
+                      {
+                        sort_order: 0,
+                        line_type: "group" as const,
+                        name: c.name,
+                        unit: "—",
+                        quantity: 0,
+                        unit_price: 0,
+                      },
+                    ];
+                    c.package_lines.forEach((pl: { name: string; unit: string; quantity: number; unit_price: number }) => {
+                      extra.push({
+                        sort_order: 0,
                         line_type: "item" as const,
                         name: pl.name,
                         unit: pl.unit,
@@ -429,12 +454,11 @@ function QuoteEditorPage() {
                         unit_price: Number(pl.unit_price),
                       });
                     });
-                    setLines(next);
+                    appendToBase(extra);
                   } else {
-                    setLines([
-                      ...lines,
+                    appendToBase([
                       {
-                        sort_order: lines.length,
+                        sort_order: 0,
                         line_type: "item" as const,
                         name: c.name,
                         unit: c.unit,
@@ -456,35 +480,13 @@ function QuoteEditorPage() {
             ))}
           </div>
         )}
-        <div className="mb-3 rounded border border-[var(--bdg-line)] bg-stone-50/60 p-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="min-w-[10rem] flex-1 text-sm">
-              <span className="bdg-label">全部價格調整</span>
-              <div className="mt-1 flex items-center gap-1.5">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={priceAdjustPct}
-                  onChange={(e) => setPriceAdjustPct(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      applyPriceAdjust();
-                    }
-                  }}
-                  placeholder="例如 10"
-                  className="bdg-input flex-1"
-                />
-                <span className="shrink-0 text-stone-500">%</span>
-              </div>
-            </label>
-            <button type="button" onClick={applyPriceAdjust} className="bdg-btn bdg-btn-secondary shrink-0">
-              套用
-            </button>
-          </div>
-          <p className="bdg-meta mt-2">統包再報價時可一次調整所有項目單價（正數加價、負數減價）</p>
-        </div>
-        <QuoteLineList lines={lines} onChange={setLines} />
+        <QuotePriceAdjustBar
+          value={priceAdjustPct}
+          onChange={handlePriceAdjustChange}
+          onReset={resetPriceAdjust}
+          disabled={!lines.some((l) => (l.line_type ?? "item") !== "group")}
+        />
+        <QuoteLineList lines={lines} onChange={handleLinesChange} />
       </div>
 
       <div className="bdg-card space-y-3 p-4">

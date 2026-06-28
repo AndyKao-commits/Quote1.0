@@ -128,13 +128,29 @@ export function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+export function cloneQuoteLines(lines: QuoteLine[]): QuoteLine[] {
+  return lines.map((l) => ({ ...l }));
+}
+
 /** 依 % 數調整所有項目單價（工種列不變；正數加價、負數減價） */
 export function applyPricePercentAdjustment(lines: QuoteLine[], percent: number): QuoteLine[] {
+  if (!percent) return cloneQuoteLines(lines);
   const factor = 1 + percent / 100;
-  if (!Number.isFinite(factor) || factor <= 0) return lines;
+  if (!Number.isFinite(factor) || factor <= 0) return cloneQuoteLines(lines);
   return lines.map((l) => {
     if ((l.line_type ?? "item") === "group") return l;
     return { ...l, unit_price: round2(Number(l.unit_price || 0) * factor) };
+  });
+}
+
+/** 還原 applyPricePercentAdjustment 對項目單價的調整 */
+export function unapplyPricePercentAdjustment(lines: QuoteLine[], percent: number): QuoteLine[] {
+  if (!percent) return cloneQuoteLines(lines);
+  const factor = 1 + percent / 100;
+  if (!Number.isFinite(factor) || factor <= 0) return cloneQuoteLines(lines);
+  return lines.map((l) => {
+    if ((l.line_type ?? "item") === "group") return l;
+    return { ...l, unit_price: round2(Number(l.unit_price || 0) / factor) };
   });
 }
 

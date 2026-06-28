@@ -1,0 +1,65 @@
+import { RotateCcw } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+
+const MIN = -50;
+const MAX = 100;
+
+function formatPct(pct: number) {
+  if (pct > 0) return `+${pct}%`;
+  if (pct < 0) return `${pct}%`;
+  return "0%";
+}
+
+export function QuotePriceAdjustBar({
+  value,
+  onChange,
+  onReset,
+  disabled,
+}: {
+  value: number;
+  onChange: (pct: number) => void;
+  onReset: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="mb-3 rounded border border-[var(--bdg-line)] bg-stone-50/60 p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span className="bdg-label mb-0">全部價格調整</span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`min-w-[3.5rem] text-right text-sm font-semibold tabular-nums ${
+              value > 0 ? "text-[var(--bdg-brand)]" : value < 0 ? "text-rose-600" : "text-stone-500"
+            }`}
+          >
+            {formatPct(value)}
+          </span>
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={disabled || value === 0}
+            className="bdg-btn bdg-btn-secondary flex items-center gap-1 px-2 py-1 text-xs disabled:opacity-40"
+            title="復原至調整前價格"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            復原
+          </button>
+        </div>
+      </div>
+      <Slider
+        min={MIN}
+        max={MAX}
+        step={1}
+        value={[value]}
+        disabled={disabled}
+        onValueChange={([pct]) => onChange(pct)}
+        className="py-2 [&_.bg-primary]:bg-[var(--bdg-brand)] [&_.border-primary\\/50]:border-[var(--bdg-brand)]"
+      />
+      <div className="mt-1 flex justify-between text-[11px] text-stone-400">
+        <span>{MIN}%</span>
+        <span>0%</span>
+        <span>+{MAX}%</span>
+      </div>
+      <p className="bdg-meta mt-2">拖曳即時調整所有項目單價；按「復原」或拖回 0% 可還原</p>
+    </div>
+  );
+}
