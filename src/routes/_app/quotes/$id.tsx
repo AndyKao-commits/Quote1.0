@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download, Eye, Loader2, Save, Search, Share2, X,
 } from "lucide-react";
+import { BackToTopButton, useShowBackToTop } from "@/components/BackToTopButton";
 import { QuoteLineList } from "@/components/QuoteLineList";
 import { QuotePriceAdjustBar } from "@/components/QuotePriceAdjustBar";
 import { CsvImportButton } from "@/components/CsvImportButton";
@@ -32,6 +33,47 @@ import { toast } from "sonner";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
 import { getSampleQuote, SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
+
+const AUTO_SAVE_MS = 2500;
+
+function buildQuoteSnapshot(
+  form: Record<string, unknown>,
+  lines: QuoteLine[],
+  priceAdjustPct: number,
+  paymentSchedule: string,
+) {
+  const { lines: normalized } = prepareQuoteLinesForSave(lines);
+  return JSON.stringify({
+    title: form.title,
+    client_name: form.client_name,
+    client_company: form.client_company ?? null,
+    client_phone: form.client_phone ?? null,
+    client_email: form.client_email ?? null,
+    client_tax_id: form.client_tax_id ?? null,
+    client_address: form.client_address ?? null,
+    show_seller_tax_id: form.show_seller_tax_id,
+    show_buyer_tax_id: form.show_buyer_tax_id,
+    seller_tax_id: form.seller_tax_id ?? null,
+    tax_included: form.tax_included,
+    show_tax_breakdown: form.show_tax_breakdown,
+    tax_rate: Number(form.tax_rate ?? 0.05),
+    valid_until: form.valid_until ?? null,
+    note: form.note ?? null,
+    terms: resolveQuoteTerms(String(form.terms ?? "")),
+    payment_schedule: paymentSchedule,
+    cover_image_url: form.cover_image_url ?? null,
+    price_adjust_pct: priceAdjustPct,
+    lines: normalized.map((l) => ({
+      line_type: l.line_type ?? "item",
+      name: l.name,
+      unit: l.unit,
+      quantity: l.quantity,
+      unit_price: l.unit_price,
+      note: l.note ?? null,
+      sort_order: l.sort_order,
+    })),
+  });
+}
 
 export const Route = createFileRoute("/_app/quotes/$id")({
   head: () => ({ meta: [{ title: "編輯報價 — 報得過" }] }),
@@ -79,6 +121,24 @@ function QuoteEditorPage() {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [paymentTouched, setPaymentTouched] = useState(false);
   const [priceAdjustPct, setPriceAdjustPct] = useState(0);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
+  const hydratedRef = useRef(false);
+  const savedSnapshotRef = useRef("");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorStateRef = useRef({
+    form: null as any,
+    lines: [] as QuoteLine[],
+    priceAdjustPct: 0,
+    paymentTouched: false,
+    totals: { subtotal: 0, tax_amount: 0, total: 0 },
+  });
+  const showBackToTop = useShowBackToTop();
+
+  useEffect(() => {
+    hydratedRef.current = false;
+    savedSnapshotRef.current = "";
+    setAutoSaveStatus("idle");
+  }, [id]);
 
   useEffect(() => {
     if (data) {
@@ -145,63 +205,123 @@ function QuoteEditorPage() {
       }
     : null;
 
+  const paymentValue = paymentTouched
+    ? (form?.payment_schedule ?? "")
+    : formatPaymentScheduleText(totals.total);
+
+  editorStateRef.current = { form, lines, priceAdjustPct, paymentTouched, totals };
+
+  const currentSnapshot = form
+    ? buildQuoteSnapshot(form, lines, priceAdjustPct, paymentValue)
+    : "";
+  const isDirty = Boolean(form) && currentSnapshot !== savedSnapshotRef.current;
+
   const saveMut = useMutation({
-    mutationFn: async () => {
-      if (!form) return null;
-      const { lines: saveLines, skipped, truncated } = prepareQuoteLinesForSave(lines);
+    mutationFn: async ({ silent: _silent = false }: { silent?: boolean } = {}) => {
+      const s = editorStateRef.current;
+      if (!s.form) return null;
+      const { lines: saveLines, skipped, truncated } = prepareQuoteLinesForSave(s.lines);
       if (!saveLines.length) throw new Error("至少需要一筆有名稱的項目");
       if (skipped > 0 || truncated > 0) {
         baseLinesRef.current =
-          priceAdjustPct === 0
+          s.priceAdjustPct === 0
             ? cloneQuoteLines(saveLines)
-            : unapplyPricePercentAdjustment(saveLines, priceAdjustPct);
+            : unapplyPricePercentAdjustment(saveLines, s.priceAdjustPct);
         setLines(saveLines);
       }
+      const pay = s.paymentTouched
+        ? s.form.payment_schedule
+        : formatPaymentScheduleText(s.totals.total);
       await saveFn({
         data: {
           id,
-          title: form.title,
-          client_name: form.client_name,
-          client_company: form.client_company,
-          client_phone: form.client_phone,
-          client_email: form.client_email,
-          client_tax_id: form.client_tax_id,
-          client_address: form.client_address,
-          show_seller_tax_id: form.show_seller_tax_id,
-          show_buyer_tax_id: form.show_buyer_tax_id,
-          seller_tax_id: form.seller_tax_id,
-          tax_included: form.tax_included,
-          show_tax_breakdown: form.show_tax_breakdown,
-          tax_rate: Number(form.tax_rate ?? 0.05),
-          valid_until: form.valid_until || null,
-          note: form.note,
-          terms: resolveQuoteTerms(form.terms),
-          payment_schedule: paymentTouched
-            ? form.payment_schedule
-            : formatPaymentScheduleText(totals.total),
-          cover_image_url: form.cover_image_url,
-          price_adjust_pct: priceAdjustPct,
+          title: s.form.title,
+          client_name: s.form.client_name,
+          client_company: s.form.client_company,
+          client_phone: s.form.client_phone,
+          client_email: s.form.client_email,
+          client_tax_id: s.form.client_tax_id,
+          client_address: s.form.client_address,
+          show_seller_tax_id: s.form.show_seller_tax_id,
+          show_buyer_tax_id: s.form.show_buyer_tax_id,
+          seller_tax_id: s.form.seller_tax_id,
+          tax_included: s.form.tax_included,
+          show_tax_breakdown: s.form.show_tax_breakdown,
+          tax_rate: Number(s.form.tax_rate ?? 0.05),
+          valid_until: s.form.valid_until || null,
+          note: s.form.note,
+          terms: resolveQuoteTerms(s.form.terms),
+          payment_schedule: pay,
+          cover_image_url: s.form.cover_image_url,
+          price_adjust_pct: s.priceAdjustPct,
           lines: saveLines,
         },
       });
-      return { skipped, truncated };
+      return { skipped, truncated, snapshot: buildQuoteSnapshot(s.form, saveLines, s.priceAdjustPct, pay) };
     },
-    onSuccess: (res) => {
+    onMutate: ({ silent }) => {
+      if (!silent) return;
+      setAutoSaveStatus("saving");
+    },
+    onSuccess: (res, { silent }) => {
       if (!res) return;
+      savedSnapshotRef.current = res.snapshot;
+      if (silent) {
+        setAutoSaveStatus("saved");
+        return;
+      }
       const parts: string[] = [];
       if (res.skipped > 0) parts.push(`已略過 ${res.skipped} 筆空白列`);
       if (res.truncated > 0) parts.push(`${res.truncated} 筆已截斷至字數上限（項目 100 字、備註 200 字）`);
       if (parts.length) setImportMsg(parts.join("；"));
+      setAutoSaveStatus("saved");
     },
-    onError: (e) => {
+    onError: (e, { silent }) => {
       const msg = e instanceof Error ? e.message : "儲存失敗";
+      if (silent) {
+        setAutoSaveStatus("error");
+        return;
+      }
       if (msg.includes("String must contain at least 1 character")) {
         setImportMsg("有項目名稱是空的，請填寫或刪除空白列後再儲存");
         return;
       }
       setImportMsg(msg);
+      setAutoSaveStatus("error");
     },
   });
+
+  useEffect(() => {
+    if (!form) return;
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      savedSnapshotRef.current = currentSnapshot;
+      return;
+    }
+    if (!isDirty || saveMut.isPending) return;
+
+    setAutoSaveStatus("pending");
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      const namedLines = editorStateRef.current.lines.filter((l) => l.name.trim());
+      if (!namedLines.length) return;
+      saveMut.mutate({ silent: true });
+    }, AUTO_SAVE_MS);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [currentSnapshot, form, isDirty, saveMut.isPending, saveMut]);
+
+  useEffect(() => {
+    if (autoSaveStatus !== "saved") return;
+    const t = setTimeout(() => setAutoSaveStatus("idle"), 3000);
+    return () => clearTimeout(t);
+  }, [autoSaveStatus]);
 
   const filteredCatalog = useMemo(() => {
     const q = kw.trim().toLowerCase();
@@ -235,7 +355,7 @@ function QuoteEditorPage() {
     setExporting(true);
     try {
       try {
-        await saveMut.mutateAsync();
+        await saveMut.mutateAsync({});
       } catch {
         // PDF 不依賴儲存成功
       }
@@ -248,12 +368,9 @@ function QuoteEditorPage() {
   }
 
   const termsValue = resolveQuoteTerms(form.terms);
-  const paymentValue = paymentTouched
-    ? (form.payment_schedule ?? "")
-    : formatPaymentScheduleText(totals.total);
 
   async function doShare() {
-    await saveMut.mutateAsync();
+    await saveMut.mutateAsync({});
     const res = await shareFn({ data: { id } });
     const url = `${window.location.origin}/q/${res.token}`;
     setShareUrl(url);
@@ -520,6 +637,7 @@ function QuoteEditorPage() {
         />
         <Field label="有效期限" value={form.valid_until ?? ""} onChange={(v) => setForm({ ...form, valid_until: v })} type="date" />
       </div>
+      <BackToTopButton />
     </div>
   );
 
@@ -529,8 +647,9 @@ function QuoteEditorPage() {
         <button type="button" onClick={() => nav({ to: "/quotes" })} className="text-sm text-stone-500 hover:text-[var(--bdg-ink)]">
           ← 返回
         </button>
+        <AutoSaveStatus status={autoSaveStatus} isDirty={isDirty} isPending={saveMut.isPending} />
         <div className="flex-1" />
-        <button type="button" onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="bdg-btn bdg-btn-secondary">
+        <button type="button" onClick={() => saveMut.mutate({})} disabled={saveMut.isPending} className="bdg-btn bdg-btn-secondary">
           {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 儲存
         </button>
         <button type="button" onClick={() => setPreviewFull(true)} className="bdg-btn bdg-btn-secondary">
@@ -619,8 +738,44 @@ function QuoteEditorPage() {
           </div>
         </div>
       )}
+
+      {showBackToTop && tab !== "preview" && !previewFull && (
+        <BackToTopButton variant="floating" />
+      )}
     </AppShell>
   );
+}
+
+function AutoSaveStatus({
+  status,
+  isDirty,
+  isPending,
+}: {
+  status: "idle" | "pending" | "saving" | "saved" | "error";
+  isDirty: boolean;
+  isPending: boolean;
+}) {
+  let text = "已儲存";
+  let className = "text-stone-400";
+
+  if (status === "saving" || (isPending && status !== "saved")) {
+    text = "儲存中…";
+    className = "text-[var(--bdg-brand)]";
+  } else if (status === "pending" && isDirty) {
+    text = "將自動儲存…";
+    className = "text-stone-500";
+  } else if (status === "saved") {
+    text = "已自動儲存";
+    className = "text-emerald-600";
+  } else if (status === "error") {
+    text = "自動儲存失敗";
+    className = "text-rose-600";
+  } else if (isDirty) {
+    text = "有未儲存變更";
+    className = "text-amber-700";
+  }
+
+  return <span className={`text-xs font-medium ${className}`}>{text}</span>;
 }
 
 function Field({ label, value, onChange, multiline, type = "text", hint, rows = 3 }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean; type?: string; hint?: string; rows?: number }) {
