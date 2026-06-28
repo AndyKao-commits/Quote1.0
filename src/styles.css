@@ -869,6 +869,10 @@
       0 0 0 3px rgb(196 90 60 / 0.35);
     opacity: 0.97;
   }
+  .quote-line-card--group-collapsed .bdg-input {
+    min-height: 2.25rem;
+    background: #fff7f3;
+  }
   .quote-line-card--drop-target {
     background: #fff7f3 !important;
     box-shadow: inset 0 0 0 2px rgb(196 90 60 / 0.35);

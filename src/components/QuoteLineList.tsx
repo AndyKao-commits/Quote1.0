@@ -49,14 +49,32 @@ function getDragBlock(lines: QuoteLine[], from: number) {
   return { start: from, end: from + 1 };
 }
 
-function insertIndexAtY(refs: (HTMLDivElement | null)[], clientY: number, count: number) {
-  for (let i = 0; i < count; i++) {
+function getVisibleIndices(lines: QuoteLine[], dragIdx: number | null) {
+  if (dragIdx === null || lines[dragIdx]?.line_type !== "group") {
+    return lines.map((_, i) => i);
+  }
+  const { start, end } = getDragBlock(lines, dragIdx);
+  const out: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (i > start && i < end) continue;
+    out.push(i);
+  }
+  return out;
+}
+
+function insertIndexAtY(
+  refs: (HTMLDivElement | null)[],
+  clientY: number,
+  visibleIndices: number[],
+) {
+  for (let vi = 0; vi < visibleIndices.length; vi++) {
+    const i = visibleIndices[vi];
     const el = refs[i];
     if (!el) continue;
     const r = el.getBoundingClientRect();
     if (clientY < r.top + r.height / 2) return i;
   }
-  return count - 1;
+  return visibleIndices[visibleIndices.length - 1] ?? 0;
 }
 
 const AUTO_SCROLL_EDGE = 100;
@@ -167,7 +185,8 @@ export function QuoteLineList({
     (clientY: number) => {
       if (dragFromRef.current === null) return;
       pointerYRef.current = clientY;
-      setDrop(insertIndexAtY(rowRefs.current, clientY, linesRef.current.length));
+      const visible = getVisibleIndices(linesRef.current, dragFromRef.current);
+      setDrop(insertIndexAtY(rowRefs.current, clientY, visible));
     },
     [setDrop],
   );
@@ -179,7 +198,8 @@ export function QuoteLineList({
     }
     const y = pointerYRef.current;
     scrollWindowBy(autoScrollDelta(y));
-    setDrop(insertIndexAtY(rowRefs.current, y, linesRef.current.length));
+    const visible = getVisibleIndices(linesRef.current, dragFromRef.current);
+    setDrop(insertIndexAtY(rowRefs.current, y, visible));
     scrollRafRef.current = requestAnimationFrame(autoScrollTick);
   }, [setDrop]);
 
@@ -232,13 +252,26 @@ export function QuoteLineList({
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
+  const draggingGroupIdx =
+    dragIdx !== null && lines[dragIdx]?.line_type === "group" ? dragIdx : null;
+
   return (
     <div className={`space-y-2 ${dragIdx !== null ? "quote-line-list--dragging" : ""}`}>
       {lines.map((l, i) => {
         const isGroup = l.line_type === "group";
+        if (
+          draggingGroupIdx !== null &&
+          i > draggingGroupIdx &&
+          i < getGroupBlockEnd(lines, draggingGroupIdx)
+        ) {
+          return null;
+        }
+
         const showNote = noteOpen[i] || Boolean(l.note?.trim());
         const isDragging = dragIdx === i;
         const isDropTarget = dropIdx === i && dragIdx !== null && dragIdx !== i;
+        const isGroupDragging = isGroup && isDragging;
+        const childCount = isGroup ? getGroupBlockEnd(lines, i) - i - 1 : 0;
 
         return (
           <div key={`${i}-${l.id ?? "new"}`} className="relative">
@@ -247,7 +280,9 @@ export function QuoteLineList({
               ref={(el) => {
                 rowRefs.current[i] = el;
               }}
-              className={`bdg-card quote-line-card relative p-3 pb-10 transition-all duration-150 ${
+              className={`bdg-card quote-line-card relative p-3 transition-all duration-150 ${
+                isGroupDragging ? "pb-3 quote-line-card--group-collapsed" : "pb-10"
+              } ${
                 isDragging
                   ? "quote-line-card--dragging"
                   : isDropTarget
@@ -264,11 +299,11 @@ export function QuoteLineList({
                 >
                   <GripVertical className="h-5 w-5" />
                 </button>
-                <div className="min-w-0 flex-1 space-y-2">
+                <div className={`min-w-0 flex-1 space-y-2 ${isGroupDragging ? "pointer-events-none" : ""}`}>
                   <div>
                     <div className="mb-1 flex items-center justify-between gap-2">
                       <span className="bdg-label mb-0">{isGroup ? "工種" : "項目"}</span>
-                      <CharCount value={l.name} max={QUOTE_LIMITS.lineName} />
+                      {!isGroupDragging && <CharCount value={l.name} max={QUOTE_LIMITS.lineName} />}
                     </div>
                     <textarea
                       value={l.name}
@@ -277,7 +312,14 @@ export function QuoteLineList({
                       onChange={(e) => update(i, { name: e.target.value })}
                       placeholder={isGroup ? "例如：泥作工程" : "項目說明"}
                       className="bdg-input min-h-[2.75rem] resize-y break-words"
+                      readOnly={isGroupDragging}
+                      tabIndex={isGroupDragging ? -1 : undefined}
                     />
+                    {isGroupDragging && childCount > 0 && (
+                      <p className="bdg-meta mt-1.5 text-[var(--bdg-brand)]">
+                        含 {childCount} 項（拖曳中已收合）
+                      </p>
+                    )}
                   </div>
                   {!isGroup && (
                     <div className="quote-line-fields">
@@ -329,35 +371,39 @@ export function QuoteLineList({
                     </div>
                   )}
                 </div>
-                <div className="flex shrink-0 flex-col gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => toggleNote(i)}
-                    className={`rounded p-1.5 ${showNote ? "bg-stone-100 text-[var(--bdg-brand)]" : "text-stone-400 hover:bg-stone-50"}`}
-                    title="備註"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="rounded p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                {!isGroupDragging && (
+                  <div className="flex shrink-0 flex-col gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleNote(i)}
+                      className={`rounded p-1.5 ${showNote ? "bg-stone-100 text-[var(--bdg-brand)]" : "text-stone-400 hover:bg-stone-50"}`}
+                      title="備註"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(i)}
+                      className="rounded p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  onChange(isGroup ? insertGroupAfterSection(lines, i) : insertItemAfter(lines, i))
-                }
-                className="quote-line-add-corner"
-                title={isGroup ? "在此工種區塊後新增工種" : "在下方新增項目"}
-                aria-label={isGroup ? "新增工種" : "新增項目"}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              {!isGroupDragging && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange(isGroup ? insertGroupAfterSection(lines, i) : insertItemAfter(lines, i))
+                  }
+                  className="quote-line-add-corner"
+                  title={isGroup ? "在此工種區塊後新增工種" : "在下方新增項目"}
+                  aria-label={isGroup ? "新增工種" : "新增項目"}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         );
@@ -380,7 +426,7 @@ export function QuoteLineList({
         </button>
       </div>
       <p className="bdg-meta leading-relaxed">
-        項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。按住左側 ≡ 拖曳排序，靠近螢幕上下緣會自動捲動；卡片右下角 ＋ 可快速新增。
+        項目名稱最多 {QUOTE_LIMITS.lineName} 字、備註最多 {QUOTE_LIMITS.lineNote} 字。按住左側 ≡ 拖曳排序；拖曳工種時底下項目會收合。靠近螢幕上下緣會自動捲動；卡片右下角 ＋ 可快速新增。
       </p>
     </div>
   );
