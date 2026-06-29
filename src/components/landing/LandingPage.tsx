@@ -281,8 +281,8 @@ function MockEditorSplit({ className = "" }: { className?: string }) {
 function FeatureCard({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) {
   return (
     <div className="landing-feature-card">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#C45A3C]/10 text-[#C45A3C]">{icon}</div>
-      <h3 className="font-semibold text-[#1a1612]">{title}</h3>
+      <div className="bdg-card-icon mb-3.5">{icon}</div>
+      <h3 className="text-lg font-bold text-[#1a1612]">{title}</h3>
       <p className="mt-1.5 text-sm leading-relaxed text-[#6b5c4d]">{desc}</p>
     </div>
   );

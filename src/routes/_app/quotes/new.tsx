@@ -5,13 +5,18 @@ import { AppShell } from "@/components/BdgAppShell";
 import { createQuote, createSampleQuote } from "@/lib/quotes.functions";
 import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Bath, Home, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/quotes/new")({
   head: () => ({ meta: [{ title: "新建報價 — 報得過" }] }),
   component: NewQuotePage,
 });
+
+const SAMPLE_ICONS: Record<string, typeof Bath> = {
+  bathroom: Bath,
+  "full-home": Home,
+};
 
 function NewQuotePage() {
   const nav = useNavigate();
@@ -57,8 +62,10 @@ function NewQuotePage() {
         <p className="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{err}</p>
       )}
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        {SAMPLE_QUOTES.map((s) => (
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {SAMPLE_QUOTES.map((s) => {
+          const Icon = SAMPLE_ICONS[s.id] ?? Home;
+          return (
           <button
             key={s.id}
             type="button"
@@ -67,12 +74,16 @@ function NewQuotePage() {
               setErr(null);
               createSample.mutate(s.id as SampleQuoteId);
             }}
-            className="bdg-card p-5 text-left transition hover:border-stone-300 disabled:opacity-60"
+            className="bdg-card bdg-card-interactive p-6 text-left disabled:opacity-60"
           >
-            <p className="font-semibold">{s.tabLabel}</p>
-            <p className="mt-1 text-xs text-stone-500">{s.hint}</p>
+            <div className="bdg-card-icon mb-3.5">
+              <Icon className="h-5 w-5" />
+            </div>
+            <p className="text-lg font-bold text-[var(--bdg-ink)]">{s.tabLabel}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-stone-500">{s.hint}</p>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       <div className="relative z-50 mt-8 pb-6">

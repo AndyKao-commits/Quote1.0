@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
 import { listQuotes, duplicateQuote, deleteQuote, createSampleQuote } from "@/lib/quotes.functions";
 import { formatMoney } from "@/lib/quotes.types";
@@ -109,13 +109,19 @@ function QuotesPage() {
       )}
 
       {!isError && (
-      <ul className="space-y-2">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {quotes.map((q: any) => (
-          <li key={q.id} className="bdg-card flex items-center gap-3 p-4">
+          <li key={q.id} className="bdg-card bdg-card-interactive flex items-center gap-3 p-4">
+            <div className="bdg-card-icon bdg-card-icon--soft hidden sm:grid">
+              <FileText className="h-5 w-5" />
+            </div>
             <Link to="/quotes/$id" params={{ id: q.id }} className="min-w-0 flex-1">
-              <p className="truncate font-medium">{q.client_name || "未命名客戶"}</p>
-              <p className="text-xs text-stone-500">
-                {q.title} · {formatMoney(Number(q.total))} · {new Date(q.created_at).toLocaleDateString("zh-TW")}
+              <p className="truncate text-base font-bold text-[var(--bdg-ink)]">{q.client_name || "未命名客戶"}</p>
+              <p className="mt-0.5 text-sm text-stone-500">
+                {q.title}
+              </p>
+              <p className="mt-1 text-xs text-stone-400">
+                {formatMoney(Number(q.total))} · {new Date(q.created_at).toLocaleDateString("zh-TW")}
               </p>
             </Link>
             <button type="button" onClick={() => dup.mutate(q.id)} className="rounded p-2 text-stone-500 hover:bg-stone-100" title="複製">
