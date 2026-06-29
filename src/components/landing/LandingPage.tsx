@@ -8,19 +8,15 @@ import {
   Download,
   Package,
   Percent,
-  Save,
-  Search,
   Share2,
 } from "lucide-react";
 import {
   LandingShotCard,
-  ShotDeliverApp,
   ShotDetailPage,
-  ShotEditorApp,
-  ShotPreviewApp,
   ShotSignPage,
   ShotSummaryPage,
 } from "@/components/landing/LandingShots";
+import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
 
 const BRAND = "報得過";
 const SPLASH_KEY = "bdg_landing_splash";
@@ -260,58 +256,6 @@ function MockPdfSummary({ className = "", compact = false, showBadge = true }: {
   );
 }
 
-function MockEditorSplit({ className = "" }: { className?: string }) {
-  return (
-    <div className={`landing-mock-editor-v2 select-none ${className}`} aria-hidden>
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--bdg-line)] bg-white px-3 py-2">
-        <span className="text-xs text-stone-500">← 返回</span>
-        <div className="flex-1" />
-        {["儲存", "預覽", "PDF"].map((label) => (
-          <span key={label} className="bdg-btn bdg-btn-secondary pointer-events-none text-xs py-1">
-            {label === "儲存" && <Save className="h-3.5 w-3.5" />}
-            {label === "預覽" && <Eye className="h-3.5 w-3.5" />}
-            {label === "PDF" && <Download className="h-3.5 w-3.5" />}
-            {label}
-          </span>
-        ))}
-        <span className="bdg-btn pointer-events-none bg-[#06C755] text-xs text-white py-1">LINE</span>
-      </div>
-      <div className="grid min-h-[340px] lg:min-h-[400px] lg:grid-cols-2">
-        <div className="space-y-3 border-b border-[var(--bdg-line)] p-3 lg:border-b-0 lg:border-r">
-          <div className="bdg-card space-y-2 p-3">
-            <p className="bdg-section-title">客戶</p>
-            <div className="space-y-1.5">
-              <div className="text-[10px] text-stone-500">報價標題</div>
-              <div className="bdg-input py-1.5 text-xs">工程施工報價單</div>
-              <div className="text-[10px] text-stone-500">客戶名稱</div>
-              <div className="bdg-input py-1.5 text-xs">陳先生</div>
-            </div>
-          </div>
-          <div className="bdg-card p-3">
-            <p className="bdg-section-title mb-2">明細</p>
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
-              <div className="bdg-input py-1.5 pl-9 text-xs text-stone-400">搜尋項目庫…</div>
-            </div>
-            {SUMMARY_ROWS.slice(0, 3).map((r) => (
-              <div key={r.name} className="mb-1.5 flex justify-between rounded border border-[var(--bdg-line)] px-2 py-1.5 text-xs">
-                <span>{r.name}</span>
-                <span className="text-stone-400">式 · 1</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex min-h-[240px] flex-col bg-stone-200/70">
-          <div className="pan-hint border-b-0 bg-white/90 py-1 text-[10px]">拖曳或滑動瀏覽完整報價</div>
-          <div className="flex flex-1 items-start justify-center overflow-hidden p-3">
-            <MockPdfSummary compact showBadge={false} className="!static !max-w-full !rotate-0 !shadow-md w-full max-w-[280px]" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function FeatureCard({
   tag,
   icon: Icon,
@@ -475,21 +419,7 @@ export function LandingPage() {
             </p>
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
-            <div className="landing-shots">
-              <LandingShotCard title="明細編輯" subtitle="客戶資料、工種項目、項目庫搜尋帶入" variant="app">
-                <ShotEditorApp />
-              </LandingShotCard>
-              <LandingShotCard title="即時預覽" subtitle="PDF 版型同步顯示，支援拖曳瀏覽" variant="app">
-                <ShotPreviewApp />
-              </LandingShotCard>
-              <LandingShotCard title="PDF 與 LINE" subtitle="A4 下載列印，或產生線上預覽連結" variant="app">
-                <ShotDeliverApp />
-              </LandingShotCard>
-            </div>
-            <p className="landing-shots-hint md:hidden">左右滑動查看更多</p>
-          </ScrollReveal>
-          <ScrollReveal delay={120} from="up" className="mt-8 hidden lg:block">
-            <MockEditorSplit className="mx-auto max-w-4xl" />
+            <LandingWorkflowDemo className="mx-auto mt-8 max-w-4xl" />
           </ScrollReveal>
         </div>
       </section>
