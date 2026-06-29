@@ -4,11 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
-  Copy,
-  Download,
   Eye,
-  FileSpreadsheet,
+  Download,
   Package,
+  Percent,
   Save,
   Search,
   Share2,
@@ -25,6 +24,29 @@ import {
 
 const BRAND = "報得過";
 const SPLASH_KEY = "bdg_landing_splash";
+
+const WHY_REASONS = [
+  {
+    icon: Eye,
+    title: "邊填邊看，送出前心里有底",
+    desc: "左邊改一個數字，右邊 PDF 立刻更新。自動儲存，不用怕填到一半資料不見。",
+  },
+  {
+    icon: Share2,
+    title: "LINE 一鍵送出，業主馬上看",
+    desc: "工地、車上都能傳。產生預覽連結，客戶用手機就能翻完整報價，不用等 Email。",
+  },
+  {
+    icon: Package,
+    title: "常用工項存好，下次不用重打",
+    desc: "泥作、木作、水電建成項目庫，搜尋帶入。Excel 整理好的明細也能 CSV 一次匯入。",
+  },
+  {
+    icon: Percent,
+    title: "現場議價，全部價格一起調",
+    desc: "客戶殺價不用重算一整份。拉桿調整全部工項％數，總價與付款分期跟著變。",
+  },
+] as const;
 
 const SUMMARY_ROWS = [
   { name: "泥作工程", total: "680,000" },
@@ -286,12 +308,22 @@ function MockEditorSplit({ className = "" }: { className?: string }) {
   );
 }
 
-function FeatureCard({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) {
+function ReasonCard({
+  icon: Icon,
+  title,
+  desc,
+}: {
+  icon: (typeof WHY_REASONS)[number]["icon"];
+  title: string;
+  desc: string;
+}) {
   return (
-    <div className="landing-feature-card">
-      <div className="bdg-card-icon mb-3.5">{icon}</div>
+    <div className="landing-feature-card h-full">
+      <div className="bdg-card-icon mb-3.5">
+        <Icon className="h-5 w-5" />
+      </div>
       <h3 className="text-lg font-bold text-[#1a1612]">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-[#6b5c4d]">{desc}</p>
+      <p className="mt-2 text-sm leading-relaxed text-[#6b5c4d]">{desc}</p>
     </div>
   );
 }
@@ -359,12 +391,12 @@ export function LandingPage() {
 
       <section className="landing-hero relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-6xl items-center gap-10 px-4 pb-20 pt-8 md:grid-cols-2 md:gap-12 md:pb-24 md:pt-14">
         <ScrollReveal from="left">
-          <p className="landing-hero-eyebrow text-xs font-semibold tracking-[0.28em] text-[#C45A3C]">FOR FIELD & STUDIO</p>
+          <p className="landing-hero-eyebrow text-xs font-semibold tracking-[0.28em] text-[#C45A3C]">給現場與工作室</p>
           <h1 className="landing-hero-title mt-4 text-4xl font-bold leading-[1.12] tracking-tight md:text-5xl lg:text-[3.25rem]">
             三分鐘，<br />做出客戶願意簽的報價。
           </h1>
           <p className="landing-hero-sub mt-5 max-w-md text-base leading-relaxed text-[#6b5c4d] md:text-lg">
-            給師傅、統包、剛接案的設計師。填完項目，右邊就是給客戶看的專業報價單。
+            師傅、統包、設計師都適用。你專心談案子，版型、分頁、大寫金額我們幫你顧好——送出前就能確定業主看到的是正式文件。
           </p>
           <CtaButton className="landing-hero-cta mt-8 px-7 py-3.5 text-base" onEnter={startEnter} disabled={entering} />
         </ScrollReveal>
@@ -375,28 +407,30 @@ export function LandingPage() {
             </MockPanel>
           </div>
         </ScrollReveal>
-        <a href="#features" className="landing-hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-xs font-semibold text-[#6b5c4d] md:bottom-8">
-          往下探索功能
+        <a href="#client" className="landing-hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-xs font-semibold text-[#6b5c4d] md:bottom-8">
+          看看客戶會收到什麼
           <ChevronDown className="h-4 w-4" />
         </a>
       </section>
 
-      <section id="features" className="landing-shots-section border-t border-[#e8dfd3]/80 bg-white/60">
+      <section id="client" className="landing-shots-section border-t border-[#e8dfd3]/80 bg-white/60">
         <div className="mx-auto max-w-6xl px-4">
           <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="landing-shots-eyebrow">Professional</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">工程施工報價單，該有的都有</h2>
-            <p className="landing-shots-lead">摘要、明細、簽章區一次到位，輸出就是客戶看得懂的正式文件。</p>
+            <p className="landing-shots-eyebrow">給業主看的</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">客戶看得懂，才敢往下談</h2>
+            <p className="landing-shots-lead">
+              業主不想看 Excel 截圖。總價、工種、分期、簽章——想確認的重點都清楚列出，第一眼就建立信任。
+            </p>
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
             <div className="landing-shots">
-              <LandingShotCard title="摘要頁" subtitle="工種合計、營業稅、中文大寫金額">
+              <LandingShotCard title="工種與總價" subtitle="大項預算一眼掌握，中文大寫金額一併附上">
                 <ShotSummaryPage />
               </LandingShotCard>
-              <LandingShotCard title="明細頁" subtitle="自動分頁，每頁完整表頭">
+              <LandingShotCard title="細項拆到單價" subtitle="想深入的話，每個工種底下項目都列清楚">
                 <ShotDetailPage />
               </LandingShotCard>
-              <LandingShotCard title="簽章區" subtitle="條款、付款明細、甲乙簽章">
+              <LandingShotCard title="分期與簽章" subtitle="付款節點、條款、甲乙簽章區——簽約前最在意的都在">
                 <ShotSignPage />
               </LandingShotCard>
             </div>
@@ -405,22 +439,43 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="landing-shots-section">
+      <section id="why" className="border-t border-[#e8dfd3]/80 bg-[#F5F0E8]/40 py-16 md:py-20">
         <div className="mx-auto max-w-6xl px-4">
           <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="landing-shots-eyebrow">Live preview</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">左邊填、右邊就是成品</h2>
-            <p className="landing-shots-lead">不用猜排版。改一個數字，總價與付款明細跟著更新。</p>
+            <p className="landing-shots-eyebrow">為什麼選報得過</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">你不用再當排版工</h2>
+            <p className="landing-shots-lead">
+              Word 拉表格、Excel 截圖、回家再補排版——這些時間應該拿來談下一個案。報得過把「做出像樣的報價單」變成填完就能送。
+            </p>
+          </ScrollReveal>
+          <div className="landing-reason-grid mt-10">
+            {WHY_REASONS.map((reason, i) => (
+              <ScrollReveal key={reason.title} delay={i * 60} from={i % 2 === 0 ? "left" : "right"}>
+                <ReasonCard icon={reason.icon} title={reason.title} desc={reason.desc} />
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" className="landing-shots-section">
+        <div className="mx-auto max-w-6xl px-4">
+          <ScrollReveal className="mx-auto max-w-2xl text-center">
+            <p className="landing-shots-eyebrow">你的報價流程</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">現場填完，當天就能送</h2>
+            <p className="landing-shots-lead">
+              帶入工項、邊改邊看成品、一鍵 PDF 或 LINE——不用回家再開電腦排版。
+            </p>
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
             <div className="landing-shots">
-              <LandingShotCard title="填寫明細" subtitle="客戶資料與工種項目" variant="app">
+              <LandingShotCard title="帶入工項" subtitle="搜尋項目庫、載入範本，或從舊報價複製改價" variant="app">
                 <ShotEditorApp />
               </LandingShotCard>
-              <LandingShotCard title="即時預覽" subtitle="右側同步顯示 PDF 版型" variant="app">
+              <LandingShotCard title="邊改邊看" subtitle="右邊就是客戶會收到的 PDF，改數字立刻同步" variant="app">
                 <ShotPreviewApp />
               </LandingShotCard>
-              <LandingShotCard title="匯出分享" subtitle="PDF 下載或 LINE 一鍵送出" variant="app">
+              <LandingShotCard title="一鍵送出" subtitle="PDF 下載列印，或 LINE 分享預覽連結" variant="app">
                 <ShotDeliverApp />
               </LandingShotCard>
             </div>
@@ -432,54 +487,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-[#e8dfd3]/80 bg-white/50 py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Catalog</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">常用工項存起來，下次秒帶入</h2>
-            <p className="mt-4 text-base text-[#6b5c4d]">項目庫搜尋帶入明細，也支援 CSV 匯入，大量項目不用重打。</p>
-          </ScrollReveal>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            <ScrollReveal delay={0} from="left">
-              <div className="landing-feature-card h-full">
-                <div className="bdg-card-icon mb-3.5">
-                  <Package className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold">項目庫</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#6b5c4d]">泥作、木作、水電…常用單價一次建好，編輯時搜尋即帶入。</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={80} from="right">
-              <div className="landing-feature-card h-full">
-                <div className="bdg-card-icon mb-3.5">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold">CSV 匯入</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[#6b5c4d]">從 Excel 整理好的明細，上傳後自動對應欄位。</p>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#C45A3C]">Deliver</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">做好就送，不用再排版</h2>
-          </ScrollReveal>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            <ScrollReveal delay={0} from="left"><FeatureCard icon={<Download className="h-5 w-5" />} title="PDF 匯出" desc="A4 滿版輸出，直接寄給客戶或列印簽章。" /></ScrollReveal>
-            <ScrollReveal delay={60} from="up"><FeatureCard icon={<Share2 className="h-5 w-5" />} title="LINE 分享" desc="一鍵產生連結，附上總價與預覽頁。" /></ScrollReveal>
-            <ScrollReveal delay={120} from="right"><FeatureCard icon={<Copy className="h-5 w-5" />} title="複製舊報價" desc="同客戶改價再送，歷史紀錄隨時調出。" /></ScrollReveal>
-          </div>
-        </div>
-      </section>
-
       <section className="border-t border-[#e8dfd3] bg-[#1a1612] py-16 text-white md:py-20">
         <ScrollReveal className="mx-auto max-w-2xl px-4 text-center">
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">下一張報價，從這裡開始</h2>
-          <p className="mt-4 text-white/70">註冊後即可建立報價、匯出 PDF、分享給客戶。</p>
+          <p className="mt-4 text-white/70">免費註冊，馬上做出第一份讓客戶願意簽的報價單。</p>
           <CtaButton className="mt-8 px-8 py-3.5 text-base hover:brightness-110" onEnter={startEnter} disabled={entering} />
         </ScrollReveal>
       </section>

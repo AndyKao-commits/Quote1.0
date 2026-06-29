@@ -1111,6 +1111,17 @@
     line-height: 1.65;
     color: #6b5c4d;
   }
+  .landing-reason-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) {
+    .landing-reason-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.25rem;
+    }
+  }
   .landing-shots {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
