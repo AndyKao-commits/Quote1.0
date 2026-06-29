@@ -128,7 +128,7 @@ export function ShotSignPage() {
       <div className="flex h-full flex-col gap-2">
         <div className="shrink-0 space-y-1 text-stone-600">
           <p>壹、初估報價單時間於三個月內有效。</p>
-          <p>貳、除本報價列出之工程外，工程由甲方自行發包…</p>
+          <p>貳、付款明細金額皆以施工報價單為主…</p>
         </div>
         <div className="shrink-0 border border-[#222] bg-[#f7f7f7] px-2 py-1.5">
           <p className="font-bold">付款明細（未稅）</p>

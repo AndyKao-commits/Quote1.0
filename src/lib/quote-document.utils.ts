@@ -1,14 +1,25 @@
 import type { QuoteLine } from "@/lib/quotes.types";
 
+/** 已永久移除的條款（舊報價若仍含此行，顯示時自動略過） */
+const REMOVED_TERM_LINE =
+  "除本報價列出之工程外，工程由甲方自行發包，甲方需另支付乙方工程10%工程監管費。";
+
+function stripRemovedTerms(text: string) {
+  return text
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter((line) => line && line !== REMOVED_TERM_LINE && !line.includes("甲方需另支付乙方工程10%工程監管費"))
+    .join("\n");
+}
+
 /** 預設條款（顯示時自動加 壹貳參…） */
 export const DEFAULT_QUOTE_TERMS = `初估報價單時間於三個月內有效。
-除本報價列出之工程外，工程由甲方自行發包，甲方需另支付乙方工程10%工程監管費。
 付款明細金額皆以施工報價單為主，多退少補則不在另行簽約。
 工程中加減帳於尾款結算，驗收完畢後更新於完工請款單。
 若社區有限制施工時間或限制搬運動線而衍生之費用則由甲方負擔。`;
 
 export function resolveQuoteTerms(terms: string | null | undefined) {
-  return terms?.trim() || DEFAULT_QUOTE_TERMS;
+  return stripRemovedTerms(terms?.trim() || DEFAULT_QUOTE_TERMS);
 }
 
 const PAYMENT_PHASES = [
