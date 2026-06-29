@@ -13,6 +13,15 @@ import {
   Search,
   Share2,
 } from "lucide-react";
+import {
+  LandingShotCard,
+  ShotDeliverApp,
+  ShotDetailPage,
+  ShotEditorApp,
+  ShotPreviewApp,
+  ShotSignPage,
+  ShotSummaryPage,
+} from "@/components/landing/LandingShots";
 
 const BRAND = "報得過";
 const SPLASH_KEY = "bdg_landing_splash";
@@ -277,123 +286,6 @@ function MockEditorSplit({ className = "" }: { className?: string }) {
   );
 }
 
-function LandingShotCard({
-  title,
-  subtitle,
-  children,
-  scale = 0.52,
-}: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-  scale?: number;
-}) {
-  return (
-    <div className="landing-shot">
-      <div className="landing-shot-frame">
-        <div
-          className="landing-shot-inner"
-          style={{
-            transform: `scale(${scale})`,
-            width: `${100 / scale}%`,
-            marginBottom: `calc(-${(1 - scale) * 100}% + 8px)`,
-          }}
-        >
-          {children}
-        </div>
-      </div>
-      <div className="landing-shot-cap">
-        <b>{title}</b>
-        <span>{subtitle}</span>
-      </div>
-    </div>
-  );
-}
-
-function MockPdfDetail({ className = "" }: { className?: string }) {
-  const items = [
-    { group: "泥作工程", lines: ["地坪整平", "防水施作"] },
-    { group: "木作工程", lines: ["天花板", "櫃體"] },
-  ];
-  return (
-    <div className={`landing-mock-paper landing-mock-detail bg-white p-4 ${className}`} aria-hidden>
-      <p className="text-center text-[8px] font-semibold">陳宅室內整修案</p>
-      <p className="mt-1 text-center text-[6px] text-stone-500">明細頁 · 第 2 / 4 頁</p>
-      <div className="mt-2 overflow-hidden border border-[#222]">
-        <div className="grid grid-cols-6 border-b border-[#222] bg-[#f5f5f5] font-bold">
-          {["項次", "項目", "單位", "數量", "單價", "複價"].map((h) => (
-            <div key={h} className="border-r border-[#222] px-1 py-1 text-center last:border-r-0">{h}</div>
-          ))}
-        </div>
-        {items.map((g) => (
-          <div key={g.group}>
-            <div className="border-b border-[#222] bg-[#faf8f5] px-2 py-1 font-bold">{g.group}</div>
-            {g.lines.map((line, i) => (
-              <div key={line} className="grid grid-cols-6 border-b border-[#222]">
-                <div className="border-r border-[#222] px-1 py-1 text-center">{i + 1}</div>
-                <div className="col-span-2 border-r border-[#222] px-1 py-1">{line}</div>
-                <div className="border-r border-[#222] px-1 py-1 text-center">式</div>
-                <div className="border-r border-[#222] px-1 py-1 text-center">1</div>
-                <div className="px-1 py-1 text-right">—</div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MockSignFooter({ className = "" }: { className?: string }) {
-  return (
-    <div className={`landing-mock-paper landing-mock-detail bg-white p-4 ${className}`} aria-hidden>
-      <p className="text-[7px] font-bold">付款明細（未稅）</p>
-      <p className="mt-1 text-[6px] text-stone-600">第一期 訂金 5% $208,629</p>
-      <p className="mt-1 text-[6px] text-stone-600">第二期 進場款 30% $1,251,776</p>
-      <div className="mt-3 space-y-2">
-        {["業主代表：（甲方）", "設計業務：王小明　0912-345-678（乙方）"].map((label) => (
-          <div key={label} className="flex min-h-[2rem] items-end justify-between border border-[#222] px-2 py-1.5 text-[6.5px]">
-            <span>{label}</span>
-            <span className="text-stone-400">簽章</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MockEditorMini({ className = "" }: { className?: string }) {
-  return (
-    <div className={`landing-mock-editor-mini bg-[#f7f3ed] p-3 ${className}`} aria-hidden>
-      <div className="rounded-lg border border-[var(--bdg-line)] bg-white p-2.5">
-        <p className="text-[7px] font-semibold text-stone-500">客戶</p>
-        <p className="mt-1 rounded border border-[var(--bdg-line)] px-2 py-1 text-[7px]">陳先生</p>
-        <p className="mt-2 text-[7px] font-semibold text-stone-500">明細</p>
-        {SUMMARY_ROWS.slice(0, 4).map((r) => (
-          <div key={r.name} className="mt-1 flex justify-between rounded border border-[var(--bdg-line)] px-2 py-1 text-[6.5px]">
-            <span>{r.name}</span>
-            <span className="text-stone-400">{r.total}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MockDeliverMini({ className = "" }: { className?: string }) {
-  return (
-    <div className={`landing-mock-deliver flex flex-col gap-2 bg-[#f7f3ed] p-3 ${className}`} aria-hidden>
-      <div className="flex flex-wrap gap-1.5">
-        {["儲存", "預覽", "PDF"].map((l) => (
-          <span key={l} className="rounded border border-[var(--bdg-line)] bg-white px-2 py-1 text-[7px] font-semibold">{l}</span>
-        ))}
-        <span className="rounded bg-[#06C755] px-2 py-1 text-[7px] font-semibold text-white">LINE</span>
-      </div>
-      <MockPdfSummary compact showBadge={false} className="!static !max-w-none !rotate-0 !shadow-md" />
-    </div>
-  );
-}
-
 function FeatureCard({ icon, title, desc }: { icon: ReactNode; title: string; desc: string }) {
   return (
     <div className="landing-feature-card">
@@ -498,14 +390,14 @@ export function LandingPage() {
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
             <div className="landing-shots">
-              <LandingShotCard title="摘要頁" subtitle="工種合計、營業稅、中文大寫金額" scale={0.48}>
-                <MockPdfSummary compact showBadge={false} className="!static !max-w-none !rotate-0 !shadow-none" />
+              <LandingShotCard title="摘要頁" subtitle="工種合計、營業稅、中文大寫金額">
+                <ShotSummaryPage />
               </LandingShotCard>
-              <LandingShotCard title="明細頁" subtitle="自動分頁，每頁完整表頭" scale={0.55}>
-                <MockPdfDetail />
+              <LandingShotCard title="明細頁" subtitle="自動分頁，每頁完整表頭">
+                <ShotDetailPage />
               </LandingShotCard>
-              <LandingShotCard title="簽章區" subtitle="條款、付款明細、甲乙簽章" scale={0.58}>
-                <MockSignFooter />
+              <LandingShotCard title="簽章區" subtitle="條款、付款明細、甲乙簽章">
+                <ShotSignPage />
               </LandingShotCard>
             </div>
             <p className="landing-shots-hint md:hidden">左右滑動查看更多</p>
@@ -522,14 +414,14 @@ export function LandingPage() {
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
             <div className="landing-shots">
-              <LandingShotCard title="填寫明細" subtitle="客戶資料與工種項目" scale={0.62}>
-                <MockEditorMini />
+              <LandingShotCard title="填寫明細" subtitle="客戶資料與工種項目" variant="app">
+                <ShotEditorApp />
               </LandingShotCard>
-              <LandingShotCard title="即時預覽" subtitle="右側同步顯示 PDF 版型" scale={0.48}>
-                <MockPdfSummary compact showBadge={false} className="!static !max-w-none !rotate-0 !shadow-none" />
+              <LandingShotCard title="即時預覽" subtitle="右側同步顯示 PDF 版型" variant="app">
+                <ShotPreviewApp />
               </LandingShotCard>
-              <LandingShotCard title="匯出分享" subtitle="PDF 下載或 LINE 一鍵送出" scale={0.5}>
-                <MockDeliverMini />
+              <LandingShotCard title="匯出分享" subtitle="PDF 下載或 LINE 一鍵送出" variant="app">
+                <ShotDeliverApp />
               </LandingShotCard>
             </div>
             <p className="landing-shots-hint md:hidden">左右滑動查看更多</p>
