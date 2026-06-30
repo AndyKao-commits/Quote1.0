@@ -24,24 +24,28 @@ const SPLASH_KEY = "bdg_landing_splash";
 const PRODUCT_FEATURES = [
   {
     tag: "Preview",
+    tone: "peach",
     icon: Eye,
     title: "即時預覽同步",
     desc: "編輯區與 PDF 雙欄對照。明細、合計、付款分期隨輸入即時更新，並自動儲存。",
   },
   {
     tag: "Share",
+    tone: "blue",
     icon: Share2,
     title: "LINE 線上分享",
     desc: "產生預覽連結，客戶無需安裝即可瀏覽完整報價，支援一鍵轉發 LINE。",
   },
   {
     tag: "Catalog",
+    tone: "cream",
     icon: Package,
     title: "項目庫管理",
     desc: "常用工項與單價預先建檔，搜尋帶入明細。支援 CSV 批次匯入與欄位對應。",
   },
   {
     tag: "Pricing",
+    tone: "slate",
     icon: Percent,
     title: "批次價格調整",
     desc: "全報價統一升降百分比，總價、稅額與付款分期明細自動重算。",
@@ -256,25 +260,47 @@ function MockPdfSummary({ className = "", compact = false, showBadge = true }: {
   );
 }
 
+function LandingSectionIntro({
+  pill,
+  title,
+  lead,
+}: {
+  pill: string;
+  title: string;
+  lead?: string;
+}) {
+  return (
+    <div className="landing-section-intro">
+      <span className="landing-pill">{pill}</span>
+      <h2 className="landing-section-title">{title}</h2>
+      {lead ? <p className="landing-section-lead">{lead}</p> : null}
+    </div>
+  );
+}
+
 function FeatureCard({
   tag,
+  tone,
   icon: Icon,
   title,
   desc,
 }: {
   tag: string;
+  tone: (typeof PRODUCT_FEATURES)[number]["tone"];
   icon: (typeof PRODUCT_FEATURES)[number]["icon"];
   title: string;
   desc: string;
 }) {
   return (
-    <div className="landing-feature-card h-full">
-      <p className="landing-feature-tag">{tag}</p>
-      <div className="bdg-card-icon mb-3.5 mt-3">
-        <Icon className="h-5 w-5" />
+    <div className={`landing-feature-card landing-feature-card--${tone} h-full`}>
+      <div className="landing-feature-card-top">
+        <p className="landing-feature-tag">{tag}</p>
+        <div className="landing-feature-icon">
+          <Icon className="h-5 w-5" />
+        </div>
       </div>
-      <h3 className="text-lg font-bold tracking-tight text-[#1a1612]">{title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-[#6b5c4d]">{desc}</p>
+      <h3 className="landing-feature-title">{title}</h3>
+      <p className="landing-feature-desc">{desc}</p>
     </div>
   );
 }
@@ -324,10 +350,10 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="bdg-theme landing-page min-h-screen bg-gradient-to-br from-[#F5F0E8] via-[#F5F0E8] to-[#C45A3C]/10 text-[#1a1612]">
+    <div className="bdg-theme landing-page min-h-screen text-[var(--landing-ink)]">
       {showSplash ? <LandingSplash onDone={finishSplash} /> : null}
 
-      <header className={`landing-header sticky top-0 z-50 transition-all duration-300 ${scrolled ? "is-scrolled border-b border-[#e8dfd3] bg-[#F5F0E8]/92 backdrop-blur-md shadow-sm" : ""}`}>
+      <header className={`landing-header sticky top-0 z-50 transition-all duration-300 ${scrolled ? "is-scrolled" : ""}`}>
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <span className="flex items-center gap-2 font-display text-lg font-bold">
             <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
@@ -342,18 +368,19 @@ export function LandingPage() {
 
       <section className="landing-hero relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-6xl items-center gap-10 px-4 pb-20 pt-8 md:grid-cols-2 md:gap-12 md:pb-24 md:pt-14">
         <ScrollReveal from="left">
-          <p className="landing-hero-eyebrow text-xs font-semibold tracking-[0.28em] text-[#C45A3C]">給現場與工作室</p>
-          <h1 className="landing-hero-title mt-4 text-4xl font-bold leading-[1.12] tracking-tight md:text-5xl lg:text-[3.25rem]">
-            三分鐘，<br />做出客戶願意簽的報價。
+          <p className="landing-hero-eyebrow">給現場與工作室</p>
+          <h1 className="landing-hero-title">
+            三分鐘，做出客戶願意簽的<span className="landing-hero-accent">報價單</span>。
           </h1>
-          <p className="landing-hero-sub mt-5 max-w-md text-base leading-relaxed text-[#6b5c4d] md:text-lg">
-            師傅、統包、設計師都適用。你專心談案子，版型、分頁、大寫金額我們幫你顧好——送出前就能確定業主看到的是正式文件。
+          <p className="landing-hero-sub">
+            師傅、統包、設計師都適用。版型、分頁、大寫金額一次到位，送出前就能確認業主看到的是正式文件。
           </p>
           <CtaButton className="landing-hero-cta mt-8 px-7 py-3.5 text-base" onEnter={startEnter} disabled={entering} />
         </ScrollReveal>
         <ScrollReveal from="right" delay={120} className="flex justify-center md:justify-end">
-          <div className="landing-hero-visual w-full max-w-sm">
-            <MockPanel className="landing-hero-visual-panel">
+          <div className="landing-hero-stage w-full max-w-md">
+            <div className="landing-hero-stage-bg" aria-hidden />
+            <MockPanel className="landing-hero-visual-panel relative z-[1]">
               <MockPdfSummary className="!static !max-w-none !rotate-0 !shadow-none mx-auto" />
             </MockPanel>
           </div>
@@ -364,24 +391,29 @@ export function LandingPage() {
         </a>
       </section>
 
-      <section id="output" className="landing-shots-section border-t border-[#e8dfd3]/80 bg-white/60">
+      <section id="output" className="landing-shots-section landing-shots-section--cool">
         <div className="mx-auto max-w-6xl px-4">
-          <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="landing-shots-eyebrow">輸出文件</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">標準工程施工報價單</h2>
-            <p className="landing-shots-lead">
-              A4 滿版輸出。摘要、明細、條款、付款明細與簽章區，依工程報價慣例完整呈現。
-            </p>
+          <ScrollReveal>
+            <LandingSectionIntro
+              pill="輸出文件"
+              title="標準工程施工報價單"
+              lead="A4 滿版輸出。摘要、明細、條款、付款明細與簽章區，依工程報價慣例完整呈現。"
+            />
           </ScrollReveal>
           <ScrollReveal delay={80} from="up">
-            <div className="landing-shots">
-              <LandingShotCard title="摘要頁" subtitle="工種合計、營業稅、中文大寫金額">
+            <div className="landing-output-bento">
+              <LandingShotCard
+                title="摘要頁"
+                subtitle="工種合計、營業稅、中文大寫金額"
+                frameTone="peach"
+                className="landing-shot--featured"
+              >
                 <ShotSummaryPage />
               </LandingShotCard>
-              <LandingShotCard title="明細頁" subtitle="工種分組、自動分頁、每頁完整表頭">
+              <LandingShotCard title="明細頁" subtitle="工種分組、自動分頁、每頁完整表頭" frameTone="blue">
                 <ShotDetailPage />
               </LandingShotCard>
-              <LandingShotCard title="簽章頁" subtitle="工程條款、付款分期、甲乙簽章欄位">
+              <LandingShotCard title="簽章頁" subtitle="工程條款、付款分期、甲乙簽章欄位" frameTone="sage">
                 <ShotSignPage />
               </LandingShotCard>
             </div>
@@ -390,49 +422,57 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="border-t border-[#e8dfd3]/80 bg-[#F5F0E8]/40 py-16 md:py-20">
+      <section id="features" className="landing-shots-section landing-shots-section--light">
         <div className="mx-auto max-w-6xl px-4">
-          <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="landing-shots-eyebrow">核心功能</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">專業報價所需的能力</h2>
-            <p className="landing-shots-lead">
-              編輯、預覽、匯出與資料管理，整合於同一套流程。
-            </p>
+          <ScrollReveal>
+            <LandingSectionIntro
+              pill="核心功能"
+              title="專業報價所需的能力"
+              lead="編輯、預覽、匯出與資料管理，整合於同一套流程。"
+            />
           </ScrollReveal>
-          <div className="landing-reason-grid mt-10">
+          <div className="landing-feature-bento mt-10">
             {PRODUCT_FEATURES.map((feature, i) => (
               <ScrollReveal key={feature.title} delay={i * 60} from={i % 2 === 0 ? "left" : "right"}>
-                <FeatureCard tag={feature.tag} icon={feature.icon} title={feature.title} desc={feature.desc} />
+                <FeatureCard
+                  tag={feature.tag}
+                  tone={feature.tone}
+                  icon={feature.icon}
+                  title={feature.title}
+                  desc={feature.desc}
+                />
               </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="workflow" className="landing-shots-section">
+      <section id="workflow" className="landing-shots-section landing-shots-section--warm">
         <div className="mx-auto max-w-6xl px-4">
-          <ScrollReveal className="mx-auto max-w-2xl text-center">
-            <p className="landing-shots-eyebrow">編輯流程</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight md:text-4xl">填寫、預覽、匯出</h2>
-            <p className="landing-shots-lead">
-              明細編輯與 PDF 預覽同步進行，完成後可下載或分享。
-            </p>
-          </ScrollReveal>
+          <div className="landing-workflow-head">
+            <ScrollReveal className="flex-1">
+              <LandingSectionIntro
+                pill="編輯流程"
+                title="填寫、預覽、匯出"
+                lead="明細編輯與 PDF 預覽同步進行，完成後可下載或分享。"
+              />
+            </ScrollReveal>
+          </div>
           <ScrollReveal delay={80} from="up">
             <LandingWorkflowDemo className="mx-auto mt-8 max-w-4xl" />
           </ScrollReveal>
         </div>
       </section>
 
-      <section className="border-t border-[#e8dfd3] bg-[#1a1612] py-16 text-white md:py-20">
+      <section className="landing-cta-band">
         <ScrollReveal className="mx-auto max-w-2xl px-4 text-center">
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">下一張報價，從這裡開始</h2>
-          <p className="mt-4 text-white/70">註冊後即可建立報價、匯出 PDF、分享預覽連結。</p>
+          <h2 className="landing-cta-title">下一張報價，從這裡開始</h2>
+          <p className="landing-cta-lead">註冊後即可建立報價、匯出 PDF、分享預覽連結。</p>
           <CtaButton className="mt-8 px-8 py-3.5 text-base hover:brightness-110" onEnter={startEnter} disabled={entering} />
         </ScrollReveal>
       </section>
 
-      <footer className="border-t border-white/10 bg-[#1a1612] py-6 text-center text-xs text-white/40">{BRAND}</footer>
+      <footer className="landing-footer">{BRAND}</footer>
 
       {enterRect && entering ? <LandingEnterOverlay rect={enterRect} /> : null}
     </div>

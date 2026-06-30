@@ -228,16 +228,22 @@ export function LandingShotCard({
   title,
   subtitle,
   variant = "doc",
+  frameTone = "neutral",
+  className = "",
   children,
 }: {
   title: string;
   subtitle: string;
   variant?: "doc" | "app";
+  frameTone?: "neutral" | "peach" | "blue" | "sage";
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <article className="landing-shot">
-      <div className={`landing-shot-frame landing-shot-frame--${variant}`}>
+    <article className={`landing-shot ${className}`}>
+      <div
+        className={`landing-shot-frame landing-shot-frame--${variant} landing-shot-frame--tone-${frameTone}`}
+      >
         <div className="landing-shot-fill">{children}</div>
       </div>
       <div className="landing-shot-cap">
