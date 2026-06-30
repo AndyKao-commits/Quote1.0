@@ -1902,15 +1902,17 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: transparent;
   }
   .quote-pigeon__sprite {
     display: block;
     width: 100%;
-    height: 100%;
+    height: auto;
+    max-height: 100%;
     object-fit: contain;
+    background: transparent;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    overflow: visible;
   }
   .quote-pigeon--animated .quote-pigeon__sprite,
   .quote-pigeon--animated {

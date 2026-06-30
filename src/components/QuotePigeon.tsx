@@ -20,7 +20,7 @@ export function QuotePigeon({
       aria-label={animated ? label : "報價鴿"}
     >
       <img
-        src="/quote-pigeon.png"
+        src="/quote-pigeon.png?v=4"
         alt=""
         className="quote-pigeon__sprite"
         width={size}
