@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
+import { QuotePigeonLoader } from "@/components/QuotePigeon";
 import { getProfile, updateProfile } from "@/lib/quotes.functions";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -30,7 +31,7 @@ function SettingsPage() {
   if (!form) {
     return (
       <AppShell>
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--bdg-muted)]" />
+        <QuotePigeonLoader />
       </AppShell>
     );
   }

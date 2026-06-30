@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { QuotePigeonLoader } from "@/components/QuotePigeon";
 import {
   Download, Eye, Loader2, Save, Search, Share2, X,
 } from "lucide-react";
@@ -344,9 +345,7 @@ function QuoteEditorPage() {
   if (isLoading || !form || !quotePreview) {
     return (
       <AppShell>
-        <p className="flex items-center gap-2 text-sm text-[var(--bdg-muted)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> 載入中…
-        </p>
+        <QuotePigeonLoader />
       </AppShell>
     );
   }

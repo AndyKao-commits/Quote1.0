@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Copy, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
+import { QuotePigeonLoader } from "@/components/QuotePigeon";
 import { listQuotes, duplicateQuote, deleteQuote, createSampleQuote } from "@/lib/quotes.functions";
 import { formatMoney } from "@/lib/quotes.types";
 import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
@@ -59,7 +60,7 @@ function QuotesPage() {
         <p className="mt-1 text-sm text-[var(--bdg-muted)]">複製舊報價，改價再送</p>
       </div>
 
-      {isLoading && <p className="text-sm text-stone-500">載入中…</p>}
+      {isLoading && <QuotePigeonLoader className="py-8" />}
 
       {isError && !isLoading && (
         <div className="bdg-card p-6 text-center">

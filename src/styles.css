@@ -1875,6 +1875,60 @@
       transform: translate(-50%, -50%) translateY(0);
     }
   }
+  /* 報價鴿 — 載入吉祥物 */
+  .quote-pigeon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .quote-pigeon__sprite {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .quote-pigeon--animated .quote-pigeon__sprite {
+    animation: quote-pigeon-walk 0.9s ease-in-out infinite;
+  }
+  @keyframes quote-pigeon-walk {
+    0%,
+    100% {
+      transform: translateX(0) translateY(0);
+    }
+    25% {
+      transform: translateX(3px) translateY(-4px);
+    }
+    50% {
+      transform: translateX(6px) translateY(0);
+    }
+    75% {
+      transform: translateX(3px) translateY(-4px);
+    }
+  }
+  .quote-pigeon-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+  .quote-pigeon-loader__label {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bdg-muted, #64748b);
+    letter-spacing: 0.02em;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .quote-pigeon--animated .quote-pigeon__sprite {
+      animation: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .landing-splash,
     .landing-splash-inner,

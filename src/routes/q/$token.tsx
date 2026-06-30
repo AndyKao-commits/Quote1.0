@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Copy, Download, Loader2, Share2 } from "lucide-react";
+import { QuotePigeonLoader } from "@/components/QuotePigeon";
 import { toast } from "sonner";
 import { QuoteDocument } from "@/components/QuoteDocument";
 import { QuotePreviewPane } from "@/components/QuotePreviewPane";
@@ -29,7 +30,7 @@ function SharePage() {
   if (isLoading) {
     return (
       <div className="bdg-theme flex min-h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-[var(--bdg-brand)]" />
+        <QuotePigeonLoader />
       </div>
     );
   }
