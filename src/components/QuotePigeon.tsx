@@ -1,3 +1,5 @@
+import { QuotePigeonSprite } from "@/components/QuotePigeonSprite";
+
 type QuotePigeonProps = {
   /** 載入中：輕微彈跳＋左右踱步 */
   animated?: boolean;
@@ -19,14 +21,7 @@ export function QuotePigeon({
       role={animated ? "status" : "img"}
       aria-label={animated ? label : "報價鴿"}
     >
-      <img
-        src="/quote-pigeon.png"
-        alt=""
-        className="quote-pigeon__sprite"
-        width={size}
-        height={size}
-        draggable={false}
-      />
+      <QuotePigeonSprite size={size} className="quote-pigeon__sprite" />
       {animated && <span className="sr-only">{label}</span>}
     </div>
   );

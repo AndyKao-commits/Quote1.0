@@ -17,6 +17,7 @@ import {
   ShotSummaryPage,
 } from "@/components/landing/LandingShots";
 import { LandingWorkflowDemo } from "@/components/landing/LandingWorkflowDemo";
+import { QuotePigeon } from "@/components/QuotePigeon";
 
 const BRAND = "報得過";
 const SPLASH_KEY = "bdg_landing_splash";
@@ -110,7 +111,10 @@ function LandingEnterOverlay({ rect }: { rect: DOMRect }) {
           ["--enter-scale" as string]: String(scale),
         }}
       />
-      <p className="landing-enter-status">進入報價世界…</p>
+      <div className="landing-enter-status-wrap">
+        <QuotePigeon animated size={64} label="進入報價世界" />
+        <p className="landing-enter-status">進入報價世界…</p>
+      </div>
     </div>
   );
 }
@@ -124,7 +128,7 @@ function LandingSplash({ onDone }: { onDone: () => void }) {
   return (
     <div className="landing-splash" aria-hidden>
       <div className="landing-splash-inner">
-        <img src="/favicon.svg" alt="" className="landing-splash-logo" />
+        <QuotePigeon animated size={80} label="載入中" className="landing-splash-pigeon" />
         <p className="landing-splash-brand">{BRAND}</p>
         <p className="landing-splash-tagline">專業報價，三分鐘搞定</p>
         <div className="landing-splash-bar">

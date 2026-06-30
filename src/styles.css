@@ -783,6 +783,9 @@
     text-align: center;
     animation: landing-splash-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
+  .landing-splash-pigeon {
+    animation: landing-splash-logo 1.2s ease-in-out infinite alternate;
+  }
   .landing-splash-logo {
     width: 3.5rem;
     height: 3.5rem;
@@ -1840,12 +1843,20 @@
     transform-origin: center center;
     animation: landing-enter-burst 0.72s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
-  .landing-enter-status {
+  .landing-enter-status-wrap {
     position: fixed;
     left: 50%;
     top: 50%;
     z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
     transform: translate(-50%, -50%);
+    animation: landing-enter-status-wrap 0.82s ease forwards;
+  }
+  .landing-enter-status {
+    margin: 0;
     font-size: 0.9375rem;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -1863,7 +1874,7 @@
       border-radius: 0;
     }
   }
-  @keyframes landing-enter-status {
+  @keyframes landing-enter-status-wrap {
     0%,
     52% {
       opacity: 0;
@@ -1873,6 +1884,16 @@
     100% {
       opacity: 1;
       transform: translate(-50%, -50%) translateY(0);
+    }
+  }
+  @keyframes landing-enter-status {
+    0%,
+    52% {
+      opacity: 0;
+    }
+    62%,
+    100% {
+      opacity: 1;
     }
   }
   /* 報價鴿 — 載入吉祥物 */
@@ -1889,8 +1910,10 @@
     object-fit: contain;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    overflow: visible;
   }
-  .quote-pigeon--animated .quote-pigeon__sprite {
+  .quote-pigeon--animated .quote-pigeon__sprite,
+  .quote-pigeon--animated {
     animation: quote-pigeon-walk 0.9s ease-in-out infinite;
   }
   @keyframes quote-pigeon-walk {
@@ -1924,7 +1947,8 @@
     letter-spacing: 0.02em;
   }
   @media (prefers-reduced-motion: reduce) {
-    .quote-pigeon--animated .quote-pigeon__sprite {
+    .quote-pigeon--animated .quote-pigeon__sprite,
+    .quote-pigeon--animated {
       animation: none;
     }
   }
@@ -1933,6 +1957,7 @@
     .landing-splash,
     .landing-splash-inner,
     .landing-splash-logo,
+    .landing-splash-pigeon,
     .landing-splash-bar-fill {
       animation: none;
     }
@@ -1948,6 +1973,7 @@
       animation: none;
     }
     .landing-enter-burst,
+    .landing-enter-status-wrap,
     .landing-enter-status {
       animation: none;
     }
