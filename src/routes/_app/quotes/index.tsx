@@ -56,7 +56,7 @@ function QuotesPage() {
     <AppShell>
       <div className="mb-5">
         <h1 className="text-xl font-semibold tracking-tight">報價紀錄</h1>
-        <p className="mt-1 text-sm text-stone-500">複製舊報價，改價再送</p>
+        <p className="mt-1 text-sm text-[var(--bdg-muted)]">複製舊報價，改價再送</p>
       </div>
 
       {isLoading && <p className="text-sm text-stone-500">載入中…</p>}
@@ -124,7 +124,7 @@ function QuotesPage() {
                 {formatMoney(Number(q.total))} · {new Date(q.created_at).toLocaleDateString("zh-TW")}
               </p>
             </Link>
-            <button type="button" onClick={() => dup.mutate(q.id)} className="rounded p-2 text-stone-500 hover:bg-stone-100" title="複製">
+            <button type="button" onClick={() => dup.mutate(q.id)} className="rounded p-2 text-[var(--bdg-muted)] hover:bg-[var(--bdg-surface-soft)]" title="複製">
               <Copy className="h-4 w-4" />
             </button>
             <button type="button" onClick={() => confirm("確定刪除？") && del.mutate(q.id)} className="rounded p-2 text-rose-500 hover:bg-rose-50" title="刪除">

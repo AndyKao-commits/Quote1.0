@@ -56,7 +56,7 @@ function NewQuotePage() {
   return (
     <AppShell>
       <h1 className="text-xl font-semibold tracking-tight">新建報價</h1>
-      <p className="mt-1 text-sm text-stone-500">建立空白報價，或先開啟範例學習操作流程</p>
+      <p className="mt-1 text-sm text-[var(--bdg-muted)]">建立空白報價，或先開啟範例學習操作流程</p>
 
       {err && (
         <p className="mt-4 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{err}</p>
@@ -80,7 +80,7 @@ function NewQuotePage() {
               <Icon className="h-5 w-5" />
             </div>
             <p className="text-lg font-bold text-[var(--bdg-ink)]">{s.tabLabel}</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-stone-500">{s.hint}</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-[var(--bdg-muted)]">{s.hint}</p>
           </button>
           );
         })}

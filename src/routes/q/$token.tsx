@@ -28,16 +28,16 @@ function SharePage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5F0E8]">
-        <Loader2 className="h-6 w-6 animate-spin text-[#C45A3C]" />
+      <div className="bdg-theme flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--bdg-brand)]" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5F0E8] p-6 text-center">
-        <p className="text-[#6b5c4d]">{(error as Error)?.message || "找不到報價"}</p>
+      <div className="bdg-theme flex min-h-screen items-center justify-center p-6 text-center">
+        <p className="text-[var(--bdg-muted)]">{(error as Error)?.message || "找不到報價"}</p>
       </div>
     );
   }
@@ -67,14 +67,14 @@ function SharePage() {
   }
 
   return (
-    <div className="bdg-theme min-h-screen bg-[#ece3d6] pb-6">
-      <div className="sticky top-0 z-10 border-b border-[var(--bdg-line)] bg-[#F5F0E8]/95 backdrop-blur-sm">
+    <div className="bdg-theme min-h-screen pb-6">
+      <div className="bdg-preview-strip sticky top-0 z-10">
         <div className="mx-auto max-w-5xl px-4 py-3">
-          <p className="font-display text-lg font-bold text-[#1a1612]">報得過 · 報價預覽</p>
-          <p className="text-sm text-[#6b5c4d]">
+          <p className="font-display text-lg font-bold text-[var(--bdg-ink)]">報得過 · 報價預覽</p>
+          <p className="text-sm text-[var(--bdg-muted)]">
             {data.quote.client_name || "客戶"} · {formatMoney(Number(data.quote.total))}
           </p>
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 text-xs text-[var(--bdg-muted)]">
             {data.quote.share_expires_at
               ? `此連結有效至 ${formatShareExpiry(data.quote.share_expires_at)}`
               : "此連結長期有效"}

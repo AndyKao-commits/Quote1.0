@@ -82,19 +82,19 @@ function AuthPage() {
   }
 
   return (
-    <div className="bdg-theme flex min-h-screen items-center justify-center bg-[#F5F0E8] p-4">
+    <div className="bdg-theme flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 block text-center font-display text-2xl font-bold text-[#1a1612]">
+        <Link to="/" className="mb-8 block text-center font-display text-2xl font-bold text-[var(--bdg-ink)]">
           報得過
         </Link>
-        <div className="rounded-2xl border border-[#e8dfd3] bg-white p-6 shadow-sm">
-          <div className="mb-5 flex gap-1 rounded-lg border border-[#ece3d6] p-1">
+        <div className="bdg-auth-card">
+          <div className="bdg-auth-tabs">
             {(["signin", "signup"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
-                className={`flex-1 rounded-md py-2 text-sm font-semibold ${mode === m ? "bg-[#C45A3C] text-white" : "text-[#6b5c4d]"}`}
+                className={`bdg-auth-tab ${mode === m ? "is-active" : ""}`}
               >
                 {m === "signin" ? "登入" : "註冊"}
               </button>
@@ -103,26 +103,26 @@ function AuthPage() {
           <form onSubmit={submit} className="space-y-3">
             {mode === "signup" && (
               <>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" className={inp} />
-                <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="公司／工作室（選填）" className={inp} />
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" className="bdg-field-input" />
+                <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="公司／工作室（選填）" className="bdg-field-input" />
               </>
             )}
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={inp} />
-            <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="密碼（至少 6 碼）" />
+            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bdg-field-input" />
+            <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="密碼（至少 6 碼）" inputClassName="bdg-field-input pr-10" />
             {mode === "signin" && (
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-[#6b5c4d]">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--bdg-muted)]">
                 <input
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
-                  className="rounded border-[#d9cfc0] text-[#C45A3C] focus:ring-[#C45A3C]"
+                  className="rounded border-[var(--bdg-line)] text-[var(--bdg-brand)] focus:ring-[var(--bdg-brand)]"
                 />
                 記住登入狀態（下次自動登入）
               </label>
             )}
             {err && <p className="text-sm text-rose-600">{err}</p>}
-            {msg && <p className="text-sm text-[#C45A3C]">{msg}</p>}
-            <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-[#C45A3C] py-3 text-sm font-bold text-white disabled:opacity-60">
+            {msg && <p className="text-sm text-[var(--bdg-brand)]">{msg}</p>}
+            <button type="submit" disabled={busy} className="bdg-btn bdg-btn-primary flex w-full justify-center rounded-full py-3">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === "signin" ? "登入" : "建立帳號"}
             </button>
@@ -132,5 +132,3 @@ function AuthPage() {
     </div>
   );
 }
-
-const inp = "w-full rounded-xl border border-[#ece3d6] px-3 py-2.5 text-sm outline-none focus:border-[#C45A3C]";

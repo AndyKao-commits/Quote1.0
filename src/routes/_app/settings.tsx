@@ -30,17 +30,17 @@ function SettingsPage() {
   if (!form) {
     return (
       <AppShell>
-        <Loader2 className="h-5 w-5 animate-spin text-[#6b5c4d]" />
+        <Loader2 className="h-5 w-5 animate-spin text-[var(--bdg-muted)]" />
       </AppShell>
     );
   }
 
   return (
     <AppShell>
-      <h1 className="text-2xl font-bold text-[#1a1612]">品牌設定</h1>
-      <p className="mt-1 text-sm text-[#6b5c4d]">Logo、預設條款與稅務習慣</p>
+      <h1 className="text-2xl font-bold text-[var(--bdg-ink)]">品牌設定</h1>
+      <p className="mt-1 text-sm text-[var(--bdg-muted)]">Logo、預設條款與稅務習慣</p>
 
-      <div className="mt-6 space-y-4 rounded-2xl border border-[#e8dfd3] bg-white p-5">
+      <div className="bdg-card mt-6 space-y-4 p-5">
         <Field
           label="顯示名稱"
           hint="顯示在報價單簽名區「設計業務」欄"
@@ -56,9 +56,9 @@ function SettingsPage() {
         <Field label="電話" value={form.phone ?? ""} onChange={(v) => setForm({ ...form, phone: v })} />
         <Field label="Logo 圖片 URL" value={form.logo_url ?? ""} onChange={(v) => setForm({ ...form, logo_url: v })} />
         {form.logo_url?.trim() && (
-          <div className="flex items-center gap-3 rounded-xl border border-[#ece3d6] bg-[#FDFBF7] p-3">
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--bdg-line)] bg-[var(--bdg-surface-soft)] p-3">
             <img src={form.logo_url} alt="" className="h-12 w-12 rounded-lg object-contain" />
-            <p className="text-xs text-[#6b5c4d]">預覽：會顯示在頂部導覽列與報價單 PDF</p>
+            <p className="text-xs text-[var(--bdg-muted)]">預覽：會顯示在頂部導覽列與報價單 PDF</p>
           </div>
         )}
         <Field label="品牌色（hex）" value={form.brand_color ?? "#C45A3C"} onChange={(v) => setForm({ ...form, brand_color: v })} />
@@ -69,7 +69,7 @@ function SettingsPage() {
         <Toggle checked={form.default_tax_included} onChange={(v) => setForm({ ...form, default_tax_included: v })} label="新報價預設含稅" />
         <Toggle checked={form.default_show_tax_breakdown} onChange={(v) => setForm({ ...form, default_show_tax_breakdown: v })} label="新報價預設顯示稅額明細" />
 
-        <button type="button" disabled={save.isPending} onClick={() => save.mutate()} className="inline-flex items-center gap-1 rounded-full bg-[#C45A3C] px-5 py-2.5 text-sm font-bold text-white">
+        <button type="button" disabled={save.isPending} onClick={() => save.mutate()} className="bdg-btn bdg-btn-primary rounded-full px-5 py-2.5">
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} 儲存設定
         </button>
       </div>
@@ -92,12 +92,12 @@ function Field({
 }) {
   return (
     <label className="block text-sm">
-      <span className="mb-1 block text-xs font-semibold text-[#6b5c4d]">{label}</span>
-      {hint && <span className="mb-1 block text-[11px] text-[#9a8f82]">{hint}</span>}
+      <span className="mb-1 block text-xs font-semibold text-[var(--bdg-muted)]">{label}</span>
+      {hint && <span className="mb-1 block text-[11px] text-[var(--bdg-muted)] opacity-80">{hint}</span>}
       {multiline ? (
-        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className={inp} />
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} className="bdg-field-input" />
       ) : (
-        <input value={value} onChange={(e) => onChange(e.target.value)} className={inp} />
+        <input value={value} onChange={(e) => onChange(e.target.value)} className="bdg-field-input" />
       )}
     </label>
   );
@@ -112,4 +112,3 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-const inp = "w-full rounded-xl border border-[#ece3d6] px-3 py-2 text-sm outline-none focus:border-[#C45A3C]";

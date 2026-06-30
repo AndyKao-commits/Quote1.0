@@ -344,7 +344,7 @@ function QuoteEditorPage() {
   if (isLoading || !form || !quotePreview) {
     return (
       <AppShell>
-        <p className="flex items-center gap-2 text-sm text-[#6b5c4d]">
+        <p className="flex items-center gap-2 text-sm text-[var(--bdg-muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 載入中…
         </p>
       </AppShell>

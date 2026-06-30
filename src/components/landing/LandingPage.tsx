@@ -360,7 +360,7 @@ export function LandingPage() {
             {BRAND}
           </span>
           <div className="flex items-center gap-3">
-            <Link to="/auth" className="hidden text-sm font-semibold text-[#6b5c4d] hover:text-[#1a1612] sm:inline">登入</Link>
+            <Link to="/auth" className="hidden text-sm font-semibold text-[var(--bdg-muted)] hover:text-[var(--bdg-ink)] sm:inline">登入</Link>
             <CtaButton className="px-4 py-2 text-sm shadow-md" onEnter={startEnter} disabled={entering} />
           </div>
         </div>
@@ -385,7 +385,7 @@ export function LandingPage() {
             </MockPanel>
           </div>
         </ScrollReveal>
-        <a href="#output" className="landing-hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-xs font-semibold text-[#6b5c4d] md:bottom-8">
+        <a href="#output" className="landing-hero-hint absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-1 text-xs font-semibold text-[var(--bdg-muted)] md:bottom-8">
           查看輸出格式
           <ChevronDown className="h-4 w-4" />
         </a>

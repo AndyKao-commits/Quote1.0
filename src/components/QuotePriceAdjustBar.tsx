@@ -25,7 +25,7 @@ export function QuotePriceAdjustBar({
   disabled?: boolean;
 }) {
   return (
-    <div className="mb-3 rounded border border-[var(--bdg-line)] bg-stone-50/60 p-3">
+    <div className="mb-3 rounded border border-[var(--bdg-line)] bg-[var(--bdg-surface-soft)]/80 p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <span className="bdg-label mb-0">全部價格調整</span>
         <div className="flex items-center gap-2">

@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="bdg-theme min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-[var(--bdg-line)] bg-[var(--bdg-paper)]/95 backdrop-blur-sm">
+      <header className="bdg-app-header sticky top-0 z-40">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/quotes" className="flex min-w-0 items-center gap-2.5">
             {profile?.logo_url ? (
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:pb-10">{children}</main>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--bdg-line)] bg-[var(--bdg-card)]/98 backdrop-blur-sm md:hidden">
+      <nav className="bdg-app-bottom-nav fixed inset-x-0 bottom-0 z-40 md:hidden">
         <div className="mx-auto flex max-w-lg justify-around px-1">
           <Bottom to="/quotes" label="報價" icon={<FileText className="h-5 w-5" />} active={isActive("/quotes") && !pathname.includes("/new")} />
           <Bottom to="/quotes/new" label="新建" icon={<FileText className="h-5 w-5" />} active={pathname.includes("/new")} primary />
@@ -73,7 +73,9 @@ function Nav({ to, label, active }: { to: string; label: string; active: boolean
     <Link
       to={to}
       className={`rounded px-3 py-2 text-sm font-medium transition ${
-        active ? "bg-white text-[var(--bdg-ink)] shadow-sm" : "text-stone-500 hover:text-[var(--bdg-ink)]"
+        active
+          ? "bg-[var(--bdg-surface-soft)] text-[var(--bdg-ink)] shadow-sm ring-1 ring-[var(--bdg-line)]"
+          : "text-[var(--bdg-muted)] hover:text-[var(--bdg-ink)]"
       }`}
     >
       {label}
@@ -86,7 +88,7 @@ function Bottom({ to, label, icon, active, primary }: { to: string; label: strin
     <Link
       to={to}
       className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
-        primary || active ? "text-[var(--bdg-brand)]" : "text-stone-500"
+        primary || active ? "text-[var(--bdg-brand)]" : "text-[var(--bdg-muted)]"
       }`}
     >
       {icon}

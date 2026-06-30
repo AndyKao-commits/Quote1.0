@@ -52,16 +52,16 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="bdg-theme flex min-h-screen items-center justify-center bg-[#F5F0E8] p-4">
+    <div className="bdg-theme flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-8 block text-center font-display text-2xl font-bold text-[#1a1612]">
+        <Link to="/" className="mb-8 block text-center font-display text-2xl font-bold text-[var(--bdg-ink)]">
           報得過
         </Link>
 
-        <div className="rounded-2xl border border-[#e8dfd3] bg-white p-6 shadow-sm">
-          <h1 className="text-lg font-bold text-[#1a1612]">重設密碼</h1>
+        <div className="bdg-auth-card">
+          <h1 className="text-lg font-bold text-[var(--bdg-ink)]">重設密碼</h1>
           {!ready ? (
-            <p className="mt-3 text-sm text-[#6b5c4d]">
+            <p className="mt-3 text-sm text-[var(--bdg-muted)]">
               請從 Email 中的「重設密碼」連結進入此頁。如果連結已失效，請重新申請。
             </p>
           ) : done ? (
@@ -71,19 +71,15 @@ function ResetPasswordPage() {
           ) : (
             <form className="mt-4 space-y-3" onSubmit={submit}>
               <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-[#6b5c4d]">新密碼</span>
-                <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required inputClassName={inp} />
+                <span className="mb-1 block text-xs font-semibold text-[var(--bdg-muted)]">新密碼</span>
+                <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required inputClassName="bdg-field-input pr-10" />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-[#6b5c4d]">確認新密碼</span>
-                <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={6} required inputClassName={inp} />
+                <span className="mb-1 block text-xs font-semibold text-[var(--bdg-muted)]">確認新密碼</span>
+                <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} minLength={6} required inputClassName="bdg-field-input pr-10" />
               </label>
               {err && <p className="text-sm text-rose-600">{err}</p>}
-              <button
-                type="submit"
-                disabled={busy}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#C45A3C] py-3 text-sm font-bold text-white disabled:opacity-60"
-              >
+              <button type="submit" disabled={busy} className="bdg-btn bdg-btn-primary flex w-full justify-center rounded-full py-3">
                 {busy && <Loader2 className="h-4 w-4 animate-spin" />}
                 更新密碼
               </button>
@@ -91,7 +87,7 @@ function ResetPasswordPage() {
           )}
         </div>
 
-        <p className="mt-4 text-center text-xs text-[#8a7b6a]">
+        <p className="mt-4 text-center text-xs text-[var(--bdg-muted)]">
           <Link to="/auth" className="hover:underline">
             ← 回登入
           </Link>
@@ -100,5 +96,3 @@ function ResetPasswordPage() {
     </div>
   );
 }
-
-const inp = "w-full rounded-xl border border-[#ece3d6] px-3 py-2.5 text-sm outline-none focus:border-[#C45A3C]";
