@@ -1,47 +1,44 @@
-/** 32×28 像素報價鴿，透明背景 SVG */
+/** 28×24 像素報價鴿 — 依使用者參考圖，手持牛皮紙報價單，透明背景 */
 export function QuotePigeonSprite({ size = 64, className = "" }: { size?: number; className?: string }) {
   const rows = [
-    "................................",
-    "....wwwwww......................",
-    "...wwCCwwww.....................",
-    "...wwCCwwww.....................",
-    "....wwwwww......................",
-    "................................",
-    "...........wwwwww...............",
-    "..........wwGGGGww..............",
-    ".........wBBO#BBBww.............",
-    "........wBBBBBBBBBwW............",
-    ".......wBBbbbbbBBBWWw...........",
-    "......wBbbbbbbbbWWWWw...........",
-    ".....wBbbbbbbbbGGGGw............",
-    "....wBBbbbbbbbWWWWw.............",
-    "....wBBBbbbbBBWWw...............",
-    "...wBBBBBBBBBBw.................",
-    "...wBBBKKBBBBw..................",
-    "..wBBBBBBBBBw...................",
-    "..wBBBbbbBBw....................",
-    "...wBBbbbBw.....................",
-    "....wBBBww......................",
-    ".....wOwO.......................",
-    ".....wOwO.......................",
-    "......gg........................",
-    ".....g..g.......................",
-    "....g....g......................",
-    "................................",
-    "................................",
+    "............................",
+    "....wwww....................",
+    "...wwCCww...................",
+    "...wwCCww...................",
+    "....wwww....................",
+    "............................",
+    ".......bbbbbb...............",
+    "......bbW#bbbb..............",
+    ".....bbbbbbbbbb.............",
+    "....bbbbbbbbbbbb............",
+    "...bbbbbbbbbbbbbb..PPPP.....",
+    "...bbbbbbbbbbbbbb..PTTP.....",
+    "...bbbbbbbbbbbbbb..PTTP.....",
+    "...bbbbbbbbbbbbbb..PpPP.....",
+    "....bbbbbbbbbbbbbbPPP.......",
+    "....bbbbKbbbbbbbbbPP........",
+    ".....bbbbbbbbbbbbbb.........",
+    "......bbbbbbbbbbb...........",
+    ".......bbO....bO............",
+    ".......bbO....bO............",
+    "........gggg................",
+    ".......g......g.............",
+    "............................",
   ] as const;
 
   const palette: Record<string, string> = {
-    B: "#5c3d2e",
-    b: "#7a5238",
+    b: "#8b5e3c",
+    B: "#6b4423",
     K: "#3a2518",
     O: "#e8833a",
     W: "#ffffff",
-    w: "#ffffff",
-    G: "#b0a8a0",
-    g: "#4a4540",
-    C: "#22d3ee",
     "#": "#1a1a1a",
+    C: "#2dd4bf",
+    w: "#ffffff",
+    P: "#c9a66b",
+    p: "#a67c52",
+    T: "#6b5344",
+    g: "#5a534d",
   };
 
   const pixels: { x: number; y: number; fill: string }[] = [];
@@ -54,7 +51,7 @@ export function QuotePigeonSprite({ size = 64, className = "" }: { size?: number
 
   return (
     <svg
-      viewBox="0 0 32 28"
+      viewBox="0 0 28 24"
       width={size}
       height={size}
       className={className}
