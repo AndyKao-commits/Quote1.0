@@ -12,7 +12,7 @@ const required = [
   "SUPABASE_SERVICE_ROLE_KEY",
 ];
 
-const optional = ["LOVABLE_API_KEY", "SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"];
+const optional = ["SUPABASE_PROJECT_ID", "VITE_SUPABASE_PROJECT_ID"];
 
 function parseEnv(text) {
   const map = new Map();
@@ -54,6 +54,3 @@ if (missing.length) {
 }
 
 console.log("\nLocal .env looks complete.");
-if (missingOptional.includes("LOVABLE_API_KEY")) {
-  console.log("Note: LOVABLE_API_KEY is missing — AI 客服與估價單掃描將無法使用。");
-}

@@ -15,8 +15,7 @@ $keys = @(
   "SUPABASE_URL",
   "SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_PROJECT_ID",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "LOVABLE_API_KEY"
+  "SUPABASE_SERVICE_ROLE_KEY"
 )
 
 $targets = @("production", "preview", "development")

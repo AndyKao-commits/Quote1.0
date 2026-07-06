@@ -30,7 +30,6 @@
     "security:check": "node scripts/security-check.mjs"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.48",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
