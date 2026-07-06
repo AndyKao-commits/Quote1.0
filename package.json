@@ -17,7 +17,17 @@
     "setup:supabase": "powershell -ExecutionPolicy Bypass -File scripts/push-supabase-migrations.ps1",
     "build:bootstrap-sql": "node scripts/build-bootstrap-sql.mjs",
     "bootstrap:db": "node scripts/bootstrap-db.mjs",
-    "generate:three-page-csv": "node scripts/generate-three-page-quote-csv.mjs"
+    "generate:three-page-csv": "node scripts/generate-three-page-quote-csv.mjs",
+    "mock:api": "node scripts/local-mock-api.mjs",
+    "mock:api:lan": "node scripts/local-mock-api.mjs --lan",
+    "dev:local": "vite dev --mode local-first --port 8080 --strictPort",
+    "dev:local:lan": "vite dev --mode local-first --host --port 8080 --strictPort",
+    "local": "powershell -ExecutionPolicy Bypass -File scripts/start-local-demo.ps1",
+    "local:lan": "powershell -ExecutionPolicy Bypass -File scripts/start-local-lan.ps1",
+    "lan:diagnose": "powershell -ExecutionPolicy Bypass -File scripts/diagnose-lan.ps1",
+    "lan:firewall": "powershell -ExecutionPolicy Bypass -File scripts/open-lan-firewall.ps1",
+    "lan:reset-devices": "powershell -ExecutionPolicy Bypass -File scripts/reset-local-devices.ps1",
+    "security:check": "node scripts/security-check.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2.0.48",
@@ -60,6 +70,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
+    "dexie": "^4.4.4",
     "embla-carousel-react": "^8.6.0",
     "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",

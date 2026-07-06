@@ -17,6 +17,15 @@ import type { CatalogPackageLine } from "@/lib/quotes.types";
 import { catalogRowsToCsv, downloadCsv, parseCatalogCsv } from "@/lib/csv-import";
 import { DEMO_CATALOG_SUMMARY } from "@/lib/demo-catalog";
 import { QUOTE_LIMITS, clampText } from "@/lib/quotes.types";
+import {
+  apiBulkDeleteCatalog,
+  apiBulkImportCatalog,
+  apiDeleteCatalogItem,
+  apiListCatalog,
+  apiSaveCatalogItem,
+  apiSeedDemoCatalog,
+  quoteApiEnabled,
+} from "@/lib/quote-api";
 
 export const Route = createFileRoute("/_app/items")({
   head: () => ({ meta: [{ title: "快速項目庫 — 報得過" }] }),
@@ -33,6 +42,7 @@ function emptyPackageLine(): CatalogPackageLine {
 
 function ItemsPage() {
   const qc = useQueryClient();
+  const localMode = quoteApiEnabled();
   const listFn = useServerFn(listCatalogItems);
   const saveFn = useServerFn(saveCatalogItem);
   const delFn = useServerFn(deleteCatalogItem);
@@ -40,8 +50,8 @@ function ItemsPage() {
   const seedFn = useServerFn(seedDemoCatalog);
   const importFn = useServerFn(bulkImportCatalog);
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["catalog"],
-    queryFn: () => listFn({}) as Promise<any[]>,
+    queryKey: ["catalog", localMode],
+    queryFn: () => apiListCatalog(() => listFn({}) as Promise<any[]>),
   });
 
   const [addMode, setAddMode] = useState<AddMode>("single");
@@ -97,29 +107,27 @@ function ItemsPage() {
         item_type: addMode,
       };
       if (addMode === "package") {
-        return saveFn({
-          data: {
-            ...base,
-            item_type: "package",
-            package_lines: packageLines
-              .filter((l) => l.name.trim())
-              .map((l) => ({
-                name: clampText(l.name.trim(), QUOTE_LIMITS.lineName),
-                unit: l.unit || "式",
-                quantity: Number(l.quantity) || 1,
-                unit_price: Number(l.unit_price) || 0,
-              })),
-          },
-        });
-      }
-      return saveFn({
-        data: {
+        const payload = {
           ...base,
-          item_type: "single",
-          unit: form.unit,
-          unit_price: form.unit_price,
-        },
-      });
+          item_type: "package" as const,
+          package_lines: packageLines
+            .filter((l) => l.name.trim())
+            .map((l) => ({
+              name: clampText(l.name.trim(), QUOTE_LIMITS.lineName),
+              unit: l.unit || "式",
+              quantity: Number(l.quantity) || 1,
+              unit_price: Number(l.unit_price) || 0,
+            })),
+        };
+        return apiSaveCatalogItem(() => saveFn({ data: payload }) as Promise<{ id: string }>, payload);
+      }
+      const payload = {
+        ...base,
+        item_type: "single" as const,
+        unit: form.unit,
+        unit_price: form.unit_price,
+      };
+      return apiSaveCatalogItem(() => saveFn({ data: payload }) as Promise<{ id: string }>, payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["catalog"] });
@@ -130,7 +138,7 @@ function ItemsPage() {
   });
 
   const seed = useMutation({
-    mutationFn: () => seedFn({}) as Promise<{ ok: boolean; added: number; message: string }>,
+    mutationFn: () => apiSeedDemoCatalog(() => seedFn({}) as Promise<{ ok: boolean; added: number; message: string }>),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["catalog"] });
       setSeedMsg(res.message);
@@ -140,7 +148,10 @@ function ItemsPage() {
 
   const importCsv = useMutation({
     mutationFn: (rows: ReturnType<typeof parseCatalogCsv>["rows"]) =>
-      importFn({ data: { items: rows } }) as Promise<{ message: string; added: number; skipped: number }>,
+      apiBulkImportCatalog(
+        () => importFn({ data: { items: rows } }) as Promise<{ message: string; added: number; skipped: number }>,
+        rows,
+      ),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["catalog"] });
       setSeedMsg(res.message);
@@ -149,7 +160,8 @@ function ItemsPage() {
   });
 
   const bulkDelete = useMutation({
-    mutationFn: (ids: string[]) => bulkDelFn({ data: { ids } }),
+    mutationFn: (ids: string[]) =>
+      apiBulkDeleteCatalog(() => bulkDelFn({ data: { ids } }) as Promise<{ ok: boolean; deleted: number }>, ids),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["catalog"] });
       setSelected(new Set());
@@ -172,7 +184,7 @@ function ItemsPage() {
 
   async function handleDeleteOne(it: { id: string; name: string }) {
     if (!confirm(`確定刪除「${it.name}」？此操作無法復原。`)) return;
-    await delFn({ data: { id: it.id } });
+    await apiDeleteCatalogItem(() => delFn({ data: { id: it.id } }) as Promise<{ ok: boolean }>, it.id);
     qc.invalidateQueries({ queryKey: ["catalog"] });
     if (editingId === it.id) resetForm();
     setSelected((prev) => {

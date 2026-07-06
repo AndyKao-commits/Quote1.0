@@ -1,7 +1,46 @@
 import "./lib/error-capture";
 
+import { AUTH_PROXY_PATH } from "./lib/local-first/config";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+
+const LOCAL_MOCK_API =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_LOCAL_MOCK_API) ||
+  "http://127.0.0.1:3099";
+
+async function maybeProxyLocalAuth(request: Request): Promise<Response | null> {
+  if (import.meta.env.PROD && import.meta.env.VITE_LOCAL_FIRST !== "true") return null;
+
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith(AUTH_PROXY_PATH)) return null;
+
+  const targetPath = url.pathname.slice(AUTH_PROXY_PATH.length) || "/";
+  const target = `${LOCAL_MOCK_API.replace(/\/$/, "")}${targetPath}${url.search}`;
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+
+  try {
+    const upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      body:
+        request.method !== "GET" && request.method !== "HEAD"
+          ? await request.arrayBuffer()
+          : undefined,
+    });
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: upstream.headers,
+    });
+  } catch (error) {
+    console.error("[__local_auth__ proxy]", error);
+    return Response.json(
+      { error: "授權服務未啟動，請在電腦執行 npm run mock:api:lan" },
+      { status: 502 },
+    );
+  }
+}
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -39,6 +78,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const proxied = await maybeProxyLocalAuth(request);
+    if (proxied) return proxied;
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

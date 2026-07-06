@@ -13,6 +13,9 @@ import {
 } from "@/lib/session";
 import { refreshSession } from "@/lib/auth.functions";
 import { PasswordInput } from "@/components/PasswordInput";
+import { isLocalFirstMode } from "@/lib/local-first/config";
+import { getStoredLicense, loginLocal } from "@/lib/local-first/license";
+import { ensureLocalProfile } from "@/lib/local-first/store";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "登入 — 報得過" }] }),
@@ -23,6 +26,7 @@ type Mode = "signin" | "signup";
 
 function AuthPage() {
   const nav = useNavigate();
+  const localMode = isLocalFirstMode();
   const signInFn = useServerFn(signIn);
   const signUpFn = useServerFn(signUp);
   const [mode, setMode] = useState<Mode>("signin");
@@ -38,6 +42,10 @@ function AuthPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (localMode) {
+        if (!cancelled && getStoredLicense()) nav({ to: "/quotes" });
+        return;
+      }
       const ok = await ensureValidSession(async (refreshToken) =>
         refreshSession({ data: { refresh_token: refreshToken } }),
       );
@@ -46,7 +54,7 @@ function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [nav]);
+  }, [nav, localMode]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +62,15 @@ function AuthPage() {
     setMsg(null);
     setBusy(true);
     try {
+      if (localMode) {
+        await loginLocal(email, pw);
+        await ensureLocalProfile();
+        setRememberLogin(remember);
+        if (remember) setRememberedEmail(email);
+        else setRememberedEmail("");
+        nav({ to: "/quotes" });
+        return;
+      }
       if (mode === "signup") {
         const res = await signUpFn({ data: { email, password: pw, display_name: name, company_name: company } });
         if ("needs_confirm" in res && res.needs_confirm) {
@@ -88,20 +105,22 @@ function AuthPage() {
           報得過
         </Link>
         <div className="bdg-auth-card">
-          <div className="bdg-auth-tabs">
-            {(["signin", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`bdg-auth-tab ${mode === m ? "is-active" : ""}`}
-              >
-                {m === "signin" ? "登入" : "註冊"}
-              </button>
-            ))}
-          </div>
+          {!localMode ? (
+            <div className="bdg-auth-tabs">
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={`bdg-auth-tab ${mode === m ? "is-active" : ""}`}
+                >
+                  {m === "signin" ? "登入" : "註冊"}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <form onSubmit={submit} className="space-y-3">
-            {mode === "signup" && (
+            {!localMode && mode === "signup" && (
               <>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" className="bdg-field-input" />
                 <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="公司／工作室（選填）" className="bdg-field-input" />

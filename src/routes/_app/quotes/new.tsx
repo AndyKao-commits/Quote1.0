@@ -7,6 +7,7 @@ import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 import { useState } from "react";
 import { Bath, Home, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiCreateQuote, apiCreateSampleQuote } from "@/lib/quote-api";
 
 export const Route = createFileRoute("/_app/quotes/new")({
   head: () => ({ meta: [{ title: "新建報價 — 報得過" }] }),
@@ -25,7 +26,7 @@ function NewQuotePage() {
   const [err, setErr] = useState<string | null>(null);
 
   const create = useMutation({
-    mutationFn: () => createFn({ data: {} }) as Promise<{ id: string }>,
+    mutationFn: () => apiCreateQuote(() => createFn({ data: {} }) as Promise<{ id: string }>),
     onSuccess: (res) => {
       if (!res?.id) throw new Error("建立失敗，未取得報價編號");
       nav({ to: "/quotes/$id", params: { id: res.id }, replace: true });
@@ -39,7 +40,7 @@ function NewQuotePage() {
 
   const createSample = useMutation({
     mutationFn: (sampleId: SampleQuoteId) =>
-      sampleFn({ data: { sampleId } }) as Promise<{ id: string }>,
+      apiCreateSampleQuote(() => sampleFn({ data: { sampleId } }) as Promise<{ id: string }>, sampleId),
     onSuccess: (res) => {
       if (!res?.id) throw new Error("建立範例失敗");
       nav({ to: "/quotes/$id", params: { id: res.id }, replace: true });

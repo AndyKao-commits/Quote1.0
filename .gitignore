@@ -34,3 +34,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local-first mock (dev only)
+.local-mock-data.json
+.strix-ref/

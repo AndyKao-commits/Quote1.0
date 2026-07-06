@@ -9,6 +9,8 @@ import { listQuotes, duplicateQuote, deleteQuote, createSampleQuote } from "@/li
 import { formatMoney } from "@/lib/quotes.types";
 import { SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 import { clearSession } from "@/lib/session";
+import { apiCreateSampleQuote, apiDeleteQuote, apiDuplicateQuote, apiListQuotes, quoteApiEnabled } from "@/lib/quote-api";
+import { clearStoredLicense } from "@/lib/local-first/license";
 
 export const Route = createFileRoute("/_app/quotes/")({
   head: () => ({ meta: [{ title: "報價紀錄 — 報得過" }] }),
@@ -18,13 +20,14 @@ export const Route = createFileRoute("/_app/quotes/")({
 function QuotesPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
+  const localMode = quoteApiEnabled();
   const listFn = useServerFn(listQuotes);
   const dupFn = useServerFn(duplicateQuote);
   const delFn = useServerFn(deleteQuote);
   const sampleFn = useServerFn(createSampleQuote);
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["quotes"],
-    queryFn: () => listFn({}) as Promise<any[]>,
+    queryKey: ["quotes", localMode],
+    queryFn: () => apiListQuotes(() => listFn({}) as Promise<any[]>),
     retry: 1,
   });
   const quotes = Array.isArray(data) ? data.filter((q) => q && typeof q.id === "string") : [];
@@ -33,23 +36,24 @@ function QuotesPage() {
     if (!isError || !error) return;
     const msg = error instanceof Error ? error.message : "";
     if (msg.includes("登入") || msg.includes("過期")) {
-      clearSession();
+      if (localMode) clearStoredLicense();
+      else clearSession();
       nav({ to: "/auth" });
     }
-  }, [isError, error, nav]);
+  }, [isError, error, nav, localMode]);
 
   const dup = useMutation({
-    mutationFn: (id: string) => dupFn({ data: { id } }),
+    mutationFn: (id: string) => apiDuplicateQuote(() => dupFn({ data: { id } }) as Promise<{ id: string }>, id),
     onSuccess: (r) => nav({ to: "/quotes/$id", params: { id: r.id } }),
   });
   const del = useMutation({
-    mutationFn: (id: string) => delFn({ data: { id } }),
+    mutationFn: (id: string) => apiDeleteQuote(() => delFn({ data: { id } }) as Promise<{ ok: boolean }>, id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["quotes"] }),
   });
 
   const createSample = useMutation({
     mutationFn: (sampleId: SampleQuoteId) =>
-      sampleFn({ data: { sampleId } }) as Promise<{ id: string }>,
+      apiCreateSampleQuote(() => sampleFn({ data: { sampleId } }) as Promise<{ id: string }>, sampleId),
     onSuccess: (r) => nav({ to: "/quotes/$id", params: { id: r.id } }),
   });
 
@@ -75,7 +79,8 @@ function QuotesPage() {
             <button
               type="button"
               onClick={() => {
-                clearSession();
+                if (localMode) clearStoredLicense();
+                else clearSession();
                 nav({ to: "/auth" });
               }}
               className="bdg-btn bdg-btn-secondary text-sm"

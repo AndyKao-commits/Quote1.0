@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as LocalDemoRouteRouteImport } from './routes/local-demo/route'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LocalDemoIndexRouteImport } from './routes/local-demo/index'
 import { Route as QTokenRouteImport } from './routes/q/$token'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppItemsRouteImport } from './routes/_app/items'
@@ -30,6 +32,11 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocalDemoRouteRoute = LocalDemoRouteRouteImport.update({
+  id: '/local-demo',
+  path: '/local-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -38,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LocalDemoIndexRoute = LocalDemoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LocalDemoRouteRoute,
 } as any)
 const QTokenRoute = QTokenRouteImport.update({
   id: '/q/$token',
@@ -72,11 +84,13 @@ const AppQuotesIdRoute = AppQuotesIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/local-demo': typeof LocalDemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
+  '/local-demo/': typeof LocalDemoIndexRoute
   '/quotes/$id': typeof AppQuotesIdRoute
   '/quotes/new': typeof AppQuotesNewRoute
   '/quotes/': typeof AppQuotesIndexRoute
@@ -88,6 +102,7 @@ export interface FileRoutesByTo {
   '/items': typeof AppItemsRoute
   '/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
+  '/local-demo': typeof LocalDemoIndexRoute
   '/quotes/$id': typeof AppQuotesIdRoute
   '/quotes/new': typeof AppQuotesNewRoute
   '/quotes': typeof AppQuotesIndexRoute
@@ -96,11 +111,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
+  '/local-demo': typeof LocalDemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_app/items': typeof AppItemsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/q/$token': typeof QTokenRoute
+  '/local-demo/': typeof LocalDemoIndexRoute
   '/_app/quotes/$id': typeof AppQuotesIdRoute
   '/_app/quotes/new': typeof AppQuotesNewRoute
   '/_app/quotes/': typeof AppQuotesIndexRoute
@@ -109,11 +126,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/local-demo'
     | '/auth'
     | '/reset-password'
     | '/items'
     | '/settings'
     | '/q/$token'
+    | '/local-demo/'
     | '/quotes/$id'
     | '/quotes/new'
     | '/quotes/'
@@ -125,6 +144,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/q/$token'
+    | '/local-demo'
     | '/quotes/$id'
     | '/quotes/new'
     | '/quotes'
@@ -132,11 +152,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/local-demo'
     | '/auth'
     | '/reset-password'
     | '/_app/items'
     | '/_app/settings'
     | '/q/$token'
+    | '/local-demo/'
     | '/_app/quotes/$id'
     | '/_app/quotes/new'
     | '/_app/quotes/'
@@ -145,6 +167,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  LocalDemoRouteRoute: typeof LocalDemoRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   QTokenRoute: typeof QTokenRoute
@@ -166,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/local-demo': {
+      id: '/local-demo'
+      path: '/local-demo'
+      fullPath: '/local-demo'
+      preLoaderRoute: typeof LocalDemoRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -179,6 +209,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/local-demo/': {
+      id: '/local-demo/'
+      path: '/'
+      fullPath: '/local-demo/'
+      preLoaderRoute: typeof LocalDemoIndexRouteImport
+      parentRoute: typeof LocalDemoRouteRoute
     }
     '/q/$token': {
       id: '/q/$token'
@@ -245,9 +282,22 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
+interface LocalDemoRouteRouteChildren {
+  LocalDemoIndexRoute: typeof LocalDemoIndexRoute
+}
+
+const LocalDemoRouteRouteChildren: LocalDemoRouteRouteChildren = {
+  LocalDemoIndexRoute: LocalDemoIndexRoute,
+}
+
+const LocalDemoRouteRouteWithChildren = LocalDemoRouteRoute._addFileChildren(
+  LocalDemoRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
+  LocalDemoRouteRoute: LocalDemoRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   QTokenRoute: QTokenRoute,

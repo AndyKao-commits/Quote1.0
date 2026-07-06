@@ -61,7 +61,7 @@ export function QuotePriceAdjustBar({
           value={[value]}
           disabled={disabled}
           onValueChange={([pct]) => onChange(pct)}
-          className="py-2 [&_.bg-primary]:bg-[var(--bdg-brand)] [&_.border-primary\\/50]:border-[var(--bdg-brand)]"
+          className="quote-price-adjust-slider py-2"
         />
         <div className="relative mt-1 h-4 text-[11px] leading-none text-stone-400">
           <span className="absolute left-0">{MIN}%</span>

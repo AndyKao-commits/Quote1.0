@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/BdgAppShell";
+import { LocalSettingsExtras } from "@/components/local-first/LocalSettingsExtras";
 import { QuotePigeonLoader } from "@/components/QuotePigeon";
 import { getProfile, updateProfile } from "@/lib/quotes.functions";
+import { apiGetProfile, apiUpdateProfile, quoteApiEnabled } from "@/lib/quote-api";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "設定 — 報得過" }] }),
@@ -14,9 +16,13 @@ export const Route = createFileRoute("/_app/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
+  const localMode = quoteApiEnabled();
   const profileFn = useServerFn(getProfile);
   const updateFn = useServerFn(updateProfile);
-  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: () => profileFn({}) as Promise<any> });
+  const { data: profile } = useQuery({
+    queryKey: ["profile", localMode],
+    queryFn: () => apiGetProfile(() => profileFn({}) as Promise<any>),
+  });
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
@@ -24,7 +30,7 @@ function SettingsPage() {
   }, [profile]);
 
   const save = useMutation({
-    mutationFn: () => updateFn({ data: form }),
+    mutationFn: () => apiUpdateProfile(() => updateFn({ data: form }), form),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
   });
 
@@ -74,6 +80,8 @@ function SettingsPage() {
           {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} 儲存設定
         </button>
       </div>
+
+      {localMode ? <LocalSettingsExtras /> : null}
     </AppShell>
   );
 }

@@ -33,6 +33,16 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { toast } from "sonner";
 import { downloadCsv, parseQuoteLinesCsv, quoteLineCsvToQuoteLines, quoteLinesToCsv } from "@/lib/csv-import";
 import { DEFAULT_QUOTE_TERMS, formatPaymentScheduleText, resolveQuoteTerms } from "@/lib/quote-document.utils";
+import { HalfBrowseOverlay } from "@/components/local-first/LocalAccessBanner";
+import { useLocalAccess } from "@/hooks/use-local-access";
+import { assertCanExportPdf, sliceLinesForBrowse } from "@/lib/local-first/gate";
+import {
+  apiGetProfile,
+  apiGetQuote,
+  apiListCatalog,
+  apiSaveQuote,
+  quoteApiEnabled,
+} from "@/lib/quote-api";
 import { getSampleQuote, SAMPLE_QUOTES, type SampleQuoteId } from "@/lib/landing-demo-quotes";
 
 const AUTO_SAVE_MS = 2500;
@@ -91,15 +101,21 @@ function QuoteEditorPage() {
   const renewShareFn = useServerFn(renewShare);
   const catalogFn = useServerFn(listCatalogItems);
   const profileFn = useServerFn(getProfile);
+  const localMode = quoteApiEnabled();
+  const { access, isLocalMode } = useLocalAccess();
+  const readOnly = isLocalMode && access ? !access.canEdit : false;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["quote", id],
-    queryFn: () => getFn({ data: { id } }) as Promise<any>,
+    queryKey: ["quote", id, localMode],
+    queryFn: () => apiGetQuote(() => getFn({ data: { id } }) as Promise<any>, id),
   });
-  const { data: profile } = useQuery({ queryKey: ["profile"], queryFn: () => profileFn({}) as Promise<any> });
+  const { data: profile } = useQuery({
+    queryKey: ["profile", localMode],
+    queryFn: () => apiGetProfile(() => profileFn({}) as Promise<any>),
+  });
   const { data: catalog = [] } = useQuery({
-    queryKey: ["catalog"],
-    queryFn: () => catalogFn({}) as Promise<any[]>,
+    queryKey: ["catalog", localMode],
+    queryFn: () => apiListCatalog(() => catalogFn({}) as Promise<any[]>),
   });
 
   const [form, setForm] = useState<any>(null);
@@ -210,6 +226,12 @@ function QuoteEditorPage() {
     ? (form?.payment_schedule ?? "")
     : formatPaymentScheduleText(totals.total);
 
+  const previewLines = useMemo(
+    () => sliceLinesForBrowse(lines, access?.browseRatio ?? 1),
+    [lines, access?.browseRatio],
+  );
+  const halfBrowse = isLocalMode && (access?.browseRatio ?? 1) < 1;
+
   editorStateRef.current = { form, lines, priceAdjustPct, paymentTouched, totals };
 
   const currentSnapshot = form
@@ -233,8 +255,34 @@ function QuoteEditorPage() {
       const pay = s.paymentTouched
         ? s.form.payment_schedule
         : formatPaymentScheduleText(s.totals.total);
-      await saveFn({
-        data: {
+      await apiSaveQuote(
+        () =>
+          saveFn({
+            data: {
+              id,
+              title: s.form.title,
+              client_name: s.form.client_name,
+              client_company: s.form.client_company,
+              client_phone: s.form.client_phone,
+              client_email: s.form.client_email,
+              client_tax_id: s.form.client_tax_id,
+              client_address: s.form.client_address,
+              show_seller_tax_id: s.form.show_seller_tax_id,
+              show_buyer_tax_id: s.form.show_buyer_tax_id,
+              seller_tax_id: s.form.seller_tax_id,
+              tax_included: s.form.tax_included,
+              show_tax_breakdown: s.form.show_tax_breakdown,
+              tax_rate: Number(s.form.tax_rate ?? 0.05),
+              valid_until: s.form.valid_until || null,
+              note: s.form.note,
+              terms: resolveQuoteTerms(s.form.terms),
+              payment_schedule: pay,
+              cover_image_url: s.form.cover_image_url,
+              price_adjust_pct: s.priceAdjustPct,
+              lines: saveLines,
+            },
+          }),
+        {
           id,
           title: s.form.title,
           client_name: s.form.client_name,
@@ -257,7 +305,7 @@ function QuoteEditorPage() {
           price_adjust_pct: s.priceAdjustPct,
           lines: saveLines,
         },
-      });
+      );
       return { skipped, truncated, snapshot: buildQuoteSnapshot(s.form, saveLines, s.priceAdjustPct, pay) };
     },
     onMutate: ({ silent }) => {
@@ -293,7 +341,7 @@ function QuoteEditorPage() {
   });
 
   useEffect(() => {
-    if (!form) return;
+    if (!form || readOnly) return;
     if (!hydratedRef.current) {
       hydratedRef.current = true;
       savedSnapshotRef.current = currentSnapshot;
@@ -316,7 +364,7 @@ function QuoteEditorPage() {
         autoSaveTimerRef.current = null;
       }
     };
-  }, [currentSnapshot, form, isDirty, saveMut.isPending, saveMut]);
+  }, [currentSnapshot, form, isDirty, readOnly, saveMut.isPending, saveMut]);
 
   useEffect(() => {
     if (autoSaveStatus !== "saved") return;
@@ -351,6 +399,14 @@ function QuoteEditorPage() {
   }
 
   async function doExport() {
+    if (isLocalMode) {
+      try {
+        assertCanExportPdf();
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "無法匯出 PDF");
+        return;
+      }
+    }
     setExporting(true);
     try {
       try {
@@ -487,7 +543,7 @@ function QuoteEditorPage() {
   }
 
   const editor = (
-    <div className="space-y-5">
+    <fieldset disabled={readOnly} className={readOnly ? "space-y-5 opacity-95 [&_*]:pointer-events-none" : "space-y-5"}>
       <div className="bdg-card p-4">
         <p className="bdg-section-title mb-2">學習範例</p>
         <p className="bdg-meta mb-3">載入完整範例報價，觀察欄位與 PDF 排版（可再修改後儲存）。</p>
@@ -637,7 +693,7 @@ function QuoteEditorPage() {
         <Field label="有效期限" value={form.valid_until ?? ""} onChange={(v) => setForm({ ...form, valid_until: v })} type="date" />
       </div>
       <BackToTopButton />
-    </div>
+    </fieldset>
   );
 
   return (
@@ -648,21 +704,28 @@ function QuoteEditorPage() {
         </button>
         <AutoSaveStatus status={autoSaveStatus} isDirty={isDirty} isPending={saveMut.isPending} />
         <div className="flex-1" />
-        <button type="button" onClick={() => saveMut.mutate({})} disabled={saveMut.isPending} className="bdg-btn bdg-btn-secondary">
+        <button type="button" onClick={() => saveMut.mutate({})} disabled={readOnly || saveMut.isPending} className="bdg-btn bdg-btn-secondary">
           {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 儲存
         </button>
         <button type="button" onClick={() => setPreviewFull(true)} className="bdg-btn bdg-btn-secondary">
           <Eye className="h-4 w-4" /> 預覽
         </button>
-        <button type="button" onClick={doExport} disabled={exporting} className="bdg-btn bdg-btn-secondary">
+        <button
+          type="button"
+          onClick={doExport}
+          disabled={exporting || (isLocalMode && access ? !access.canExportPdf : false)}
+          className="bdg-btn bdg-btn-secondary"
+        >
           {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
         </button>
-        <button type="button" onClick={doShare} className="bdg-btn bg-[#06C755] text-white hover:brightness-105">
-          <Share2 className="h-4 w-4" /> LINE
-        </button>
+        {!localMode ? (
+          <button type="button" onClick={doShare} className="bdg-btn bg-[#06C755] text-white hover:brightness-105">
+            <Share2 className="h-4 w-4" /> LINE
+          </button>
+        ) : null}
       </div>
 
-      {shareUrl && (
+      {!localMode && shareUrl && (
         <div className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
           <p>
             分享連結
@@ -696,7 +759,7 @@ function QuoteEditorPage() {
         aria-hidden
         className="quote-preview-root pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
       >
-        <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+        <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
       </div>
 
       <div className="quote-editor-layout grid min-w-0 items-stretch gap-5 lg:grid-cols-2">
@@ -704,10 +767,11 @@ function QuoteEditorPage() {
         <div
           className={`quote-editor-preview-col min-w-0 ${tab === "edit" ? "hidden lg:block" : "block"} ${previewFull ? "hidden" : ""}`}
         >
-          <div className="quote-editor-sticky">
+          <div className="quote-editor-sticky relative">
             <QuotePreviewPane className="quote-editor-pan flex w-full">
-              <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+              <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
             </QuotePreviewPane>
+            <HalfBrowseOverlay show={halfBrowse} />
           </div>
         </div>
       </div>
@@ -724,16 +788,19 @@ function QuoteEditorPage() {
               <X className="h-5 w-5" />
             </button>
           </div>
-          <QuotePreviewPane fullscreen className="flex min-h-0 w-full flex-1 flex-col">
-            <QuoteDocument quote={quotePreview} lines={lines} profile={profile} preview />
+          <QuotePreviewPane fullscreen className="relative flex min-h-0 w-full flex-1 flex-col">
+            <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
+            <HalfBrowseOverlay show={halfBrowse} />
           </QuotePreviewPane>
           <div className="mx-auto mt-2 flex shrink-0 gap-2 pb-1">
             <button type="button" onClick={doExport} className="rounded-full bg-white px-5 py-2 text-sm font-semibold shadow-sm">
               下載 PDF
             </button>
-            <button type="button" onClick={doShare} className="rounded-full bg-[#06C755] px-5 py-2 text-sm font-semibold text-white shadow-sm">
-              LINE 分享
-            </button>
+            {!localMode ? (
+              <button type="button" onClick={doShare} className="rounded-full bg-[#06C755] px-5 py-2 text-sm font-semibold text-white shadow-sm">
+                LINE 分享
+              </button>
+            ) : null}
           </div>
         </div>
       )}
