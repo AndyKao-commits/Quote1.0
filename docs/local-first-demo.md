@@ -94,6 +94,18 @@ npm run dev:local:lan
 3. 授權服務必須用 `mock:api:lan`，不能用一般的 `mock:api`
 4. 修改 `.env.local-first` 後需**重啟** `dev:local:lan`
 
-### 上線版（Vercel）
+### 上線版（Vercel · 可離線）
 
-若要測已部署的正式站，手機直接開 https://quote1-0.vercel.app 即可，不需上述設定。
+正式站若要改為**可離線版本**，在 Vercel 設定：
+
+| 變數 | 值 |
+|------|-----|
+| `VITE_LOCAL_FIRST` | `true` |
+| `LOCAL_MOCK_SECRET` | 隨機長字串（僅伺服器，勿加 `VITE_` 前綴） |
+| 其餘 Supabase 變數 | 與雲端版相同 |
+
+並在 Supabase 執行 migration：`20260706100000_offline_license_devices.sql`
+
+設定後 **Redeploy**。使用者以 **Supabase 註冊帳號**登入（非 `demo@local`），報價資料存於裝置 IndexedDB，每 20 天需連線驗證會籍。
+
+本機開發仍用 `npm run local`；`demo@local` 僅限本機。

@@ -5,9 +5,11 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { baodeguoPwaPlugin } from "./src/lib/pwa-config";
 
 export default defineConfig({
   vite: {
+    plugins: [baodeguoPwaPlugin()],
     server: {
       proxy: {
         "/__local_auth__": {

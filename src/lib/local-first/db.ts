@@ -4,7 +4,7 @@ import type { CatalogItem, Profile, Quote, QuoteLine } from "@/lib/quotes.types"
 export type CloudBackupRow = {
   id: string;
   userId: string;
-  provider: "icloud" | "google" | "onedrive";
+  provider: "icloud" | "google" | "onedrive" | "device";
   label: string;
   payload: string;
   createdAt: string;

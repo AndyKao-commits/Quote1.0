@@ -4,7 +4,7 @@ import { useLocalAccess } from "@/hooks/use-local-access";
 
 const INTERVAL_MS = 5 * 60 * 1000;
 
-/** 本機模式：連線時自動雲端存檔 */
+/** 本機模式：連線時自動存檔至使用者裝置（不上傳伺服器） */
 export function AutoCloudBackupRunner() {
   const { isLocalMode, access } = useLocalAccess();
   const canAuto = isLocalMode && access?.canEdit;

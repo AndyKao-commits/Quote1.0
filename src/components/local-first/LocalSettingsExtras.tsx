@@ -1,13 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Cloud, RefreshCw } from "lucide-react";
+import { Cloud, RefreshCw, Share2 } from "lucide-react";
 import { LocalAccessBanner } from "@/components/local-first/LocalAccessBanner";
 import {
-  backupToSimulatedCloud,
   detectCloudProvider,
   getCloudProviderLabel,
-  listSimulatedCloudBackups,
-  restoreFromSimulatedCloud,
+  shareBackupToUserCloud,
 } from "@/lib/local-first/cloud";
 import { getAutoBackupMeta, recordBackupMeta } from "@/lib/local-first/auto-backup";
 import {
@@ -16,15 +14,27 @@ import {
   pingMockApi,
   refreshLocalLicense,
 } from "@/lib/local-first/license";
-import { exportLocalBackup, importLocalBackup } from "@/lib/local-first/store";
+import {
+  backupToUserDevice,
+  canShareBackupFile,
+  downloadBackupFile,
+  listDeviceBackups,
+  restoreFromUserDevice,
+} from "@/lib/local-first/user-backup";
+import { importLocalBackup } from "@/lib/local-first/store";
 import { toast } from "sonner";
 
 export function LocalSettingsExtras() {
   const license = getStoredLicense();
   const access = evaluateAccess(license);
-  const provider = detectCloudProvider();
+  const suggestedCloud = detectCloudProvider();
   const [busy, setBusy] = useState(false);
+  const [canShare, setCanShare] = useState(false);
   const [autoMeta, setAutoMeta] = useState(() => getAutoBackupMeta());
+
+  useEffect(() => {
+    void canShareBackupFile().then(setCanShare);
+  }, []);
 
   useEffect(() => {
     const sync = () => setAutoMeta(getAutoBackupMeta());
@@ -33,8 +43,8 @@ export function LocalSettingsExtras() {
   }, []);
 
   const { data: backups, refetch } = useQuery({
-    queryKey: ["local-cloud-backups"],
-    queryFn: listSimulatedCloudBackups,
+    queryKey: ["local-device-backups"],
+    queryFn: listDeviceBackups,
     enabled: Boolean(license),
   });
 
@@ -52,18 +62,18 @@ export function LocalSettingsExtras() {
     }
   }
 
-  async function cloudBackup() {
+  async function deviceBackup() {
     if (!access.canEdit) {
       toast.error("目前狀態無法備份");
       return;
     }
     setBusy(true);
     try {
-      const label = `手動備份 ${new Date().toLocaleString("zh-TW")}`;
-      const r = await backupToSimulatedCloud({ label });
-      await recordBackupMeta(r.label, "manual");
+      const label = `手動存檔 ${new Date().toLocaleString("zh-TW")}`;
+      await backupToUserDevice({ label });
+      await recordBackupMeta(label, "manual");
       setAutoMeta(getAutoBackupMeta());
-      toast.success(`已備份至 ${getCloudProviderLabel(r.provider)}`);
+      toast.success("已存到本機裝置（不上傳伺服器）");
       refetch();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "備份失敗");
@@ -72,11 +82,11 @@ export function LocalSettingsExtras() {
     }
   }
 
-  async function cloudRestore() {
+  async function deviceRestore() {
     setBusy(true);
     try {
-      const r = await restoreFromSimulatedCloud();
-      toast.success(`已從 ${getCloudProviderLabel(r.provider)} 還原`);
+      const r = await restoreFromUserDevice();
+      toast.success(r.source === "opfs" ? "已從裝置自動存檔還原" : "已從本機備份還原");
       window.location.reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "還原失敗");
@@ -85,14 +95,25 @@ export function LocalSettingsExtras() {
     }
   }
 
-  async function downloadFile() {
-    const payload = await exportLocalBackup();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `baodeguo-save-${Date.now()}.bdg.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  async function shareToUserCloud() {
+    if (!access.canEdit) {
+      toast.error("目前狀態無法備份");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await shareBackupToUserCloud();
+      if (r.method === "share") {
+        toast.success(`可選擇存到 ${getCloudProviderLabel(suggestedCloud)} 或檔案 App`);
+      } else {
+        toast.success("已下載存檔，可手動上傳至你的雲端");
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      toast.error(e instanceof Error ? e.message : "分享失敗");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function importFile(file: File) {
@@ -109,7 +130,9 @@ export function LocalSettingsExtras() {
   return (
     <div className="mt-8 space-y-4 border-t border-[var(--bdg-line)] pt-8">
       <h2 className="text-lg font-semibold text-[var(--bdg-ink)]">資料與同步</h2>
-      <p className="text-sm text-[var(--bdg-muted)]">會籍驗證、雲端自動存檔與手動匯出</p>
+      <p className="text-sm text-[var(--bdg-muted)]">
+        報價資料僅存於你的裝置或你選擇的雲端／檔案，不會上傳至報得過伺服器。
+      </p>
 
       <LocalAccessBanner access={access} onReconnect={reconnect} />
 
@@ -131,11 +154,10 @@ export function LocalSettingsExtras() {
 
       <section className="bdg-card p-4 text-sm">
         <h3 className="flex items-center gap-2 font-semibold">
-          <Cloud className="h-4 w-4" /> 自動存檔
+          <Cloud className="h-4 w-4" /> 自動存檔（本機）
         </h3>
         <p className="mt-1 text-xs text-[var(--bdg-muted)]">
-          連線時自動將品牌設定、報價單與項目庫備份至 <strong>{getCloudProviderLabel(provider)}</strong>。
-          編輯後約 30 秒、每 5 分鐘，或離開頁面時觸發。
+          連線時自動將品牌設定、報價單與項目庫存到本機裝置。編輯後約 30 秒、每 5 分鐘，或離開頁面時觸發。
         </p>
         {autoMeta ? (
           <p className="mt-2 text-xs text-emerald-800">
@@ -145,11 +167,11 @@ export function LocalSettingsExtras() {
           <p className="mt-2 text-xs text-[var(--bdg-muted)]">尚無自動存檔紀錄</p>
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="bdg-btn bdg-btn-primary text-xs" disabled={busy} onClick={cloudBackup}>
-            立即備份
+          <button type="button" className="bdg-btn bdg-btn-primary text-xs" disabled={busy} onClick={deviceBackup}>
+            立即存檔
           </button>
-          <button type="button" className="bdg-btn text-xs" disabled={busy} onClick={cloudRestore}>
-            從雲端還原
+          <button type="button" className="bdg-btn text-xs" disabled={busy} onClick={deviceRestore}>
+            從本機還原
           </button>
         </div>
         {backups?.length ? (
@@ -164,19 +186,26 @@ export function LocalSettingsExtras() {
       </section>
 
       <section className="bdg-card p-4 text-sm">
-        <h3 className="font-semibold">手動存檔</h3>
+        <h3 className="flex items-center gap-2 font-semibold">
+          <Share2 className="h-4 w-4" /> 存到你的雲端或檔案
+        </h3>
         <p className="mt-1 text-xs text-[var(--bdg-muted)]">
-          無法連線雲端時，可將資料匯出成檔案帶到其他裝置還原（需同一帳號）。
+          {canShare
+            ? `透過系統分享，可存到 ${getCloudProviderLabel(suggestedCloud)}、檔案 App、AirDrop 等。`
+            : "下載 .bdg 存檔後，可手動上傳至 iCloud、Google 雲端或其他備份服務。"}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className="bdg-btn text-xs" onClick={downloadFile}>
-            匯出存檔
+          <button type="button" className="bdg-btn bdg-btn-primary text-xs" disabled={busy} onClick={shareToUserCloud}>
+            {canShare ? "分享存檔" : "下載存檔"}
+          </button>
+          <button type="button" className="bdg-btn text-xs" disabled={busy} onClick={() => downloadBackupFile()}>
+            另存檔案
           </button>
           <label className="bdg-btn cursor-pointer text-xs">
-            匯入存檔
+            從檔案匯入
             <input
               type="file"
-              accept=".json,.bdg,application/json"
+              accept=".bdg,.json,application/json,application/octet-stream"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];

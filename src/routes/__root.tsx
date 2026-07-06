@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
@@ -75,6 +75,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 const OG_DESC = "三分鐘做出客戶願意簽的報價。PDF 預覽、LINE 分享、項目庫、歷史複製。";
+const PWA_THEME = "#1c1917";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -84,6 +85,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "報得過 — 快速生成漂亮報價單" },
       { name: "description", content: OG_DESC },
       { name: "author", content: "報得過" },
+      { name: "theme-color", content: PWA_THEME },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "報得過" },
       { property: "og:title", content: "報得過" },
       { property: "og:description", content: OG_DESC },
       { property: "og:type", content: "website" },
@@ -94,7 +100,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "apple-touch-icon", href: "/favicon.svg" },
+      { rel: "apple-touch-icon", href: "/quote-pigeon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -105,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-TW">
       <head>
         <HeadContent />
       </head>
@@ -124,6 +131,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    if (import.meta.env.SSR) return;
+    void import("@/lib/pwa-register");
+    const onUpdate = () => {
+      if (window.confirm("有新版本可用，是否立即更新？")) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("bdg-pwa-update", onUpdate);
+    return () => window.removeEventListener("bdg-pwa-update", onUpdate);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,5 +1,5 @@
 import { isLocalFirstMode } from "@/lib/local-first/config";
-import { backupToSimulatedCloud } from "@/lib/local-first/cloud";
+import { backupToUserDevice } from "@/lib/local-first/user-backup";
 import { evaluateAccess, getStoredLicense } from "@/lib/local-first/license";
 import { exportLocalBackup } from "@/lib/local-first/store";
 
@@ -87,7 +87,7 @@ export async function runAutoCloudBackup(trigger: string) {
   inFlight = true;
   try {
     const label = `自動存檔 ${new Date().toLocaleString("zh-TW")}`;
-    const r = await backupToSimulatedCloud({ label });
+    const r = await backupToUserDevice({ label });
     const meta = await recordBackupMeta(r.label, trigger);
     return { ok: true as const, meta };
   } catch {
