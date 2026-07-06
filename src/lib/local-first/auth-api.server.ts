@@ -82,8 +82,9 @@ function getAuthClient() {
 async function getMembershipExpiry(userId: string) {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin.rpc("current_membership_expiry", { _user: userId });
-  if (error || !data) return new Date(0).toISOString();
-  return String(data);
+  if (!error && data) return String(data);
+  if (error) console.error("[offline auth] membership expiry", error);
+  return new Date(0).toISOString();
 }
 
 async function loginWithFile(email: string, password: string, deviceId: string, deviceName: string) {
@@ -130,7 +131,11 @@ async function loginWithSupabase(email: string, password: string, deviceId: stri
 
   if (listErr) {
     console.error("[offline auth] device list", listErr);
-    return Response.json({ error: "授權服務暫時無法使用" }, { status: 503 });
+    const hint =
+      listErr.code === "PGRST205" || listErr.message?.includes("offline_license_devices")
+        ? "資料庫尚未更新，請執行 offline_license_devices migration"
+        : "授權服務暫時無法使用";
+    return Response.json({ error: hint }, { status: 503 });
   }
 
   const list = (devices ?? []).map((d) => ({
@@ -288,6 +293,7 @@ export async function handleLocalAuthRequest(request: Request): Promise<Response
     return Response.json({ error: "not found" }, { status: 404 });
   } catch (error) {
     console.error("[__local_auth__]", error);
-    return Response.json({ error: "server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "server error";
+    return Response.json({ error: message }, { status: 500 });
   }
 }

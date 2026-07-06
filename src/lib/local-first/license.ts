@@ -138,7 +138,15 @@ export async function loginLocal(email: string, password: string) {
     throw new Error("授權伺服器回應異常");
   }
   if (!res.ok) {
-    const msg = data.error || "登入失敗";
+    const raw = data.error;
+    const msg =
+      typeof raw === "string" && raw.trim()
+        ? raw
+        : res.status === 500
+          ? "伺服器錯誤，請稍後再試或聯絡客服"
+          : res.status === 503
+            ? "授權服務暫時無法使用，請確認資料庫 migration 已執行"
+            : "登入失敗";
     if (res.status === 403 && msg.includes("裝置上限")) {
       throw new Error(`${msg}（電腦執行 npm run lan:reset-devices 可重置）`);
     }

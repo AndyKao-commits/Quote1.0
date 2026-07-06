@@ -118,14 +118,18 @@ function AuthPage() {
                 </button>
               ))}
             </div>
-          ) : null}
+          ) : (
+            <p className="mb-4 text-center text-xs text-[var(--bdg-muted)]">
+              離線版：請用已註冊的 Email 登入。報價資料只存於你的裝置，不會上傳伺服器。
+            </p>
+          )}
           <form onSubmit={submit} className="space-y-3">
-            {!localMode && mode === "signup" && (
+            {localMode ? null : mode === "signup" ? (
               <>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="你的名字" className="bdg-field-input" />
                 <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="公司／工作室（選填）" className="bdg-field-input" />
               </>
-            )}
+            ) : null}
             <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="bdg-field-input" />
             <PasswordInput required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} placeholder="密碼（至少 6 碼）" inputClassName="bdg-field-input pr-10" />
             {mode === "signin" && (
