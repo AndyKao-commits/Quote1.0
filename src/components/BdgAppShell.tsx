@@ -6,7 +6,9 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { AutoCloudBackupRunner } from "@/components/local-first/AutoCloudBackupRunner";
 import { LocalAccessBanner } from "@/components/local-first/LocalAccessBanner";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { useLocalAccess } from "@/hooks/use-local-access";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { pingMockApi, refreshLocalLicense, clearStoredLicense } from "@/lib/local-first/license";
 import { getProfile } from "@/lib/quotes.functions";
 import { apiGetProfile } from "@/lib/quote-api";
@@ -19,6 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isActive = (p: string) => pathname.startsWith(p);
   const profileFn = useServerFn(getProfile);
   const { access, isLocalMode } = useLocalAccess();
+  const online = useOnlineStatus();
   const [reconnecting, setReconnecting] = useState(false);
   const { data: profile } = useQuery({
     queryKey: ["profile", isLocalMode],
@@ -86,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:pb-10">
+        {!isLocalMode && !online ? <OfflineBanner /> : null}
         {isLocalMode && access && access.level !== "full" ? (
           <LocalAccessBanner access={access} onReconnect={reconnecting ? undefined : reconnect} />
         ) : null}
