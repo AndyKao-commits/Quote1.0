@@ -1312,11 +1312,19 @@
     overflow: hidden;
   }
   @media (min-width: 1024px) {
-    .quote-editor-preview-col .quote-editor-pan {
-      max-height: none;
+    /* 右欄 sticky：左側編輯捲動時預覽固定於畫面右側 */
+    .quote-editor-sticky {
+      position: sticky;
+      top: 5.5rem;
+      z-index: 10;
+      width: 100%;
+      align-self: start;
     }
-    .quote-editor-preview-col .pan-scroller {
-      max-height: min(85vh, 900px);
+    .quote-editor-sticky .quote-editor-pan {
+      max-height: calc(100vh - 5.5rem);
+    }
+    .quote-editor-sticky .pan-scroller {
+      max-height: calc(100vh - 5.5rem - 6.5rem);
     }
   }
   .quote-editor-pan .pan-viewport {
@@ -1346,6 +1354,9 @@
     .quote-editor-pan .pan-scroller {
       min-height: min(72vh, 640px);
       max-height: min(78vh, 720px);
+    }
+    .quote-editor-sticky .quote-editor-pan .pan-scroller {
+      max-height: calc(100vh - 5.5rem - 6.5rem);
     }
   }
   .quote-editor-pan--fullscreen {
