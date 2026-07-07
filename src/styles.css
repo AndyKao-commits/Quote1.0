@@ -1312,18 +1312,11 @@
     overflow: hidden;
   }
   @media (min-width: 1024px) {
-    /* 外層 sticky（無 overflow）+ 右欄撐滿列高 → 左側捲動時預覽貼在 header 下 */
-    .quote-editor-sticky {
-      position: sticky;
-      top: 5.5rem;
-      z-index: 10;
-      width: 100%;
+    .quote-editor-preview-col .quote-editor-pan {
+      max-height: none;
     }
-    .quote-editor-sticky .quote-editor-pan {
-      max-height: calc(100vh - 5.5rem);
-    }
-    .quote-editor-sticky .pan-scroller {
-      max-height: calc(100vh - 5.5rem - 6.5rem);
+    .quote-editor-preview-col .pan-scroller {
+      max-height: min(85vh, 900px);
     }
   }
   .quote-editor-pan .pan-viewport {
