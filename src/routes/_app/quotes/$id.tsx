@@ -765,18 +765,21 @@ function QuoteEditorPage() {
         <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
       </div>
 
-      <div className="quote-editor-layout grid min-w-0 items-stretch gap-5 lg:grid-cols-2">
+      <div className="quote-editor-layout grid min-w-0 items-start gap-5 lg:grid-cols-2">
         <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <div
-          className={`quote-editor-preview-col min-w-0 ${tab === "edit" ? "hidden lg:block" : "block"} ${previewFull ? "hidden" : ""}`}
+        <aside
+          className={`quote-editor-preview-col min-w-0 ${
+            previewFull ? "hidden" : tab === "edit" ? "hidden lg:flex" : "flex"
+          }`}
+          aria-label="報價預覽"
         >
-          <div className="quote-editor-sticky relative">
+          <div className="quote-editor-sticky relative min-h-0 w-full flex-1">
             <QuotePreviewPane className="quote-editor-pan flex w-full">
               <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
             </QuotePreviewPane>
             <HalfBrowseOverlay show={halfBrowse} />
           </div>
-        </div>
+        </aside>
       </div>
 
       {previewFull && (

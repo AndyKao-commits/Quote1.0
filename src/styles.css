@@ -139,12 +139,13 @@
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    overflow-x: clip;
-    max-width: 100vw;
   }
+  /* 僅手機限制橫向溢出；桌面勿對 html/body 設 overflow-x，否則會破壞 position:sticky */
   @media (max-width: 767px) {
     html, body {
       font-size: 17px;
+      overflow-x: clip;
+      max-width: 100vw;
     }
   }
   img, video, canvas, svg {
@@ -1312,19 +1313,59 @@
     overflow: hidden;
   }
   @media (min-width: 1024px) {
-    /* 右欄 sticky：左側編輯捲動時預覽固定於畫面右側 */
-    .quote-editor-sticky {
+    /*
+      右欄固定在視窗右側半頁：grid item 本身 sticky + 視窗高度，
+      左側長表單捲動時預覽仍可見；拖曳／縮放留在 pane 內部。
+    */
+    .quote-editor-layout {
+      align-items: start;
+    }
+    .quote-editor-preview-col {
       position: sticky;
-      top: 5.5rem;
+      top: 5.25rem;
       z-index: 10;
-      width: 100%;
       align-self: start;
+      width: 100%;
+      height: calc(100dvh - 5.25rem - 1rem);
+      max-height: calc(100dvh - 5.25rem - 1rem);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
-    .quote-editor-sticky .quote-editor-pan {
-      max-height: calc(100vh - 5.5rem);
+    .quote-editor-sticky {
+      position: relative;
+      z-index: 0;
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
     }
-    .quote-editor-sticky .pan-scroller {
-      max-height: calc(100vh - 5.5rem - 6.5rem);
+    .quote-editor-sticky .quote-editor-pan,
+    .quote-editor-preview-col .quote-editor-pan {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      max-height: none;
+    }
+    .quote-editor-sticky .pan-viewport,
+    .quote-editor-preview-col .pan-viewport,
+    .quote-editor-pan.pan-viewport {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+      height: auto;
+    }
+    .quote-editor-sticky .pan-scroller,
+    .quote-editor-preview-col .pan-scroller,
+    .quote-editor-pan .pan-scroller {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
     }
   }
   .quote-editor-pan .pan-viewport {
@@ -1348,15 +1389,6 @@
       flex: 1;
       min-height: 0;
       max-height: none;
-    }
-  }
-  @media (min-width: 1024px) {
-    .quote-editor-pan .pan-scroller {
-      min-height: min(72vh, 640px);
-      max-height: min(78vh, 720px);
-    }
-    .quote-editor-sticky .quote-editor-pan .pan-scroller {
-      max-height: calc(100vh - 5.5rem - 6.5rem);
     }
   }
   .quote-editor-pan--fullscreen {
