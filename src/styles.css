@@ -139,12 +139,13 @@
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    overflow-x: clip;
-    max-width: 100vw;
   }
+  /* 僅手機限制橫向溢出；桌面勿對 html/body 設 overflow-x，否則會破壞 position:sticky */
   @media (max-width: 767px) {
     html, body {
       font-size: 17px;
+      overflow-x: clip;
+      max-width: 100vw;
     }
   }
   img, video, canvas, svg {
@@ -1311,22 +1312,96 @@
     flex-direction: column;
     overflow: hidden;
   }
+
+  /* 桌面：整頁不捲，左欄獨立捲動、右欄固定預覽 */
   @media (min-width: 1024px) {
-    /* 右欄 sticky：左側編輯捲動時預覽固定於畫面右側 */
+    .bdg-shell-split {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .bdg-shell-split .bdg-app-header {
+      position: relative;
+      top: auto;
+    }
+    .bdg-shell-split-main {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    .quote-editor-page {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .quote-editor-chrome {
+      flex-shrink: 0;
+    }
+    .quote-editor-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1.25rem;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      align-items: stretch;
+    }
+    .quote-editor-form-col {
+      min-width: 0;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 0.25rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .quote-editor-preview-col {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+    }
     .quote-editor-sticky {
-      position: sticky;
-      top: 5.5rem;
-      z-index: 10;
+      position: relative;
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
       width: 100%;
-      align-self: start;
+      height: 100%;
     }
-    .quote-editor-sticky .quote-editor-pan {
-      max-height: calc(100vh - 5.5rem);
+    .quote-editor-sticky .quote-editor-pan,
+    .quote-editor-preview-col .quote-editor-pan,
+    .quote-editor-pan.pan-viewport {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      max-height: none;
     }
-    .quote-editor-sticky .pan-scroller {
-      max-height: calc(100vh - 5.5rem - 6.5rem);
+    .quote-editor-sticky .pan-scroller,
+    .quote-editor-preview-col .pan-scroller,
+    .quote-editor-pan .pan-scroller {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
     }
   }
+
   .quote-editor-pan .pan-viewport {
     flex: 1;
     min-height: 0;
@@ -1348,15 +1423,6 @@
       flex: 1;
       min-height: 0;
       max-height: none;
-    }
-  }
-  @media (min-width: 1024px) {
-    .quote-editor-pan .pan-scroller {
-      min-height: min(72vh, 640px);
-      max-height: min(78vh, 720px);
-    }
-    .quote-editor-sticky .quote-editor-pan .pan-scroller {
-      max-height: calc(100vh - 5.5rem - 6.5rem);
     }
   }
   .quote-editor-pan--fullscreen {
