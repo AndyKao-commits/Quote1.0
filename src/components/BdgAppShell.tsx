@@ -15,7 +15,14 @@ import { apiGetProfile } from "@/lib/quote-api";
 import { clearSession } from "@/lib/session";
 import { toast } from "sonner";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  layout = "default",
+}: {
+  children: ReactNode;
+  /** split：桌面左右分欄（左捲右固定），用於報價編輯 */
+  layout?: "default" | "split";
+}) {
   const nav = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname }) ?? "";
   const isActive = (p: string) => pathname.startsWith(p);
@@ -30,6 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
 
   const brandLabel = profile?.company_name || profile?.display_name || "報得過";
+  const split = layout === "split";
 
   async function logout() {
     if (isLocalMode) {
@@ -55,10 +63,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="bdg-theme min-h-screen">
+    <div className={`bdg-theme min-h-screen ${split ? "bdg-shell-split" : ""}`}>
       {isLocalMode ? <AutoCloudBackupRunner /> : null}
-      <header className="bdg-app-header sticky top-0 z-40">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+      <header className="bdg-app-header sticky top-0 z-40 shrink-0">
+        <div
+          className={`mx-auto flex items-center justify-between gap-4 px-4 py-3 ${
+            split ? "max-w-7xl" : "max-w-5xl"
+          }`}
+        >
           <Link to="/quotes" className="flex min-w-0 items-center gap-2.5">
             {profile?.logo_url ? (
               <img src={profile.logo_url} alt="" className="h-8 w-8 shrink-0 rounded object-contain" />
@@ -88,7 +100,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6 pb-24 md:pb-10">
+      <main
+        className={
+          split
+            ? "bdg-shell-split-main mx-auto max-w-7xl px-4"
+            : "mx-auto max-w-5xl px-4 py-6 pb-24 md:pb-10"
+        }
+      >
         {!isLocalMode && !online ? <OfflineBanner /> : null}
         {isLocalMode && access && access.level !== "full" ? (
           <LocalAccessBanner access={access} onReconnect={reconnecting ? undefined : reconnect} />

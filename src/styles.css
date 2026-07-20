@@ -1312,29 +1312,69 @@
     flex-direction: column;
     overflow: hidden;
   }
+
+  /* 桌面：整頁不捲，左欄獨立捲動、右欄固定預覽 */
   @media (min-width: 1024px) {
-    /*
-      右欄固定在視窗右側半頁：grid item 本身 sticky + 視窗高度，
-      左側長表單捲動時預覽仍可見；拖曳／縮放留在 pane 內部。
-    */
-    .quote-editor-layout {
-      align-items: start;
-    }
-    .quote-editor-preview-col {
-      position: sticky;
-      top: 5.25rem;
-      z-index: 10;
-      align-self: start;
-      width: 100%;
-      height: calc(100dvh - 5.25rem - 1rem);
-      max-height: calc(100dvh - 5.25rem - 1rem);
+    .bdg-shell-split {
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+    }
+    .bdg-shell-split .bdg-app-header {
+      position: relative;
+      top: auto;
+    }
+    .bdg-shell-split-main {
+      flex: 1 1 auto;
       min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    .quote-editor-page {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .quote-editor-chrome {
+      flex-shrink: 0;
+    }
+    .quote-editor-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1.25rem;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+      align-items: stretch;
+    }
+    .quote-editor-form-col {
+      min-width: 0;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding-right: 0.25rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .quote-editor-preview-col {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
     }
     .quote-editor-sticky {
       position: relative;
-      z-index: 0;
       display: flex;
       flex: 1 1 auto;
       flex-direction: column;
@@ -1343,7 +1383,8 @@
       height: 100%;
     }
     .quote-editor-sticky .quote-editor-pan,
-    .quote-editor-preview-col .quote-editor-pan {
+    .quote-editor-preview-col .quote-editor-pan,
+    .quote-editor-pan.pan-viewport {
       display: flex;
       flex: 1 1 auto;
       flex-direction: column;
@@ -1351,14 +1392,6 @@
       min-height: 0;
       height: 100%;
       max-height: none;
-    }
-    .quote-editor-sticky .pan-viewport,
-    .quote-editor-preview-col .pan-viewport,
-    .quote-editor-pan.pan-viewport {
-      flex: 1 1 auto;
-      min-height: 0;
-      max-height: none;
-      height: auto;
     }
     .quote-editor-sticky .pan-scroller,
     .quote-editor-preview-col .pan-scroller,
@@ -1368,6 +1401,7 @@
       max-height: none;
     }
   }
+
   .quote-editor-pan .pan-viewport {
     flex: 1;
     min-height: 0;

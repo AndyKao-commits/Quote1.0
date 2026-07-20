@@ -6,8 +6,17 @@ type BackToTopButtonProps = {
   className?: string;
 };
 
+function scrollToTop() {
+  const formPane = document.querySelector<HTMLElement>("[data-quote-form-scroll]");
+  if (formPane) {
+    formPane.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 export function BackToTopButton({ variant = "inline", className = "" }: BackToTopButtonProps) {
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollTop = () => scrollToTop();
 
   if (variant === "floating") {
     return (

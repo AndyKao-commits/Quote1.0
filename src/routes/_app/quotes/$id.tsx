@@ -700,86 +700,95 @@ function QuoteEditorPage() {
   );
 
   return (
-    <AppShell>
-      <div className="mb-5 flex flex-wrap items-center gap-2 border-b border-[var(--bdg-line)] pb-4">
-        <button type="button" onClick={() => nav({ to: "/quotes" })} className="text-sm text-stone-500 hover:text-[var(--bdg-ink)]">
-          ← 返回
-        </button>
-        <AutoSaveStatus status={autoSaveStatus} isDirty={isDirty} isPending={saveMut.isPending} />
-        <div className="flex-1" />
-        <button type="button" onClick={() => saveMut.mutate({})} disabled={readOnly || saveMut.isPending} className="bdg-btn bdg-btn-secondary">
-          {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 儲存
-        </button>
-        <button type="button" onClick={() => setPreviewFull(true)} className="bdg-btn bdg-btn-secondary">
-          <Eye className="h-4 w-4" /> 預覽
-        </button>
-        <button
-          type="button"
-          onClick={doExport}
-          disabled={exporting || (isLocalMode && access ? !access.canExportPdf : false)}
-          className="bdg-btn bdg-btn-secondary"
-        >
-          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
-        </button>
-        {!localMode ? (
-          <button type="button" onClick={doShare} className="bdg-btn bg-[#06C755] text-white hover:brightness-105">
-            <Share2 className="h-4 w-4" /> LINE
-          </button>
-        ) : null}
-      </div>
+    <AppShell layout="split">
+      <div className="quote-editor-page">
+        <div className="quote-editor-chrome">
+          <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-[var(--bdg-line)] pb-4 lg:mb-3">
+            <button type="button" onClick={() => nav({ to: "/quotes" })} className="text-sm text-stone-500 hover:text-[var(--bdg-ink)]">
+              ← 返回
+            </button>
+            <AutoSaveStatus status={autoSaveStatus} isDirty={isDirty} isPending={saveMut.isPending} />
+            <div className="flex-1" />
+            <button type="button" onClick={() => saveMut.mutate({})} disabled={readOnly || saveMut.isPending} className="bdg-btn bdg-btn-secondary">
+              {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 儲存
+            </button>
+            <button type="button" onClick={() => setPreviewFull(true)} className="bdg-btn bdg-btn-secondary">
+              <Eye className="h-4 w-4" /> 預覽
+            </button>
+            <button
+              type="button"
+              onClick={doExport}
+              disabled={exporting || (isLocalMode && access ? !access.canExportPdf : false)}
+              className="bdg-btn bdg-btn-secondary"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
+            </button>
+            {!localMode ? (
+              <button type="button" onClick={doShare} className="bdg-btn bg-[#06C755] text-white hover:brightness-105">
+                <Share2 className="h-4 w-4" /> LINE
+              </button>
+            ) : null}
+          </div>
 
-      {!localMode && shareUrl && (
-        <div className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
-          <p>
-            分享連結
-            {form?.share_expires_at
-              ? `（有效至 ${formatShareExpiry(form.share_expires_at)}）`
-              : "（長期有效）"}
-          </p>
-          <p className="mt-1 break-all text-stone-600">{shareUrl}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={copyShareUrl} className="bdg-btn bdg-btn-secondary py-1 text-xs">
-              複製連結
-            </button>
-            <button type="button" onClick={doRenewShare} className="bdg-btn bdg-btn-secondary py-1 text-xs">
-              延長 90 天
-            </button>
-            <button type="button" onClick={doRevokeShare} className="bdg-btn bdg-btn-secondary py-1 text-xs text-rose-700">
-              作廢連結
-            </button>
+          {!localMode && shareUrl && (
+            <div className="mb-3 rounded border border-[var(--bdg-line)] bg-white px-3 py-2 text-xs text-stone-500">
+              <p>
+                分享連結
+                {form?.share_expires_at
+                  ? `（有效至 ${formatShareExpiry(form.share_expires_at)}）`
+                  : "（長期有效）"}
+              </p>
+              <p className="mt-1 break-all text-stone-600">{shareUrl}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={copyShareUrl} className="bdg-btn bdg-btn-secondary py-1 text-xs">
+                  複製連結
+                </button>
+                <button type="button" onClick={doRenewShare} className="bdg-btn bdg-btn-secondary py-1 text-xs">
+                  延長 90 天
+                </button>
+                <button type="button" onClick={doRevokeShare} className="bdg-btn bdg-btn-secondary py-1 text-xs text-rose-700">
+                  作廢連結
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-3 flex gap-2 md:hidden">
+            <button type="button" onClick={() => setTab("edit")} className={`flex-1 bdg-btn text-sm ${tab === "edit" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>編輯</button>
+            <button type="button" onClick={() => setTab("preview")} className={`flex-1 bdg-btn text-sm ${tab === "preview" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>預覽</button>
           </div>
         </div>
-      )}
 
-      <div className="mb-3 flex gap-2 md:hidden">
-        <button type="button" onClick={() => setTab("edit")} className={`flex-1 bdg-btn text-sm ${tab === "edit" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>編輯</button>
-        <button type="button" onClick={() => setTab("preview")} className={`flex-1 bdg-btn text-sm ${tab === "preview" ? "bdg-btn-primary" : "bdg-btn-secondary"}`}>預覽</button>
-      </div>
-
-      {/* 手機編輯模式時預覽隱藏，PDF 改擷取此離屏節點（與預覽相同排版） */}
-      <div
-        id="quote-document-fallback"
-        aria-hidden
-        className="quote-preview-root pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
-      >
-        <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
-      </div>
-
-      <div className="quote-editor-layout grid min-w-0 items-start gap-5 lg:grid-cols-2">
-        <div className={`min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}>{editor}</div>
-        <aside
-          className={`quote-editor-preview-col min-w-0 ${
-            previewFull ? "hidden" : tab === "edit" ? "hidden lg:flex" : "flex"
-          }`}
-          aria-label="報價預覽"
+        {/* 手機編輯模式時預覽隱藏，PDF 改擷取此離屏節點（與預覽相同排版） */}
+        <div
+          id="quote-document-fallback"
+          aria-hidden
+          className="quote-preview-root pointer-events-none fixed top-0 -left-[99999px] z-0 w-[794px] overflow-visible"
         >
-          <div className="quote-editor-sticky relative min-h-0 w-full flex-1">
-            <QuotePreviewPane className="quote-editor-pan flex w-full">
-              <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
-            </QuotePreviewPane>
-            <HalfBrowseOverlay show={halfBrowse} />
+          <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
+        </div>
+
+        <div className="quote-editor-workspace">
+          <div
+            data-quote-form-scroll
+            className={`quote-editor-form-col min-w-0 ${tab === "preview" ? "hidden lg:block" : ""}`}
+          >
+            {editor}
           </div>
-        </aside>
+          <aside
+            className={`quote-editor-preview-col min-w-0 ${
+              previewFull ? "hidden" : tab === "edit" ? "hidden lg:flex" : "flex"
+            }`}
+            aria-label="報價預覽"
+          >
+            <div className="quote-editor-sticky relative min-h-0 w-full flex-1">
+              <QuotePreviewPane className="quote-editor-pan flex w-full">
+                <QuoteDocument quote={quotePreview} lines={previewLines} profile={profile} preview />
+              </QuotePreviewPane>
+              <HalfBrowseOverlay show={halfBrowse} />
+            </div>
+          </aside>
+        </div>
       </div>
 
       {previewFull && (
@@ -812,7 +821,7 @@ function QuoteEditorPage() {
       )}
 
       {showBackToTop && tab !== "preview" && !previewFull && (
-        <BackToTopButton variant="floating" />
+        <BackToTopButton variant="floating" className="lg:hidden" />
       )}
     </AppShell>
   );
